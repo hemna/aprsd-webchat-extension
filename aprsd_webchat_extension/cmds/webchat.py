@@ -6,16 +6,6 @@ import sys
 import threading
 import time
 
-import click
-import flask
-from flask import request
-from flask_httpauth import HTTPBasicAuth
-from flask_socketio import Namespace, SocketIO
-from geopy.distance import geodesic
-from oslo_config import cfg
-import timeago
-import wrapt
-
 import aprsd
 from aprsd import cli_helper, client, packets, plugin_utils, stats, threads
 from aprsd import utils
@@ -27,6 +17,15 @@ from aprsd.threads import keep_alive, rx
 from aprsd.threads import stats as stats_thread
 from aprsd.threads import tx
 from aprsd.utils import trace
+import click
+import flask
+from flask import request
+from flask_httpauth import HTTPBasicAuth
+from flask_socketio import Namespace, SocketIO
+from geopy.distance import geodesic
+from oslo_config import cfg
+import timeago
+import wrapt
 
 from aprsd_webchat_extension import utils as webchat_utils
 
@@ -313,7 +312,8 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         elif (
             from_call not in callsign_locations
             and from_call not in callsign_no_track
-            and client_factory.create().transport() in [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
+            and client_factory.create().transport() in
+            [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
         ):
             # We have to ask aprs for the location for the callsign
             # We send a message packet to wb4bor-11 asking for location.
@@ -368,7 +368,7 @@ def _get_transport(stats):
 @flask_app.route("/location/<callsign>", methods=["POST"])
 def location(callsign):
     LOG.debug(f"Fetch location for callsign {callsign}")
-    if not callsign in callsign_no_track:
+    if callsign not in callsign_no_track:
         populate_callsign_location(callsign)
 
 
@@ -573,7 +573,8 @@ def init_flask(loglevel, quiet):
     "port",
     show_default=True,
     default=None,
-    help="Port to listen to web requests.  This overrides the config.aprsd_webchat_extension.web_port setting.",
+    help="Port to listen to web requests.  This overrides the "
+         "config.aprsd_webchat_extension.web_port setting.",
 )
 @click.pass_context
 @cli_helper.process_standard_options
