@@ -1,3 +1,7 @@
 aprsd>=3.4.0
-oslo_config
 click
+flask
+flask-httpauth
+flask-socketio
+oslo_config
+python-socketio

@@ -10,7 +10,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import pbr.version
+from importlib.metadata import PackageNotFoundError, version
 
 
-__version__ = pbr.version.VersionInfo("aprsd_webchat_extension").version_string()
+try:
+    __version__ = version("aprsd-webchat-extension")
+except PackageNotFoundError:
+    pass

@@ -1,6 +1,17 @@
+import logging
+
+from aprsd.conf import log as conf_log
+from loguru import logger
+from oslo_config import cfg
 import update_checker
 
 import aprsd_webchat_extension
+# Have to import this to get the setup_logging to work
+from aprsd_webchat_extension import conf  # noqa
+
+
+CONF = cfg.CONF
+LOG = logger
 
 
 def _check_version():
@@ -18,3 +29,32 @@ def _check_version():
         # Lets put up an error and move on.  We might not
         # have internet in this aprsd deployment.
         return 1, "Couldn't check for new version of APRSD Extension (aprsd-webchat-extension)"
+
+
+def setup_logging(loglevel=None, quiet=False):
+    if not loglevel:
+        log_level = CONF.logging.log_level
+    else:
+        log_level = conf_log.LOG_LEVELS[loglevel]
+
+    webserver_list = [
+        "werkzeug",
+        "werkzeug._internal",
+        "socketio",
+        "urllib3.connectionpool",
+        "chardet",
+        "chardet.charsetgroupprober",
+        "chardet.eucjpprober",
+        "chardet.mbcharsetprober",
+    ]
+
+    for name in logging.root.manager.loggerDict.keys():
+        logging.getLogger(name).handlers = []
+        if name in webserver_list:
+            logging.getLogger(name).propagate = False
+
+    if CONF.aprsd_webchat_extension.disable_url_request_logging:
+        for name in webserver_list:
+            logging.getLogger(name).handlers = []
+            logging.getLogger(name).propagate = True
+            logging.getLogger(name).setLevel(logging.ERROR)
