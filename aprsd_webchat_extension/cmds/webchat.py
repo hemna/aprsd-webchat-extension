@@ -46,7 +46,7 @@ callsign_no_track = [
 callsign_locations = {}
 
 flask_app = flask.Flask(
-    "aprsd",
+    "aprsd_webchat_extension",
     static_url_path="/static",
     static_folder="web/chat/static",
     template_folder="web/chat/templates",
