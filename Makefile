@@ -17,9 +17,14 @@ help:	# Help for the Makefile
 
 dev: venv  ## Create the virtualenv with all the requirements installed
 
-docs: build
+changelog: dev
+	npm i -g auto-changelog
+	auto-changelog -l false --sort-commits date -o ChangeLog.md
+
+docs: build changelog
+	m2r --overwrite ChangeLog.md
 	cp README.rst docs/readme.rst
-	cp Changelog docs/changelog.rst
+	cp ChangeLog.rst docs/changelog.rst
 	tox -edocs
 
 clean: clean-build clean-pyc clean-test clean-pyenv ## remove all build, test, coverage and Python artifacts
