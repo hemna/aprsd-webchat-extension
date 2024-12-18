@@ -13,16 +13,14 @@ from aprsd import utils as aprsd_utils
 from aprsd.client import client_factory, kiss
 from aprsd.main import cli
 from aprsd.threads import aprsd as aprsd_threads
-from aprsd.threads import keep_alive, rx
+from aprsd.threads import keepalive, rx
 from aprsd.threads import stats as stats_thread
 from aprsd.threads import tx
-from aprsd.utils import trace
 import click
 import flask
 from flask import request
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import Namespace, SocketIO
-from geopy.distance import geodesic
 from oslo_config import cfg
 import timeago
 import wrapt
@@ -537,7 +535,6 @@ class SendMessageNamespace(Namespace):
             populate_callsign_location(data["callsign"])
 
 
-@trace.trace
 def init_flask(loglevel, quiet):
     global socketio, flask_app
 
@@ -621,9 +618,9 @@ def webchat(ctx, flush, port):
         print(msg)
         sys.exit(-1)
 
-    keepalive = keep_alive.KeepAliveThread()
+    keepalive_thread = keepalive.KeepAliveThread()
     LOG.info("Start KeepAliveThread")
-    keepalive.start()
+    keepalive_thread.start()
 
     stats_store_thread = stats_thread.APRSDStatsStoreThread()
     stats_store_thread.start()
