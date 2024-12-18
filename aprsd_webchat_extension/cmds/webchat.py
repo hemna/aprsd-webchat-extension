@@ -286,8 +286,7 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         super().process_ack_packet(packet)
         ack_num = packet.get("msgNo")
         SentMessages().ack(ack_num)
-        msg = SentMessages().get(ack_num)
-        if msg:
+        if msg := SentMessages().get(ack_num):
             self.socketio.emit(
                 "ack", msg,
                 namespace="/sendmsg",
