@@ -36,13 +36,14 @@ APRSD Webchat
 Features
 --------
 
-* TODO
+* This is the webchat extension for APRSD.   This was removed from APRSD proper to help those
+  installs that don't want/need the webchat capability and all of it's requirements.
 
 
 Requirements
 ------------
 
-* TODO
+* aprsd >= 3.5.0
 
 
 Installation
@@ -58,7 +59,11 @@ You can install *APRSD Webchat* via pip_ from PyPI_:
 Usage
 -----
 
-Please see the `Command-line Reference <Usage_>`_ for details.
+After the install you can run webchat with the following
+
+.. code:: console
+
+   $ aprsd webchat --loglevel DEBUG
 
 
 Contributing
