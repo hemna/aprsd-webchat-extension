@@ -2,24 +2,22 @@ import typing as t
 import unittest
 from unittest import mock
 
+import flask
+import flask_socketio
 from aprsd import conf  # noqa: F401
 from aprsd.client import fake as fake_client
 from aprsd.cmds import webchat  # noqa
 from aprsd.packets import core
 from click.testing import CliRunner
-import flask
-import flask_socketio
 from oslo_config import cfg
 
 from . import fake
-
 
 CONF = cfg.CONF
 F = t.TypeVar("F", bound=t.Callable[..., t.Any])
 
 
 class TestSendMessageCommand(unittest.TestCase):
-
     def config_and_init(self, login=None, password=None):
         CONF.callsign = fake.FAKE_TO_CALLSIGN
         CONF.trace_enabled = False
@@ -47,7 +45,8 @@ class TestSendMessageCommand(unittest.TestCase):
     @mock.patch("aprsd.cmds.webchat.socketio")
     def test_process_ack_packet(
         self,
-        mock_remove, mock_socketio,
+        mock_remove,
+        mock_socketio,
     ):
         self.config_and_init()
         mock_socketio.emit = mock.MagicMock()

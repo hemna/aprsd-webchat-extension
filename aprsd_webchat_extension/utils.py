@@ -1,14 +1,14 @@
 import logging
 
+import update_checker
 from aprsd.conf import log as conf_log
 from loguru import logger
 from oslo_config import cfg
-import update_checker
 
 import aprsd_webchat_extension
+
 # Have to import this to get the setup_logging to work
 from aprsd_webchat_extension import conf  # noqa
-
 
 CONF = cfg.CONF
 LOG = logger
@@ -18,7 +18,9 @@ def _check_version():
     # check for a newer version
     try:
         check = update_checker.UpdateChecker()
-        result = check.check("aprsd-webchat-extension", aprsd_webchat_extension.__version__)
+        result = check.check(
+            "aprsd-webchat-extension", aprsd_webchat_extension.__version__
+        )
         if result:
             # Looks like there is an updated version.
             return 1, result
@@ -28,7 +30,10 @@ def _check_version():
         # probably can't get in touch with pypi for some reason
         # Lets put up an error and move on.  We might not
         # have internet in this aprsd deployment.
-        return 1, "Couldn't check for new version of APRSD Extension (aprsd-webchat-extension)"
+        return (
+            1,
+            "Couldn't check for new version of APRSD Extension (aprsd-webchat-extension)",
+        )
 
 
 def setup_logging(loglevel=None, quiet=False):

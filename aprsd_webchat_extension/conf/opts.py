@@ -31,7 +31,6 @@ import importlib
 import os
 import pkgutil
 
-
 LIST_OPTS_FUNC_NAME = "list_opts"
 
 
@@ -66,7 +65,8 @@ def _import_modules(module_names):
         if not hasattr(mod, LIST_OPTS_FUNC_NAME):
             msg = (
                 "The module 'aprsd_webchat_extension.conf.%s' should have a '%s' "
-                "function which returns the config options." % (modname, LIST_OPTS_FUNC_NAME)
+                "function which returns the config options."
+                % (modname, LIST_OPTS_FUNC_NAME)
             )
             raise Exception(msg)
         else:

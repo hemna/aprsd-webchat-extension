@@ -7,26 +7,24 @@ import threading
 import time
 
 import aprsd
-from aprsd import cli_helper, client, packets, plugin_utils, stats, threads
-from aprsd import utils
+import click
+import flask
+import timeago
+import wrapt
+from aprsd import cli_helper, client, packets, plugin_utils, stats, threads, utils
 from aprsd import utils as aprsd_utils
 from aprsd.client import client_factory, kiss
 from aprsd.main import cli
 from aprsd.threads import aprsd as aprsd_threads
-from aprsd.threads import keepalive, rx
+from aprsd.threads import keepalive, rx, tx
 from aprsd.threads import stats as stats_thread
-from aprsd.threads import tx
-import click
-import flask
 from flask import request
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import Namespace, SocketIO
+from haversine import haversine
 from oslo_config import cfg
-import timeago
-import wrapt
 
 from aprsd_webchat_extension import utils as webchat_utils
-
 
 CONF = cfg.CONF
 LOG = logging.getLogger()
@@ -35,8 +33,17 @@ socketio = None
 
 # List of callsigns that we don't want to track/fetch their location
 callsign_no_track = [
-    "APDW16", "BLN0", "BLN1", "BLN2",
-    "BLN3", "BLN4", "BLN5", "BLN6", "BLN7", "BLN8", "BLN9",
+    "APDW16",
+    "BLN0",
+    "BLN1",
+    "BLN2",
+    "BLN3",
+    "BLN4",
+    "BLN5",
+    "BLN6",
+    "BLN7",
+    "BLN8",
+    "BLN9",
 ]
 
 # Callsign location information
@@ -52,7 +59,6 @@ flask_app = flask.Flask(
 
 
 def signal_handler(sig, frame):
-
     click.echo("signal_handler: called")
     LOG.info(
         f"Ctrl+C, Sending all threads({len(threads.APRSDThreadList())}) exit! "
@@ -67,7 +73,6 @@ def signal_handler(sig, frame):
 
 
 class SentMessages:
-
     _instance = None
     lock = threading.Lock()
 
@@ -167,7 +172,7 @@ def _calculate_location_data(location_data):
     if CONF.aprsd_webchat_extension.latitude and CONF.aprsd_webchat_extension.longitude:
         our_lat = float(CONF.aprsd_webchat_extension.latitude)
         our_lon = float(CONF.aprsd_webchat_extension.longitude)
-        distance = geodesic((our_lat, our_lon), (lat, lon)).kilometers
+        distance = haversine((our_lat, our_lon), (lat, lon))
         bearing = aprsd_utils.calculate_initial_compass_bearing(
             (our_lat, our_lon),
             (lat, lon),
@@ -197,7 +202,8 @@ def send_location_data_to_browser(location_data):
     callsign = location_data["callsign"]
     LOG.info(f"Got location for {callsign} {callsign_locations[callsign]}")
     socketio.emit(
-        "callsign_location", callsign_locations[callsign],
+        "callsign_location",
+        callsign_locations[callsign],
         namespace="/sendmsg",
     )
 
@@ -205,9 +211,9 @@ def send_location_data_to_browser(location_data):
 def populate_callsign_location(callsign, data=None):
     """Populate the location for the callsign.
 
-       if data is passed in, then we have the location already from
-       an APRS packet.  If data is None, then we need to fetch the
-       location from aprs.fi or REPEAT.
+    if data is passed in, then we have the location already from
+    an APRS packet.  If data is None, then we need to fetch the
+    location from aprs.fi or REPEAT.
     """
     global socketio
     """Fetch the location for the callsign."""
@@ -286,7 +292,8 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         SentMessages().ack(ack_num)
         if msg := SentMessages().get(ack_num):
             self.socketio.emit(
-                "ack", msg,
+                "ack",
+                msg,
                 namespace="/sendmsg",
             )
         self.got_ack = True
@@ -309,21 +316,23 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         elif (
             from_call not in callsign_locations
             and from_call not in callsign_no_track
-            and client_factory.create().transport() in
-            [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
+            and client_factory.create().transport()
+            in [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
         ):
             # We have to ask aprs for the location for the callsign
             # We send a message packet to wb4bor-11 asking for location.
             populate_callsign_location(from_call)
         # Send the packet to the browser.
         self.socketio.emit(
-            "new", packet.__dict__,
+            "new",
+            packet.__dict__,
             namespace="/sendmsg",
         )
 
 
 class LocationProcessingThread(aprsd_threads.APRSDThread):
     """Class to handle the location processing."""
+
     def __init__(self):
         super().__init__("LocationProcessingThread")
 
@@ -335,17 +344,16 @@ def _get_transport(stats):
     if CONF.aprs_network.enabled:
         transport = "aprs-is"
         aprs_connection = (
-            "APRS-IS Server: <a href='http://status.aprs2.net' >"
-            "{}</a>".format(stats["APRSClientStats"]["server_string"])
+            "APRS-IS Server: <a href='http://status.aprs2.net' >" "{}</a>".format(
+                stats["APRSClientStats"]["server_string"]
+            )
         )
     elif kiss.KISSClient.is_enabled():
         transport = kiss.KISSClient.transport()
         if transport == client.TRANSPORT_TCPKISS:
-            aprs_connection = (
-                "TCPKISS://{}:{}".format(
-                    CONF.kiss_tcp.host,
-                    CONF.kiss_tcp.port,
-                )
+            aprs_connection = "TCPKISS://{}:{}".format(
+                CONF.kiss_tcp.host,
+                CONF.kiss_tcp.port,
             )
         elif transport == client.TRANSPORT_SERIALKISS:
             # for pep8 violation
@@ -445,6 +453,7 @@ def get_stats():
 
 class SendMessageNamespace(Namespace):
     """Class to handle the socketio interactions."""
+
     got_ack = False
     reply_sent = False
     msg = None
@@ -457,7 +466,8 @@ class SendMessageNamespace(Namespace):
         global socketio
         LOG.debug("Web socket connected")
         socketio.emit(
-            "connected", {"data": "/sendmsg Connected"},
+            "connected",
+            {"data": "/sendmsg Connected"},
             namespace="/sendmsg",
         )
 
@@ -492,7 +502,8 @@ class SendMessageNamespace(Namespace):
         msgs.set_status(pkt.msgNo, "Sending")
         obj = msgs.get(pkt.msgNo)
         socketio.emit(
-            "sent", obj,
+            "sent",
+            obj,
             namespace="/sendmsg",
         )
 
@@ -539,7 +550,9 @@ def init_flask(loglevel, quiet):
     global socketio, flask_app
 
     socketio = SocketIO(
-        flask_app, logger=False, engineio_logger=False,
+        flask_app,
+        logger=False,
+        engineio_logger=False,
         async_mode="threading",
     )
 
@@ -570,7 +583,7 @@ def init_flask(loglevel, quiet):
     show_default=True,
     default=None,
     help="Port to listen to web requests.  This overrides the "
-         "config.aprsd_webchat_extension.web_port setting.",
+    "config.aprsd_webchat_extension.web_port setting.",
 )
 @click.pass_context
 @cli_helper.process_standard_options
