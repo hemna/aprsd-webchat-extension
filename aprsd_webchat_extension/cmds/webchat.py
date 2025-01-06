@@ -24,6 +24,7 @@ from flask_socketio import Namespace, SocketIO
 from haversine import haversine
 from oslo_config import cfg
 
+import aprsd_webchat_extension
 from aprsd_webchat_extension import utils as webchat_utils
 
 CONF = cfg.CONF
@@ -405,7 +406,8 @@ def index():
         initial_stats=stats,
         aprs_connection=aprs_connection,
         callsign=CONF.callsign,
-        version=aprsd.__version__,
+        version=aprsd_webchat_extension.__version__,
+        aprsd_version=aprsd.__version__,
         latitude=latitude,
         longitude=longitude,
     )
