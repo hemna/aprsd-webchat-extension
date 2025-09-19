@@ -13,10 +13,10 @@ import timeago
 import wrapt
 from aprsd import cli_helper, client, packets, plugin_utils, stats, threads, utils
 from aprsd import utils as aprsd_utils
-from aprsd.client import client_factory, kiss
+from aprsd.client.client import APRSDClient
 from aprsd.main import cli
 from aprsd.threads import aprsd as aprsd_threads
-from aprsd.threads import keepalive, rx, tx
+from aprsd.threads import keepalive, rx, tx, service
 from aprsd.threads import stats as stats_thread
 from flask import request
 from flask_httpauth import HTTPBasicAuth
@@ -317,7 +317,7 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         elif (
             from_call not in callsign_locations
             and from_call not in callsign_no_track
-            and client_factory.create().transport()
+            and APRSDClient().driver.transport()
             in [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
         ):
             # We have to ask aprs for the location for the callsign
@@ -349,21 +349,21 @@ def _get_transport(stats):
                 stats["APRSClientStats"]["server_string"]
             )
         )
-    elif kiss.KISSClient.is_enabled():
-        transport = kiss.KISSClient.transport()
-        if transport == client.TRANSPORT_TCPKISS:
-            aprs_connection = "TCPKISS://{}:{}".format(
-                CONF.kiss_tcp.host,
-                CONF.kiss_tcp.port,
-            )
-        elif transport == client.TRANSPORT_SERIALKISS:
-            # for pep8 violation
-            aprs_connection = (
-                "SerialKISS://{}@{} baud".format(
-                    CONF.kiss_serial.device,
-                    CONF.kiss_serial.baudrate,
-                ),
-            )
+    elif CONF.kiss_tcp.enabled:
+        transport = "kiss_tcp"
+        aprs_connection = "TCPKISS://{}:{}".format(
+            CONF.kiss_tcp.host,
+            CONF.kiss_tcp.port,
+        )
+    elif CONF.kiss_serial.enabled:
+        transport = "kiss_serial"
+        # for pep8 violation
+        aprs_connection = (
+            "SerialKISS://{}@{} baud".format(
+                CONF.kiss_serial.device,
+                CONF.kiss_serial.baudrate,
+            ),
+        )
     elif CONF.fake_client.enabled:
         transport = client.TRANSPORT_FAKE
         aprs_connection = "Fake Client"
@@ -611,45 +611,41 @@ def webchat(ctx, flush, port):
     if not port:
         port = CONF.aprsd_webchat_extension.web_port
 
-    # Initialize the client factory and create
-    # The correct client object ready for use
+    service_threads = service.ServiceThreads()
+
+
     # Make sure we have 1 client transport enabled
-    if not client_factory.is_client_enabled():
-        LOG.error("No Clients are enabled in config.")
+    if not APRSDClient().is_enabled:
+        LOG.error('No Clients are enabled in config.')
         sys.exit(-1)
 
-    if not client_factory.is_client_configured():
-        LOG.error("APRS client is not properly configured in config file.")
+    if not APRSDClient().is_configured:
+        LOG.error('APRS client is not properly configured in config file.')
         sys.exit(-1)
 
     # Creates the client object
-    LOG.info("Creating client connection")
-    aprs_client = client_factory.create()
+    LOG.info('Creating client connection')
+    aprs_client = APRSDClient()
     LOG.info(aprs_client)
     if not aprs_client.login_success:
         # We failed to login, will just quit!
-        msg = f"Login Failure: {aprs_client.login_failure}"
+        msg = f'Login Failure: {aprs_client.login_failure}'
         LOG.error(msg)
         print(msg)
         sys.exit(-1)
 
-    keepalive_thread = keepalive.KeepAliveThread()
-    LOG.info("Start KeepAliveThread")
-    keepalive_thread.start()
-
-    stats_store_thread = stats_thread.APRSDStatsStoreThread()
-    stats_store_thread.start()
+    service_threads.register(keepalive.KeepAliveThread())
+    service_threads.register(stats_thread.APRSDStatsStoreThread())
 
     socketio = init_flask(loglevel, quiet)
-    rx_thread = rx.APRSDPluginRXThread(
+    service_threads.register(rx.APRSDRXThread(
         packet_queue=threads.packet_queue,
-    )
-    rx_thread.start()
-    process_thread = WebChatProcessPacketThread(
+    ))
+    service_threads.register(WebChatProcessPacketThread(
         packet_queue=threads.packet_queue,
         socketio=socketio,
-    )
-    process_thread.start()
+    ))
+    service_threads.start()
 
     LOG.info("Start socketio.run()")
     socketio.run(
@@ -661,5 +657,6 @@ def webchat(ctx, flush, port):
         port=port,
         allow_unsafe_werkzeug=True,
     )
+    service_threads.join()
 
     LOG.info("WebChat exiting!!!!  Bye.")
