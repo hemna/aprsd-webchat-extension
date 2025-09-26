@@ -16,7 +16,7 @@ from aprsd import utils as aprsd_utils
 from aprsd.client.client import APRSDClient
 from aprsd.main import cli
 from aprsd.threads import aprsd as aprsd_threads
-from aprsd.threads import keepalive, rx, tx, service
+from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
 from flask import request
 from flask_httpauth import HTTPBasicAuth
@@ -317,7 +317,7 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         elif (
             from_call not in callsign_locations
             and from_call not in callsign_no_track
-            and APRSDClient().driver.transport()
+            and APRSDClient().driver.transport
             in [client.TRANSPORT_APRSIS, client.TRANSPORT_FAKE]
         ):
             # We have to ask aprs for the location for the callsign
@@ -600,12 +600,13 @@ def webchat(ctx, flush, port):
     # setup webchat logging settings.
     webchat_utils.setup_logging(loglevel=loglevel)
 
+    LOG.info(f"Python version: {sys.version}")
+    LOG.info(f"APRSD Started version: {aprsd.__version__}")
     level, msg = utils._check_version()
     if level:
         LOG.warning(msg)
     else:
         LOG.info(msg)
-    LOG.info(f"APRSD Started version: {aprsd.__version__}")
 
     CONF.log_opt_values(logging.getLogger(), logging.DEBUG)
     if not port:
@@ -613,23 +614,22 @@ def webchat(ctx, flush, port):
 
     service_threads = service.ServiceThreads()
 
-
     # Make sure we have 1 client transport enabled
     if not APRSDClient().is_enabled:
-        LOG.error('No Clients are enabled in config.')
+        LOG.error("No Clients are enabled in config.")
         sys.exit(-1)
 
     if not APRSDClient().is_configured:
-        LOG.error('APRS client is not properly configured in config file.')
+        LOG.error("APRS client is not properly configured in config file.")
         sys.exit(-1)
 
     # Creates the client object
-    LOG.info('Creating client connection')
+    LOG.info("Creating client connection")
     aprs_client = APRSDClient()
     LOG.info(aprs_client)
     if not aprs_client.login_success:
         # We failed to login, will just quit!
-        msg = f'Login Failure: {aprs_client.login_failure}'
+        msg = f"Login Failure: {aprs_client.login_failure}"
         LOG.error(msg)
         print(msg)
         sys.exit(-1)
@@ -638,13 +638,17 @@ def webchat(ctx, flush, port):
     service_threads.register(stats_thread.APRSDStatsStoreThread())
 
     socketio = init_flask(loglevel, quiet)
-    service_threads.register(rx.APRSDRXThread(
-        packet_queue=threads.packet_queue,
-    ))
-    service_threads.register(WebChatProcessPacketThread(
-        packet_queue=threads.packet_queue,
-        socketio=socketio,
-    ))
+    service_threads.register(
+        rx.APRSDRXThread(
+            packet_queue=threads.packet_queue,
+        )
+    )
+    service_threads.register(
+        WebChatProcessPacketThread(
+            packet_queue=threads.packet_queue,
+            socketio=socketio,
+        )
+    )
     service_threads.start()
 
     LOG.info("Start socketio.run()")
