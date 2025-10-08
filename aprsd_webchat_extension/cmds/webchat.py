@@ -607,6 +607,7 @@ def webchat(ctx, flush, port):
         LOG.warning(msg)
     else:
         LOG.info(msg)
+    utils.package.log_installed_extensions_and_plugins()
 
     CONF.log_opt_values(logging.getLogger(), logging.DEBUG)
     if not port:
