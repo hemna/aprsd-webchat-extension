@@ -1,4 +1,4 @@
-aprsd>=4.2.0
+aprsd>=4.2.1
 click
 flask
 flask-httpauth
