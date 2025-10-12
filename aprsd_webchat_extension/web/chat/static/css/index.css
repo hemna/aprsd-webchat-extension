@@ -56,6 +56,11 @@ body {
 .wc-container .wc-row.content {
   flex: 1 1 auto;
   overflow-y: auto;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+}
+.wc-container .wc-row.prefooter {
+  flex: 0 1 auto;
 }
 .wc-container .wc-row.footer {
   flex: 0 1 0px;
