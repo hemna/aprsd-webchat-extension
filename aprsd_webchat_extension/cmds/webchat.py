@@ -60,15 +60,14 @@ flask_app = flask.Flask(
 
 
 def signal_handler(sig, frame):
-    click.echo("signal_handler: called")
-    LOG.info(
+    LOG.warning(
         f"Ctrl+C, Sending all threads({len(threads.APRSDThreadList())}) exit! "
         f"Can take up to 10 seconds {datetime.datetime.now()}",
     )
+    stats.stats_collector.stop_all()
     threads.APRSDThreadList().stop_all()
     if "subprocess" not in str(frame):
         time.sleep(1.5)
-        stats.stats_collector.collect()
         LOG.info("Telling flask to bail.")
         signal.signal(signal.SIGTERM, sys.exit(0))
 
