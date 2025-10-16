@@ -291,11 +291,14 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         ack_num = packet.get("msgNo")
         SentMessages().ack(ack_num)
         if msg := SentMessages().get(ack_num):
+            LOG.debug(f"Sending ack to browser {msg} for ack {ack_num}")
             self.socketio.emit(
                 "ack",
                 msg,
                 namespace="/sendmsg",
             )
+        else:
+            LOG.error(f"No message found for ack {ack_num} in SentMessages")
         self.got_ack = True
 
     def process_our_message_packet(self, packet: packets.MessagePacket):
