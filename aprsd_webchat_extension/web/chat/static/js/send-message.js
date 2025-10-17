@@ -52,11 +52,26 @@ function raise_error(msg) {
 
 function init_chat() {
    socket.on('connect', function () {
-       console.log("Connected to socketio");
+      console.log("Connected to socketio webchat extension");
    });
-   socket.on('connected', function(msg) {
-       console.log("Connected!");
-       console.log(msg);
+
+   socket.on('disconnect', function(reason, details) {
+      if (socket.active) {
+          // temporary disconnection, the scoket will automatically try to reconnect
+          console.log("Disconnected from socketio webchat extension.  reconnecting");
+      } else{
+          console.log("Disconnected from socketio webchat extension");
+          console.log(reason)
+      }
+   });
+
+   socket.on('connect_error', function(error) {
+      if (socket.active) {
+        // temporary failure, the scoket will automatically try to reconnect
+        console.log("connection error from socketio webchat extension.  reconnecting");
+      } else {
+        console.log("Socket.io connection error: " + error.message);
+      }
    });
 
    socket.on("sent", function(msg) {
@@ -559,19 +574,23 @@ function from_msg(msg) {
 function ack_msg(msg) {
    // Acknowledge a message
    // We have an existing entry
+   console.log("ack_msg", msg);
    ts_id = message_ts_id(msg);
    id = ts_id['id'];
    //Mark the message as acked
    callsign = msg['to_call'];
    // Ensure the message_list has this callsign
    if (!message_list.hasOwnProperty(callsign)) {
+       console.log("ack_msg:callsign not found in message_list", callsign);
        return false
    }
    // Ensure the message_list has this id
    if (!message_list[callsign].hasOwnProperty(id)) {
+       console.log("ack_msg:id not found in message_list", id);
        return false
    }
    if (message_list[callsign][id]['ack'] == true) {
+       console.log("ack_msg:message already acked", id);
        return false;
    }
    message_list[callsign][id]['ack'] = true;
