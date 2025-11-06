@@ -70,27 +70,24 @@
 
             // if the beaconing setting is set to interval, enable the beacon interval.
             if (value == 2) {
-                $('#beaconing_interval_label').show();
-                $('#beaconing_interval').val(1800);
-                $('#beaconing_interval').show();
+                $('#beacon_interval_label').show();
+                $('#beacon_interval').show();
             } else {
-                $('#beaconing_interval_label').hide();
-                $('#beaconing_interval').hide();
+                $('#beacon_interval_label').hide();
+                $('#beacon_interval').hide();
             }
 
             // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
             if (value == 3) {
-                $('#interval_beaconing_time_window_label').show();
-                $('#interval_beaconing_time_window').val(10);
-                $('#interval_beaconing_time_window').show();
-                $('#smart_beaconing_distance_threshold_label').show();
-                $('#smart_beaconing_distance_threshold').val(100);
-                $('#smart_beaconing_distance_threshold').show();
+                $('#smart_beacon_time_window_label').show();
+                $('#smart_beacon_time_window').show();
+                $('#smart_beacon_distance_threshold_label').show();
+                $('#smart_beacon_distance_threshold').show();
             } else {
-                $('#smart_beaconing_distance_threshold_label').hide();
-                $('#smart_beaconing_distance_threshold').hide();
-                $('#interval_beaconing_time_window_label').hide();
-                $('#interval_beaconing_time_window').hide();
+                $('#smart_beacon_distance_threshold_label').hide();
+                $('#smart_beacon_distance_threshold').hide();
+                $('#smart_beacon_time_window_label').hide();
+                $('#smart_beacon_time_window').hide();
             }
         }
 
@@ -105,6 +102,25 @@
             $("#wipe_local").click(function() {
                 console.log('Wipe local storage');
                 localStorage.clear();
+            });
+
+            //Now send a message back to the server when the user changes the beaconing setting.
+            $('#save_beacon_settings').click(function() {
+                beacon_type = $('#beaconing_setting').val();
+                gps_settings = {
+                    'beacon_type': beacon_type,
+                    'beacon_interval': $('#beacon_interval').val(),
+                    'smart_beacon_distance_threshold': $('#smart_beacon_distance_threshold').val(),
+                    'smart_beacon_time_window': $('#smart_beacon_time_window').val(),
+                }
+                console.log("Sending beaconing settings to server", gps_settings);
+                socket.emit('set_beaconing_setting', gps_settings);
+                $.toast({heading: 'Beaconing Settings Saved',
+                        text: "Beaconing settings saved",
+                        loader: true,
+                        loaderBg: '#9EC600',
+                        position: 'top-center',
+                });
             });
 
             // When a tab is clicked, populate the to_call form field.
@@ -193,12 +209,12 @@
                                     Also add the html input for the smart beaconing, but disable it unless the beaconing setting is set to smart.
                                     make the beaconing interval input hidden unless the beaconing setting is set to interval.
                                     -->
-                                    <label for="beaconing_interval" id="beaconing_interval_label" class="form-label" style="display: none;">Beacon Interval in seconds</label>
-                                    <input type="number" class="form-control" id="beaconing_interval" placeholder="Beacon Interval" style="display: none;">
-                                    <label for="interval_beaconing_time_window" id="interval_beaconing_time_window_label" class="form-label" style="display: none;">Interval Beaconing Time Window in seconds</label>
-                                    <input type="number" class="form-control" id="interval_beaconing_time_window" placeholder="Interval Beaconing Time Window" style="display: none;">
-                                    <label for="smart_beaconing_distance_threshold" id="smart_beaconing_distance_threshold_label" class="form-label" style="display: none;">Smart Beaconing Distance Threshold</label>
-                                    <input type="number" class="form-control" id="smart_beaconing_distance_threshold" placeholder="Smart Beaconing Distance Threshold" style="display: none;">
+                                    <label for="beacon_interval" id="beacon_interval_label" class="form-label" style="display: none;">Beacon Interval in seconds</label>
+                                    <input type="number" class="form-control" id="beacon_interval" placeholder="Beacon Interval" style="display: none;" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
+                                    <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label" style="display: none;">Interval Beaconing Time Window in seconds</label>
+                                    <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="Interval Beaconing Time Window" style="display: none;">
+                                    <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label" style="display: none;">Smart Beaconing Distance Threshold</label>
+                                    <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="Smart Beaconing Distance Threshold" style="display: none;">
                                     <br><br>
                                     <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Beacon">Send Beacon</button>
                                     <button type="button" class="btn btn-secondary mb-2" id="save_beacon_settings" value="Save">Save</button>

@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import queue
 import signal
 import sys
 import threading
@@ -36,6 +37,9 @@ CONF = cfg.CONF
 LOG = logging.getLogger()
 auth = HTTPBasicAuth()
 socketio = None
+# for the gps extension thread to notify
+# when the settings have changed.
+notify_queue = queue.Queue()
 
 # List of callsigns that we don't want to track/fetch their location
 callsign_no_track = [
@@ -350,8 +354,9 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
 class LocationProcessingThread(aprsd_threads.APRSDThread):
     """Class to handle the location processing."""
 
-    def __init__(self):
+    def __init__(self, notify_queue):
         super().__init__("LocationProcessingThread")
+        self.notify_queue = notify_queue
         self.last_gps_fix = False
         self.last_gps_sent_time = None
 
@@ -363,6 +368,22 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
         )
 
     def loop(self):
+        # First check if the notify queue has a message
+        if not self.notify_queue.empty():
+            message = self.notify_queue.get_nowait()
+            LOG.info(f"LocationProcessingThread queue message: {message}")
+            if message.get("message") == "beaconing_settings_changed":
+                # put it back on the queue for the GPSBeaconThread to process.
+                self.notify_queue.put(message)
+            elif message.get("message") == "beacon sent":
+                # notify the browser that the beacon was sent.
+                LOG.warning("Sending beacon sent to browser")
+                socketio.emit(
+                    "gps_beacon_sent",
+                    message,
+                    namespace="/sendmsg",
+                )
+
         # Check every 10 seconds to see if we have a fix.
         if self.loop_count % 2 == 0:
             if GPSStats:
@@ -536,7 +557,6 @@ def _stats():
         "time": now.strftime(time_format),
         "stats": stats_dict,
     }
-    LOG.error(f"STATS: {result}")
     return result
 
 
@@ -627,6 +647,40 @@ class SendMessageNamespace(Namespace):
             ),
             direct=True,
         )
+        # Now let the browser know that the beacon was sent.
+        socketio.emit(
+            "gps_beacon_sent",
+            {"message": "beacon sent"},
+            namespace="/sendmsg",
+        )
+
+    def on_set_beaconing_setting(self, data):
+        global notify_queue
+        LOG.warning(f"WS on_set_beaconing_setting {data}")
+        beacon_type = data["beacon_type"]
+        lookup = {
+            0: "none",
+            1: "none",
+            2: "interval",
+            3: "smart",
+        }
+        beacon_type = lookup[int(beacon_type)]
+        beacon_interval = data["beacon_interval"]
+        smart_beacon_distance_threshold = data["smart_beacon_distance_threshold"]
+        smart_beacon_time_window = data["smart_beacon_time_window"]
+        # Now we have to restart the GPSBeaconThread
+        if _is_aprsd_gps_extension_installed():
+            notify_queue.put(
+                {
+                    "message": "beaconing_settings_changed",
+                    "beacon_type": beacon_type,
+                    "beacon_interval": int(beacon_interval),
+                    "smart_beacon_distance_threshold": int(
+                        smart_beacon_distance_threshold
+                    ),
+                    "smart_beacon_time_window": int(smart_beacon_time_window),
+                }
+            )
 
     def handle_message(self, data):
         LOG.debug(f"WS Data {data}")
@@ -683,6 +737,7 @@ def init_flask(loglevel, quiet):
 @cli_helper.process_standard_options
 def webchat(ctx, flush, port):
     """Web based HAM Radio chat program!"""
+    global notify_queue
     loglevel = ctx.obj["loglevel"]
     quiet = ctx.obj["quiet"]
 
@@ -751,8 +806,8 @@ def webchat(ctx, flush, port):
             )
             from aprsd_gps_extension.threads import GPSBeaconThread
 
-            service_threads.register(GPSBeaconThread.GPSBeaconThread())
-            service_threads.register(LocationProcessingThread())
+            service_threads.register(GPSBeaconThread.GPSBeaconThread(notify_queue))
+            service_threads.register(LocationProcessingThread(notify_queue))
 
     service_threads.start()
     LOG.info("Start socketio.run()")

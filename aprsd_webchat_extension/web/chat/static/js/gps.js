@@ -22,10 +22,20 @@ function init_gps() {
         }
     });
 
+    // When the GPS stats are received, update the GPS fix.
     socket.on("gps_stats", function(msg) {
-        console.log("GPS message received");
-        console.log(msg);
+        console.log("GPS message received: ", msg);
         update_gps_fix(msg);
+    });
+
+    // When we send a beacon, update the radio icon
+    socket.on("gps_beacon_sent", function(msg) {
+        console.log("Beacon sent: ", msg);
+        // change the opacity of the radio icon to 1 for 1 second.
+        $('#radio_icon').css('opacity', 1);
+        window.setTimeout(function() {
+            $('#radio_icon').css('opacity', 0.2);
+        }, 1000);
     });
 
     // Start the GPS icon blinking until we get coordinates.
@@ -39,7 +49,7 @@ function init_gps() {
     $('#send_beacon').prop('disabled', true);
     gps = initial_stats.stats.gps;
     // beacon_types are none, interval, and smart.
-    console.log("beaconing_type is ", gps.gps_extension.beacon_type);
+    //console.log("beaconing_type is ", gps.gps_extension.beacon_type);
     $('#beaconing_type').text(beaconing_type.find(type => type.value === gps.gps_extension.beacon_type).description);
 
     $('#radio_icon').css('opacity', 0.2);
@@ -86,15 +96,14 @@ function init_gps() {
         }
     }
 
-    console.log("beaconing_setting", beaconing_setting);
     set_beaconing_setting(beaconing_setting);
 
     if (gps.gps_extension.smart_beacon_distance_threshold) {
-        $('#smart_beaconing_distance_threshold').text(gps.gps_extension.smart_beacon_distance_threshold);
+        $('#smart_beacon_distance_threshold').val(gps.gps_extension.smart_beacon_distance_threshold);
     }
 
     if (gps.gps_extension.smart_beacon_time_window) {
-        $('#smart_beaconing_time_window').text(gps.gps_extension.smart_beacon_time_window);
+        $('#smart_beacon_time_window').val(gps.gps_extension.smart_beacon_time_window);
     }
 
     if (gps.gps_extension.gpsd_host) {
@@ -106,13 +115,12 @@ function init_gps() {
     }
 
     if (gps.gps_extension.beacon_interval) {
-        $('#gps_extension_polling_period').text(gps.gps_extension.beacon_interval);
+        $('#beacon_interval').val(gps.gps_extension.beacon_interval);
     }
 }
 
 function update_gps(data) {
-    console.log("update_gps Called.")
-    console.log(data);
+    console.log("update_gps Called: ", data);
     current_stats = data;
     update_gps_fix(current_stats.stats.GPSStats);
 }
@@ -120,12 +128,14 @@ function update_gps(data) {
 function update_gps_fix(data) {
     // IF we have a fix, then enable the beacon button if the beaconing mode is
     // set to manual.  Also update the GPS satellite icon.
-    console.log("update_gps_fix Called.")
-    console.log(data);
     current_stats.stats.GPSStats = data;
-    console.log("gps fix: ", data.fix);
+    console.log("update_gps_fix Called.  GPS fix: ", data.fix);
+    beaconing_setting = $('#beaconing_setting').val();
     if (data.fix == true) {
-        $('#send_beacon').prop('disabled', false);
+        //Only set the send_beacon enabled if the beaconing type is 1 (manual).
+        if (beaconing_setting == 1) {
+            $('#send_beacon').prop('disabled', false);
+        }
         $('#beaconing_status').text('enabled');
         $('#gps_icon').css('opacity', 1);
         console.log("Clearing GPS icon interval.  We have a fix!");
@@ -143,7 +153,6 @@ function update_gps_fix(data) {
             }, 800);
         }
     }
-    console.log("gps_icon_interval", gps_icon_interval);
 }
 
 function sendPosition(position) {
@@ -154,7 +163,6 @@ function sendPosition(position) {
       'longitude': position.coords.longitude,
       'path': path,
   }
-  console.log(msg);
   $.toast({
       heading: 'Sending GPS Beacon',
       text: "Latitude: "+position.coords.latitude+"<br>Longitude: "+position.coords.longitude,
@@ -163,6 +171,6 @@ function sendPosition(position) {
       position: 'top-center',
   });
 
-  console.log("Sending GPS msg")
+  console.log("Sending GPS: ", msg);
   socket.emit("gps", msg);
 }
