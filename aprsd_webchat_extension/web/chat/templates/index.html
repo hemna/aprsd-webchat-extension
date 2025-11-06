@@ -38,6 +38,22 @@
         var initial_stats = {{ initial_stats|tojson|safe }};
         var latitude = parseFloat('{{ latitude|safe }}');
         var longitude = parseFloat('{{ longitude|safe }}');
+
+        var gps_lat = '{{ initial_stats.stats.GPSStats.latitude|safe }}';
+        var gps_lon = '{{ initial_stats.stats.GPSStats.longitude|safe }}';
+        var gps_alt = '{{ initial_stats.stats.GPSStats.altitude|safe }}';
+        var gps_speed = '{{ initial_stats.stats.GPSStats.speed|safe }}';
+        var gps_course = '{{ initial_stats.stats.GPSStats.track|safe }}';
+
+        // now set the values of the gps_lat, gps_lon, gps_alt, gps_speed, and gps_course in the initial_stats.
+        $('#gps_lat').text(gps_lat);
+        $('#gps_lon').text(gps_lon);
+        $('#gps_alt').text(gps_alt);
+        // convert meters per second to kilometers per hour
+        var speed_kph = gps_speed * 3.6;
+        $('#gps_speed').text(Math.floor(speed_kph) + "km/h");
+        $('#gps_course').text(Math.floor(gps_course) + "°");
+
         // 0 is disabled, 1 is manual enabled, 2 is interval beaconing and 3 is smart beaconing.
         var beaconing_setting = 0;
         var memory_chart = null;
@@ -191,7 +207,14 @@
                         </div>
                         <div class="collapse" id="collapseExample" style="width: 800px">
                             <div class="card">
-                                <div class="card-body">
+                                <div class="card-body" style="padding-top: 2px; padding-bottom: 2px;">
+                                   <div id="gps_info_box">
+                                        <span class="small">Lat: <span id="gps_lat"></span></span>&nbsp;
+                                        <span class="small">Lon: <span id="gps_lon"></span></span>&nbsp;
+                                        <span class="small">Alt: <span id="gps_alt"></span></span>&nbsp;
+                                        <span class="small">Speed: <span id="gps_speed"></span></span>&nbsp;
+                                        <span class="small">Course: <span id="gps_course"></span></span>&nbsp;<br>
+                                    </div>
                                     <label for="range3" class="form-label">Beaconing Setting: <span id="beaconing_setting_description"></span></label>
                                     <input type="range" class="form-range" min="0" max="3" step="1" id="beaconing_setting">
                                     <script>
@@ -215,7 +238,7 @@
                                     <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="Interval Beaconing Time Window" style="display: none;">
                                     <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label" style="display: none;">Smart Beaconing Distance Threshold</label>
                                     <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="Smart Beaconing Distance Threshold" style="display: none;">
-                                    <br><br>
+                                    <br>
                                     <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Beacon">Send Beacon</button>
                                     <button type="button" class="btn btn-secondary mb-2" id="save_beacon_settings" value="Save">Save</button>
                                 </div>

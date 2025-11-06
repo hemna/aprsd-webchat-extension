@@ -32,6 +32,13 @@ function init_gps() {
     socket.on("gps_beacon_sent", function(msg) {
         console.log("Beacon sent: ", msg);
         // change the opacity of the radio icon to 1 for 1 second.
+        $.toast({
+            heading: 'Beacon Sent',
+            text: "Beacon sent",
+            loader: true,
+            loaderBg: '#9EC600',
+            position: 'top-center',
+        });
         $('#radio_icon').css('opacity', 1);
         window.setTimeout(function() {
             $('#radio_icon').css('opacity', 0.2);
@@ -119,10 +126,23 @@ function init_gps() {
     }
 }
 
+function update_gps_info_box() {
+    $('#gps_lat').text(current_stats.stats.GPSStats.latitude);
+    $('#gps_lon').text(current_stats.stats.GPSStats.longitude);
+    $('#gps_alt').text(Math.floor(current_stats.stats.GPSStats.altitude) + " m");
+    // convert meters per second to kilometers per hour
+    var speed_kph = current_stats.stats.GPSStats.speed * 3.6;
+    $('#gps_speed').text(Math.floor(speed_kph) + " km/h");
+    $('#gps_course').text(Math.floor(current_stats.stats.GPSStats.track) + "°");
+    // now flash a green border around the gps_info_box.
+    $('#gps_info_box').fadeOut(200).fadeIn(500).fadeOut(200).fadeIn(500);
+}
+
 function update_gps(data) {
     console.log("update_gps Called: ", data);
     current_stats = data;
     update_gps_fix(current_stats.stats.GPSStats);
+    update_gps_info_box();
 }
 
 function update_gps_fix(data) {
@@ -153,6 +173,7 @@ function update_gps_fix(data) {
             }, 800);
         }
     }
+    update_gps_info_box();
 }
 
 function sendPosition(position) {

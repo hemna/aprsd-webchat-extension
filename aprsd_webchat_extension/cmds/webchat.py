@@ -508,6 +508,15 @@ def _stats():
     if "PluginManager" in stats_dict:
         del stats_dict["PluginManager"]
 
+    if not _is_aprsd_gps_extension_installed():
+        stats_dict["GPSStats"] = {
+            "latitude": CONF.aprsd_webchat_extension.latitude,
+            "longitude": CONF.aprsd_webchat_extension.longitude,
+            "altitude": 0,
+            "speed": 0,
+            "track": 0,
+        }
+
     stats_dict["gps"] = {
         "beaconing_enabled": CONF.enable_beacon,
         "latitude": CONF.aprsd_webchat_extension.latitude,
