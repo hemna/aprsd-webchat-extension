@@ -1,68 +1,152 @@
+var gps_icon_opacity = 0.2;
+var gps_icon_interval = null;
+var current_stats = null;
 
 function init_gps() {
-   console.log("init_gps Called.")
-   console.log("latitude: "+latitude)
-   console.log("longitude: "+longitude)
-   $("#send_beacon").click(function() {
-       console.log("Send a beacon!")
-       if (!isNaN(latitude) && !isNaN(longitude)) {
-           // webchat admin has hard coded lat/long in the config file
-           showPosition({'coords': {'latitude': latitude, 'longitude': longitude}})
-       } else {
-           // Try to get the current location from the browser
-           getLocation();
-       }
-   });
-}
+    console.log("init_gps Called.")
+    current_stats = initial_stats;
+    console.log(current_stats);
 
-function getLocation() {
-    if (navigator.geolocation) {
-        console.log("getCurrentPosition");
-        try {
-            navigator.geolocation.getCurrentPosition(
-            showPosition, showError,
-            {timeout:3000});
-        } catch(err) {
-            console.log("Failed to getCurrentPosition");
-            console.log(err);
+    // register the send beacon button click event.
+    $("#send_beacon").click(function() {
+        console.log("Send a beacon!")
+        // If the gps extension is installed and enabled,
+        // we try and get the lat/lon from current gps position.
+        if (current_stats.stats.gps.gps_extension.is_installed == true && current_stats.stats.gps.gps_extension.enabled == true) {
+            // we have the gps extension installed and enabled, so we can get the lat/lon from the current gps position.
+            sendPosition({'coords': {'latitude': current_stats.stats.GPSStats.latitude, 'longitude': current_stats.stats.GPSStats.longitude, 'altitude': current_stats.stats.GPSStats.altitude}});
+        } else if (!isNaN(latitude) && !isNaN(longitude)) {
+            // we don't have the gps extension installed or enabled, so we can't get the lat/lon from the current gps position.
+            // we can't send a beacon.
+            sendPosition({'coords': {'latitude': latitude, 'longitude': longitude}})
+        }
+    });
+
+    socket.on("gps_stats", function(msg) {
+        console.log("GPS message received");
+        console.log(msg);
+        update_gps_fix(msg);
+    });
+
+    // Start the GPS icon blinking until we get coordinates.
+    gps_icon_interval = window.setInterval(function() {
+            $('#gps_icon').css('opacity', gps_icon_opacity);
+            gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
+        }, 500);
+
+    //if beaconing is disabled, disable the beacon button.
+    // if gps extension is installed and enabled, we can enable the beacon button.
+    $('#send_beacon').prop('disabled', true);
+    gps = initial_stats.stats.gps;
+    // beacon_types are none, interval, and smart.
+    console.log("beaconing_type is ", gps.gps_extension.beacon_type);
+    $('#beaconing_type').text(beaconing_type.find(type => type.value === gps.gps_extension.beacon_type).description);
+
+    $('#radio_icon').css('opacity', 0.2);
+    $('#gps_icon').css('opacity', 0.2);
+    if (gps.gps_extension.is_installed == true) {
+        if (gps.gps_extension.enabled == true) {
+            $('#send_beacon').prop('disabled', false);
+            $('#beaconing_status').text('enabled');
+            if (gps.gps_extension.beacon_type == 'smart') {
+                beaconing_setting = 3;
+            } else if (gps.gps_extension.beacon_type == 'interval') {
+                beaconing_setting = 2;
+            } else {
+                beaconing_setting = 1;
+            }
+            //update_gps_fix(initial_stats.stats.GPSStats);
+
+        } else {
+            $('#send_beacon').prop('disabled', true);
+            $('#beaconing_status').text('disabled - GPS Extension is disabled');
+            // change the gps icon to greyed out.
+            $('#gps_icon').css('opacity', 0.5);
+            beaconing_setting = 0;
         }
     } else {
-        var msg = "Geolocation is not supported by this browser."
-        console.log(msg);
-        alert(msg)
+        if (gps.beaconing_enabled == true) {
+            // If aprsd beaconing is enabled, but we don't have coordinates, disable the beacon button.
+            if (isNaN(latitude) || isNaN(longitude) && location.protocol != 'https:') {
+                // Have to disable the beacon button.
+                $('#send_beacon').prop('disabled', true);
+                $('#beaconing_status').text('disabled - No lat/lon in config');
+                $('#gps_icon').css('opacity', 0.5);
+                beaconing_setting = 0;
+            } else {
+                $('#send_beacon').prop('disabled', false);
+                $('#beaconing_status').text('enabled');
+                beaconing_setting = 1;
+            }
+        } else {
+            $('#send_beacon').prop('disabled', true);
+            $('#beaconing_status').text('disabled in config');
+            $('#gps_icon').css('opacity', 0.5);
+            beaconing_setting = 0;
+        }
+    }
+
+    console.log("beaconing_setting", beaconing_setting);
+    set_beaconing_setting(beaconing_setting);
+
+    if (gps.gps_extension.smart_beacon_distance_threshold) {
+        $('#smart_beaconing_distance_threshold').text(gps.gps_extension.smart_beacon_distance_threshold);
+    }
+
+    if (gps.gps_extension.smart_beacon_time_window) {
+        $('#smart_beaconing_time_window').text(gps.gps_extension.smart_beacon_time_window);
+    }
+
+    if (gps.gps_extension.gpsd_host) {
+        $('#gps_extension_host').text(gps.gps_extension.gpsd_host);
+    }
+
+    if (gps.gps_extension.gpsd_port) {
+        $('#gps_extension_port').text(gps.gps_extension.gpsd_port);
+    }
+
+    if (gps.gps_extension.beacon_interval) {
+        $('#gps_extension_polling_period').text(gps.gps_extension.beacon_interval);
     }
 }
 
-function showError(error) {
-    console.log("showError");
-    console.log(error);
-    var msg = "";
-      switch(error.code) {
-        case error.PERMISSION_DENIED:
-          msg = "User denied the request for Geolocation."
-          break;
-        case error.POSITION_UNAVAILABLE:
-          msg = "Location information is unavailable."
-          break;
-        case error.TIMEOUT:
-          msg = "The location fix timed out."
-          break;
-        case error.UNKNOWN_ERROR:
-          msg = "An unknown error occurred."
-          break;
-      }
-      console.log(msg);
-      $.toast({
-          title: 'GPS Error',
-          class: 'warning',
-          position: 'middle center',
-          message: msg,
-          showProgress: 'top',
-          classProgress: 'blue',
-      });
+function update_gps(data) {
+    console.log("update_gps Called.")
+    console.log(data);
+    current_stats = data;
+    update_gps_fix(current_stats.stats.GPSStats);
 }
 
-function showPosition(position) {
+function update_gps_fix(data) {
+    // IF we have a fix, then enable the beacon button if the beaconing mode is
+    // set to manual.  Also update the GPS satellite icon.
+    console.log("update_gps_fix Called.")
+    console.log(data);
+    current_stats.stats.GPSStats = data;
+    console.log("gps fix: ", data.fix);
+    if (data.fix == true) {
+        $('#send_beacon').prop('disabled', false);
+        $('#beaconing_status').text('enabled');
+        $('#gps_icon').css('opacity', 1);
+        console.log("Clearing GPS icon interval.  We have a fix!");
+        clearInterval(gps_icon_interval);
+        gps_icon_interval = null;
+    } else {
+        $('#send_beacon').prop('disabled', true);
+        $('#beaconing_status').text('disabled - No fix');
+        $('#gps_icon').css('opacity', 0.2);
+        if (gps_icon_interval == null) {
+            console.log("Setting GPS icon interval.  NO fix!");
+            gps_icon_interval = window.setInterval(function() {
+                $('#gps_icon').css('opacity', gps_icon_opacity);
+                gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
+            }, 800);
+        }
+    }
+    console.log("gps_icon_interval", gps_icon_interval);
+}
+
+function sendPosition(position) {
   console.log("showPosition Called");
   path = $('#pkt_path option:selected').val();
   msg = {

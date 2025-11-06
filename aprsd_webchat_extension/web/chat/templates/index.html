@@ -7,7 +7,12 @@
     <script src="/static/js/upstream/socket.io.min.js"></script>
 
     <link rel="stylesheet" href="/static/css/upstream/bootstrap.min.css">
-    <script src="/static/js/upstream/bootstrap.bundle.min.js"></script>
+    <script defer src="/static/js/upstream/bootstrap.bundle.min.js"></script>
+
+<!--
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    -->
 
     <!--
      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
@@ -33,23 +38,69 @@
         var initial_stats = {{ initial_stats|tojson|safe }};
         var latitude = parseFloat('{{ latitude|safe }}');
         var longitude = parseFloat('{{ longitude|safe }}');
-
+        // 0 is disabled, 1 is manual enabled, 2 is interval beaconing and 3 is smart beaconing.
+        var beaconing_setting = 0;
         var memory_chart = null;
         var message_chart = null;
 
+        var beaconing_settings = [
+            { value: 0, description: 'Disabled' },
+            { value: 1, description: 'Manual Enabled' },
+            { value: 2, description: 'Interval Beaconing every 1800 seconds' },
+            { value: 3, description: 'Smart Beaconing' },
+        ];
+        var beaconing_type = [
+            { value: 'none', description: 'Manual' },
+            { value: 'interval', description: 'Interval' },
+            { value: 'smart', description: 'Smart' },
+        ];
+
+        function set_beaconing_setting(value) {
+            console.log("setting beaconing setting to", value);
+            $('#beaconing_setting').val(value);
+            $('#beaconing_setting_description').text(beaconing_settings[value].description);
+            $('#interval_beaconing_status').text(beaconing_settings[value].description == 'Interval Beaconing' ? 'enabled' : 'disabled');
+            $('#interval_beaconing_time_window').text(beaconing_settings[value].description == 'Interval Beaconing' ? '1800 seconds' : 'not set');
+            //if the beacon settings is set to manual enabled, enable the send beacon button.
+            if (value == 1) {
+                $('#send_beacon').prop('disabled', false);
+            } else {
+                $('#send_beacon').prop('disabled', true);
+            }
+
+            // if the beaconing setting is set to interval, enable the beacon interval.
+            if (value == 2) {
+                $('#beaconing_interval_label').show();
+                $('#beaconing_interval').val(1800);
+                $('#beaconing_interval').show();
+            } else {
+                $('#beaconing_interval_label').hide();
+                $('#beaconing_interval').hide();
+            }
+
+            // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
+            if (value == 3) {
+                $('#interval_beaconing_time_window_label').show();
+                $('#interval_beaconing_time_window').val(10);
+                $('#interval_beaconing_time_window').show();
+                $('#smart_beaconing_distance_threshold_label').show();
+                $('#smart_beaconing_distance_threshold').val(100);
+                $('#smart_beaconing_distance_threshold').show();
+            } else {
+                $('#smart_beaconing_distance_threshold_label').hide();
+                $('#smart_beaconing_distance_threshold').hide();
+                $('#interval_beaconing_time_window_label').hide();
+                $('#interval_beaconing_time_window').hide();
+            }
+        }
+
         $(document).ready(function() {
-            console.log(initial_stats);
+            //console.log(initial_stats);
             start_update();
             init_chat();
             //reset_Tabs();
-
-            console.log("latitude", latitude);
-            console.log("longitude", longitude);
-
-            if (isNaN(latitude) || isNaN(longitude) && location.protocol != 'https:') {
-                // Have to disable the beacon button.
-                $('#send_beacon').prop('disabled', true);
-            }
+            // Have to call it in init_chat() because the socketio connection is not established yet.
+            //init_gps();
 
             $("#wipe_local").click(function() {
                 console.log('Wipe local storage');
@@ -69,6 +120,10 @@
                 {html: true, animation: true}
             );*/
             reload_popovers();
+
+            $('#myModal').on('shown.bs.modal', function () {
+                $('#myInput').trigger('focus')
+            })
         });
     </script>
 </head>
@@ -112,8 +167,43 @@
                         </div>
                         <div class="col-auto">
                             <input type="submit" name="submit" class="btn btn-primary mb-2" id="send_msg" value="Send"/>
-                            <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Position">Send Position</button>
                             <!-- <button type="button" class="btn btn-primary mb-2" id="wipe_local" value="wipe local storage">Wipe LocalStorage</button> -->
+                            <a class="btn btn-secondary mb-2" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">GPS&nbsp;&nbsp;
+                                <img src="/static/images/satellite-solid.svg" alt="GPS Icon" style="width: 25px; height: 25px; float: right" id="gps_icon">
+                                <img src="/static/images/radio-tower.svg" alt="Radio Icon" style="width: 25px; height: 25px; float: right; color: red;" id="radio_icon">
+                            </a>
+                        </div>
+                        <div class="collapse" id="collapseExample" style="width: 800px">
+                            <div class="card">
+                                <div class="card-body">
+                                    <label for="range3" class="form-label">Beaconing Setting: <span id="beaconing_setting_description"></span></label>
+                                    <input type="range" class="form-range" min="0" max="3" step="1" id="beaconing_setting">
+                                    <script>
+                                        // Beaconing settings are 0 = disabled, 1 = manual enabled, 2 = interval beaconing and 3 = smart beaconing.
+                                        // Set the initial value of the beaconing setting to the initial value of the beaconing setting in the initial stats.
+                                        console.log("beaconing_setting", beaconing_setting);
+
+                                        $('#beaconing_setting').on('input', function() {
+                                            var value = $(this).val();
+                                            set_beaconing_setting(value);
+                                        });
+                                    </script>
+                                    <!--
+                                    add the html input for the interval beaconing, but disable it unless the beaconing setting is set to interval.
+                                    Also add the html input for the smart beaconing, but disable it unless the beaconing setting is set to smart.
+                                    make the beaconing interval input hidden unless the beaconing setting is set to interval.
+                                    -->
+                                    <label for="beaconing_interval" id="beaconing_interval_label" class="form-label" style="display: none;">Beacon Interval in seconds</label>
+                                    <input type="number" class="form-control" id="beaconing_interval" placeholder="Beacon Interval" style="display: none;">
+                                    <label for="interval_beaconing_time_window" id="interval_beaconing_time_window_label" class="form-label" style="display: none;">Interval Beaconing Time Window in seconds</label>
+                                    <input type="number" class="form-control" id="interval_beaconing_time_window" placeholder="Interval Beaconing Time Window" style="display: none;">
+                                    <label for="smart_beaconing_distance_threshold" id="smart_beaconing_distance_threshold_label" class="form-label" style="display: none;">Smart Beaconing Distance Threshold</label>
+                                    <input type="number" class="form-control" id="smart_beaconing_distance_threshold" placeholder="Smart Beaconing Distance Threshold" style="display: none;">
+                                    <br><br>
+                                    <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Beacon">Send Beacon</button>
+                                    <button type="button" class="btn btn-secondary mb-2" id="save_beacon_settings" value="Save">Save</button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
