@@ -372,17 +372,27 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
         if not self.notify_queue.empty():
             message = self.notify_queue.get_nowait()
             LOG.info(f"LocationProcessingThread queue message: {message}")
-            if message.get("message") == "beaconing_settings_changed":
-                # put it back on the queue for the GPSBeaconThread to process.
-                self.notify_queue.put(message)
-            elif message.get("message") == "beacon sent":
-                # notify the browser that the beacon was sent.
-                LOG.warning("Sending beacon sent to browser")
-                socketio.emit(
-                    "gps_beacon_sent",
-                    message,
-                    namespace="/sendmsg",
-                )
+
+            match message.get("message"):
+                case "beacon sent":
+                    # notify the browser that the beacon was sent.
+                    LOG.warning("Sending beacon sent to browser")
+                    socketio.emit(
+                        "gps_beacon_sent",
+                        message,
+                        namespace="/sendmsg",
+                    )
+                case "gps_settings":
+                    # update the browser with the GPS settings.
+                    LOG.warning("Sending GPS settings to browser")
+                    socketio.emit(
+                        "gps_settings",
+                        message,
+                        namespace="/sendmsg",
+                    )
+                case _:
+                    LOG.warning(f"Putting message back on queue: {message}")
+                    self.notify_queue.put(message)
 
         # Check every 10 seconds to see if we have a fix.
         if self.loop_count % 2 == 0:
@@ -467,6 +477,12 @@ def index():
     longitude = CONF.aprsd_webchat_extension.longitude
     if longitude:
         longitude = float(longitude)
+
+    # since we just hit the index page, we need to fetch
+    # the settings from the gps extension, since
+    # they could have changed since the last time we hit the index page.
+    if _is_aprsd_gps_extension_installed():
+        notify_queue.put({"message": "get_gps_settings"})
 
     return flask.render_template(
         html_template,

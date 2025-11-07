@@ -1,6 +1,42 @@
 var gps_icon_opacity = 0.2;
 var gps_icon_interval = null;
 var current_stats = null;
+var gps_settings = null;
+
+
+function get_beacon_type_from_value(value) {
+    // the beaconing type is a string with possible values of none, interval, and smart.
+    // when the value is none, it might mean disabled or manual.$
+    // manual is the value when beaconing is enabled in the config.
+    // we check the current stats to see if beaconing is enabled in the config.
+    enabled = current_stats.stats.gps.beaconing_enabled;
+    return_value = 0;
+    if (enabled == false) {
+        return_value = 0;
+    } else if (enabled == true && value == 'none') {
+        return_value = 1;
+    } else if (enabled == true && value == 'interval') {
+        return_value = 2;
+    } else if (enabled == true && value == 'smart') {
+        return_value = 3;
+    }
+    return return_value;
+}
+
+function update_gps_settings(data) {
+    // We got the settings from the gps extension,
+    // so we need to update the saved settings.
+    // and update the UI with the new settings.
+    console.log("update_gps_settings Called: ", data);
+    gps_settings = data.settings;
+    get_beacon_type_from_value(gps_settings.beacon_type);
+    $('#beaconing_setting').val(get_beacon_type_from_value(gps_settings.beacon_type));
+    $('#beacon_interval').val(gps_settings.beacon_interval);
+    $('#smart_beacon_distance_threshold').val(gps_settings.smart_beacon_distance_threshold);
+    $('#smart_beacon_time_window').val(gps_settings.smart_beacon_time_window);
+    //Now enable the correct ui elements based on the beaconing type.
+    set_beaconing_setting(get_beacon_type_from_value(gps_settings.beacon_type));
+}
 
 function init_gps() {
     console.log("init_gps Called.")
@@ -45,11 +81,17 @@ function init_gps() {
         }, 1000);
     });
 
+    // When the GPS settings are received, update the GPS settings.
+    socket.on("gps_settings", function(msg) {
+        console.log("GPS settings received: ", msg);
+        update_gps_settings(msg);
+    });
+
     // Start the GPS icon blinking until we get coordinates.
     gps_icon_interval = window.setInterval(function() {
-            $('#gps_icon').css('opacity', gps_icon_opacity);
-            gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
-        }, 500);
+        $('#gps_icon').css('opacity', gps_icon_opacity);
+        gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
+    }, 500);
 
     //if beaconing is disabled, disable the beacon button.
     // if gps extension is installed and enabled, we can enable the beacon button.
@@ -135,7 +177,7 @@ function update_gps_info_box() {
     $('#gps_speed').text(Math.floor(speed_kph) + " km/h");
     $('#gps_course').text(Math.floor(current_stats.stats.GPSStats.track) + "°");
     // now flash a green border around the gps_info_box.
-    $('#gps_info_box').fadeOut(200).fadeIn(500).fadeOut(200).fadeIn(500);
+    $('#gps_info_box').fadeOut(200).fadeIn(500);
 }
 
 function update_gps(data) {
