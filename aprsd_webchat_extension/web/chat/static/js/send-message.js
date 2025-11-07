@@ -82,11 +82,13 @@ function init_chat() {
        }
        msg["type"] = MSG_TYPE_TX;
        sent_msg(msg);
+       radio_icon_blink(true);
    });
 
    socket.on("ack", function(msg) {
        msg["type"] = MSG_TYPE_ACK;
        ack_msg(msg);
+       radio_icon_blink(false);
    });
 
    socket.on("new", function(msg) {
@@ -97,6 +99,7 @@ function init_chat() {
        }
        msg["type"] = MSG_TYPE_RX;
        from_msg(msg);
+       radio_icon_blink(false);
    });
 
    socket.on("callsign_location", function(msg) {

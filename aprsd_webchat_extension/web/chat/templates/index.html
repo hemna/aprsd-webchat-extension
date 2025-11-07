@@ -36,9 +36,6 @@
 
     <script type="text/javascript">
         var initial_stats = {{ initial_stats|tojson|safe }};
-        var latitude = parseFloat('{{ latitude|safe }}');
-        var longitude = parseFloat('{{ longitude|safe }}');
-
         var gps_lat = '{{ initial_stats.stats.GPSStats.latitude|safe }}';
         var gps_lon = '{{ initial_stats.stats.GPSStats.longitude|safe }}';
         var gps_alt = '{{ initial_stats.stats.GPSStats.altitude|safe }}';
@@ -71,12 +68,42 @@
             { value: 'smart', description: 'Smart' },
         ];
 
-        function set_beaconing_setting(value) {
+        function set_beaconing_setting(value, description='') {
             console.log("setting beaconing setting to", value);
             $('#beaconing_setting').val(value);
-            $('#beaconing_setting_description').text(beaconing_settings[value].description);
+            //$('#beaconing_setting_description').text(beaconing_settings[value].description);
             $('#interval_beaconing_status').text(beaconing_settings[value].description == 'Interval Beaconing' ? 'enabled' : 'disabled');
             $('#interval_beaconing_time_window').text(beaconing_settings[value].description == 'Interval Beaconing' ? '1800 seconds' : 'not set');
+
+            if (value == 0) {
+                // Beaconing is completely disabled.
+                $('#beaconing_setting').prop('disabled', true);
+                $('#send_beacon').prop('disabled', true);
+                $('#beaconing_type').text('disabled in config');
+                if (description != '') {
+                    beaconing_description = description;
+                } else {
+                    beaconing_description = 'disabled in config';
+                }
+                $('#beaconing_setting_description').text(beaconing_description);
+                $('#interval_beaconing_status').text('disabled in config');
+                $('#interval_beaconing_time_window').text('disabled in config');
+                $('#save_beacon_settings').prop('disabled', true);
+                $('#gps_icon').css('opacity', 0.5);
+                $('#save_beacon_settings').prop('disabled', true);
+
+                //$('#beaconing_status').text('disabled in config');
+                //Also disable the save button.
+                return;
+            }
+
+            /*
+            gps_icon_interval = window.setInterval(function() {
+                $('#gps_icon').css('opacity', gps_icon_opacity);
+                gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
+            }, 500);
+            */
+
             //if the beacon settings is set to manual enabled, enable the send beacon button.
             if (value == 1) {
                 $('#send_beacon').prop('disabled', false);
@@ -99,11 +126,6 @@
                 $('#smart_beacon_time_window').show();
                 $('#smart_beacon_distance_threshold_label').show();
                 $('#smart_beacon_distance_threshold').show();
-            } else {
-                $('#smart_beacon_distance_threshold_label').hide();
-                $('#smart_beacon_distance_threshold').hide();
-                $('#smart_beacon_time_window_label').hide();
-                $('#smart_beacon_time_window').hide();
             }
         }
 
@@ -147,6 +169,9 @@
                 to_call.val(callsign);
                 selected_tab_callsign = callsign;
             });
+
+            // set initial opacity of the radio icon to 0.2
+            $('#radio_icon_svg').css('opacity', 0.2);
 
             /*$('[data-bs-toggle="popover"]').popover(
                 {html: true, animation: true}
@@ -200,12 +225,17 @@
                         <div class="col-auto">
                             <input type="submit" name="submit" class="btn btn-primary mb-2" id="send_msg" value="Send"/>
                             <!-- <button type="button" class="btn btn-primary mb-2" id="wipe_local" value="wipe local storage">Wipe LocalStorage</button> -->
-                            <a class="btn btn-secondary mb-2" data-bs-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">GPS&nbsp;&nbsp;
+                            <a class="btn btn-secondary mb-2" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">GPS&nbsp;&nbsp;
                                 <img src="/static/images/satellite-solid.svg" alt="GPS Icon" style="width: 25px; height: 25px; float: right" id="gps_icon">
-                                <img src="/static/images/radio-tower.svg" alt="Radio Icon" style="width: 25px; height: 25px; float: right; color: red;" id="radio_icon">
+                            </a>
+                            <a class="btn btn-light mb-2" data-bs-toggle="collapse" href="#collapseRadio" role="button" aria-expanded="false" aria-controls="collapseRadio">
+                                <svg id="radio_icon_svg" width="25px" height="25px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#999999">
+                                    <path fill-rule="evenodd" clip-rule="evenodd"
+                                        d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
+                                </svg>
                             </a>
                         </div>
-                        <div class="collapse" id="collapseExample" style="width: 800px">
+                        <div class="collapse" id="collapseGPS" style="width: 800px">
                             <div class="card">
                                 <div class="card-body" style="padding-top: 2px; padding-bottom: 2px;">
                                    <div id="gps_info_box">

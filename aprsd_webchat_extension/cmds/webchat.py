@@ -478,6 +478,11 @@ def index():
     if longitude:
         longitude = float(longitude)
 
+    if not latitude or not longitude:
+        LOG.error("Latitude or longitude is not set in the config file.")
+        latitude = 0.0
+        longitude = 0.0
+
     # since we just hit the index page, we need to fetch
     # the settings from the gps extension, since
     # they could have changed since the last time we hit the index page.
@@ -510,6 +515,7 @@ def _stats():
 
     time_format = "%m-%d-%Y %H:%M:%S"
     stats_dict = stats.stats_collector.collect(serializable=True)
+    LOG.debug(f"stats_dict: {stats_dict}")
     # Webchat doesnt need these
     if "WatchList" in stats_dict:
         del stats_dict["WatchList"]
@@ -526,8 +532,16 @@ def _stats():
 
     if not _is_aprsd_gps_extension_installed():
         stats_dict["GPSStats"] = {
-            "latitude": CONF.aprsd_webchat_extension.latitude,
-            "longitude": CONF.aprsd_webchat_extension.longitude,
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "altitude": 0,
+            "speed": 0,
+            "track": 0,
+        }
+    elif "GPSStats" not in stats_dict:
+        stats_dict["GPSStats"] = {
+            "latitude": 0.0,
+            "longitude": 0.0,
             "altitude": 0,
             "speed": 0,
             "track": 0,
@@ -582,6 +596,7 @@ def _stats():
         "time": now.strftime(time_format),
         "stats": stats_dict,
     }
+    LOG.debug(f"result: {result}")
     return result
 
 
