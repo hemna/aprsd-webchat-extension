@@ -529,6 +529,8 @@ def index():
         aprsd_version=aprsd.__version__,
         latitude=latitude,
         longitude=longitude,
+        is_digipi=CONF.is_digipi,
+        beaconing_enabled=CONF.enable_beacon,
     )
 
 
@@ -560,6 +562,10 @@ def _stats():
         del stats_dict["EmailStats"]
     if "PluginManager" in stats_dict:
         del stats_dict["PluginManager"]
+
+    # the webchat UI needs to know if we are running on a Digipi.
+    # digipi wants ui elements to be disabled.
+    stats_dict["is_digipi"] = CONF.is_digipi
 
     if not _is_aprsd_gps_extension_installed():
         stats_dict["GPSStats"] = {

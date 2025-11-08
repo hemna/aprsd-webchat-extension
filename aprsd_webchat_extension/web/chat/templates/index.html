@@ -41,6 +41,8 @@
         var gps_alt = '{{ initial_stats.stats.GPSStats.altitude|safe }}';
         var gps_speed = '{{ initial_stats.stats.GPSStats.speed|safe }}';
         var gps_course = '{{ initial_stats.stats.GPSStats.track|safe }}';
+        var is_digipi = '{{ initial_stats.is_digipi|safe }}';
+        var beaconing_enabled = '{{ beaconing_enabled|safe }}';
 
         // now set the values of the gps_lat, gps_lon, gps_alt, gps_speed, and gps_course in the initial_stats.
         $('#gps_lat').text(gps_lat);
@@ -131,6 +133,7 @@
                         <h2>APRSD WebChat <span style='color: green;font-size:.5em'>{{ version }}</span></h2>
                     </div>
                 </div>
+                {% if is_digipi == False %}
                 <div class="row">
                     <div class="column">
                         <span style='color: green'>{{ callsign }}</span>
@@ -139,6 +142,7 @@
                         <span id='uptime'>NONE</span>
                     </div>
                 </div>
+                {% endif %}
                 <div class="row">
                     <form class="row gx-1 gy-1 justify-content-center align-items-center" id="sendform" name="sendmsg" action="" autocomplete="off">
                         <div class="col-sm-2" style="width:150px;">
@@ -187,18 +191,11 @@
                                     <script>
                                         // Beaconing settings are 0 = disabled, 1 = manual enabled, 2 = interval beaconing and 3 = smart beaconing.
                                         // Set the initial value of the beaconing setting to the initial value of the beaconing setting in the initial stats.
-                                        console.log("beaconing_setting", beaconing_setting);
-
                                         $('#beaconing_setting').on('input', function() {
                                             var value = $(this).val();
                                             set_beaconing_setting(value);
                                         });
                                     </script>
-                                    <!--
-                                    add the html input for the interval beaconing, but disable it unless the beaconing setting is set to interval.
-                                    Also add the html input for the smart beaconing, but disable it unless the beaconing setting is set to smart.
-                                    make the beaconing interval input hidden unless the beaconing setting is set to interval.
-                                    -->
                                     <label for="beacon_interval" id="beacon_interval_label" class="form-label" style="display: none;">Beacon Interval in seconds</label>
                                     <input type="number" class="form-control" id="beacon_interval" placeholder="Beacon Interval" style="display: none;" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
                                     <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label" style="display: none;">Interval Beaconing Time Window in seconds</label>

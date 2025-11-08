@@ -44,9 +44,20 @@ function set_beaconing_setting(value, description='') {
     $('#interval_beaconing_status').text(beaconing_settings[value].description == 'Interval Beaconing' ? 'enabled' : 'disabled');
     $('#interval_beaconing_time_window').text(beaconing_settings[value].description == 'Interval Beaconing' ? '1800 seconds' : 'not set');
 
+    if (beaconing_enabled == false) {
+        $('#send_beacon').prop('disabled', true);
+        $('#save_beacon_settings').prop('disabled', true);
+        $('#beaconing_setting').prop('disabled', true);
+        $('#beaconing_type').text('disabled in config');
+        $('#beaconing_setting_description').text('disabled in config');
+        $('#interval_beaconing_status').text('disabled in config');
+        $('#interval_beaconing_time_window').text('disabled in config');
+        $('#gps_icon').css('opacity', 0.5);
+        return;
+    }
+
     if (value == 0) {
         // Beaconing is completely disabled.
-        $('#beaconing_setting').prop('disabled', true);
         $('#send_beacon').prop('disabled', true);
         $('#beaconing_type').text('disabled in config');
         if (description != '') {
@@ -57,27 +68,10 @@ function set_beaconing_setting(value, description='') {
         $('#beaconing_setting_description').text(beaconing_description);
         $('#interval_beaconing_status').text('disabled in config');
         $('#interval_beaconing_time_window').text('disabled in config');
-        $('#save_beacon_settings').prop('disabled', true);
         $('#gps_icon').css('opacity', 0.5);
-        $('#save_beacon_settings').prop('disabled', true);
-
-        //$('#beaconing_status').text('disabled in config');
-        //Also disable the save button.
-        return;
-    }
-
-    /*
-    gps_icon_interval = window.setInterval(function() {
-        $('#gps_icon').css('opacity', gps_icon_opacity);
-        gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
-    }, 500);
-    */
-
-    //if the beacon settings is set to manual enabled, enable the send beacon button.
-    if (value == 1) {
-        $('#send_beacon').prop('disabled', false);
     } else {
-        $('#send_beacon').prop('disabled', true);
+        //Always enable the send beacon if we have a gps fix.
+        $('#send_beacon').prop('disabled', false);
     }
 
     // if the beaconing setting is set to interval, enable the beacon interval.
