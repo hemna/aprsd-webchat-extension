@@ -16,6 +16,7 @@ from aprsd import cli_helper, client, packets, plugin_utils, stats, threads, uti
 from aprsd import utils as aprsd_utils
 from aprsd.client.client import APRSDClient
 from aprsd.main import cli
+from aprsd.packets import collector as packets_collector
 from aprsd.threads import aprsd as aprsd_threads
 from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
@@ -88,6 +89,36 @@ def _is_aprsd_gps_extension_installed():
         return True
     except Exception:
         return False
+
+
+class WebChatPacketMonitor:
+    """Class to monitor packets for the webchat UI radio icon blinking."""
+
+    def rx(self, packet: packets.Packet):
+        LOG.debug(f"WebChatPacketMonitor rx: {packet}")
+        if packet.get("to_call") == CONF.callsign:
+            LOG.debug(f"WebChatPacketMonitor rx: {packet}")
+            socketio.emit(
+                "rx_pkt",
+                packet.__dict__,
+                namespace="/sendmsg",
+            )
+
+    def tx(self, packet: packets.Packet):
+        LOG.debug(f"WebChatPacketMonitor tx: {packet}")
+        if packet.get("from_call") == CONF.callsign:
+            LOG.debug(f"WebChatPacketMonitor tx: {packet}")
+            socketio.emit(
+                "tx_pkt",
+                packet.__dict__,
+                namespace="/sendmsg",
+            )
+
+    def flush(self):
+        pass
+
+    def load(self):
+        pass
 
 
 class SentMessages:
@@ -850,6 +881,8 @@ def webchat(ctx, flush, port):
             service_threads.register(LocationProcessingThread(notify_queue))
 
     service_threads.start()
+    # So we can monitor all packets that are TX/RX for the UI.
+    packets_collector.PacketCollector().register(WebChatPacketMonitor)
     LOG.info("Start socketio.run()")
     socketio.run(
         flask_app,

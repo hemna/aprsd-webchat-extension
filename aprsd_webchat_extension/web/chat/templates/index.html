@@ -53,8 +53,6 @@
 
         // 0 is disabled, 1 is manual enabled, 2 is interval beaconing and 3 is smart beaconing.
         var beaconing_setting = 0;
-        var memory_chart = null;
-        var message_chart = null;
 
         var beaconing_settings = [
             { value: 0, description: 'Disabled' },
@@ -67,67 +65,6 @@
             { value: 'interval', description: 'Interval' },
             { value: 'smart', description: 'Smart' },
         ];
-
-        function set_beaconing_setting(value, description='') {
-            console.log("setting beaconing setting to", value);
-            $('#beaconing_setting').val(value);
-            //$('#beaconing_setting_description').text(beaconing_settings[value].description);
-            $('#interval_beaconing_status').text(beaconing_settings[value].description == 'Interval Beaconing' ? 'enabled' : 'disabled');
-            $('#interval_beaconing_time_window').text(beaconing_settings[value].description == 'Interval Beaconing' ? '1800 seconds' : 'not set');
-
-            if (value == 0) {
-                // Beaconing is completely disabled.
-                $('#beaconing_setting').prop('disabled', true);
-                $('#send_beacon').prop('disabled', true);
-                $('#beaconing_type').text('disabled in config');
-                if (description != '') {
-                    beaconing_description = description;
-                } else {
-                    beaconing_description = 'disabled in config';
-                }
-                $('#beaconing_setting_description').text(beaconing_description);
-                $('#interval_beaconing_status').text('disabled in config');
-                $('#interval_beaconing_time_window').text('disabled in config');
-                $('#save_beacon_settings').prop('disabled', true);
-                $('#gps_icon').css('opacity', 0.5);
-                $('#save_beacon_settings').prop('disabled', true);
-
-                //$('#beaconing_status').text('disabled in config');
-                //Also disable the save button.
-                return;
-            }
-
-            /*
-            gps_icon_interval = window.setInterval(function() {
-                $('#gps_icon').css('opacity', gps_icon_opacity);
-                gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
-            }, 500);
-            */
-
-            //if the beacon settings is set to manual enabled, enable the send beacon button.
-            if (value == 1) {
-                $('#send_beacon').prop('disabled', false);
-            } else {
-                $('#send_beacon').prop('disabled', true);
-            }
-
-            // if the beaconing setting is set to interval, enable the beacon interval.
-            if (value == 2) {
-                $('#beacon_interval_label').show();
-                $('#beacon_interval').show();
-            } else {
-                $('#beacon_interval_label').hide();
-                $('#beacon_interval').hide();
-            }
-
-            // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
-            if (value == 3) {
-                $('#smart_beacon_time_window_label').show();
-                $('#smart_beacon_time_window').show();
-                $('#smart_beacon_distance_threshold_label').show();
-                $('#smart_beacon_distance_threshold').show();
-            }
-        }
 
         $(document).ready(function() {
             //console.log(initial_stats);

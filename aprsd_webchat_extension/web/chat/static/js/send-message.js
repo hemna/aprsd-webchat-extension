@@ -102,9 +102,28 @@ function init_chat() {
        radio_icon_blink(false);
    });
 
-   socket.on("callsign_location", function(msg) {
-       console.log("CALLSIGN Location!");
+   socket.on("rx", function(msg) {
+       console.log("RX packet received");
        console.log(msg);
+       msg["type"] = MSG_TYPE_RX;
+       from_msg(msg);
+   });
+
+   // For notifying the radio icon
+   // to blink when we tx/rx packets
+   socket.on("rx_pkt", function(msg) {
+       console.log("RX(" + msg._type + ") packet received: " + msg.from_call + " to " + msg.to_call);
+       radio_icon_blink(false);
+   });
+
+   socket.on("tx_pkt", function(msg) {
+       console.log("TX(" + msg._type + ") packet received: " + msg.from_call + " to " + msg.to_call);
+       radio_icon_blink(true);
+   });
+
+
+   socket.on("callsign_location", function(msg) {
+       console.log("CALLSIGN Location!: ", msg);
        now = new Date();
        msg['last_updated'] = now;
        callsign_location[msg['callsign']] = msg;
