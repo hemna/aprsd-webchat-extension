@@ -92,12 +92,6 @@
                 }
                 console.log("Sending beaconing settings to server", gps_settings);
                 socket.emit('set_beaconing_setting', gps_settings);
-                $.toast({heading: 'Beaconing Settings Saved',
-                        text: "Beaconing settings saved",
-                        loader: true,
-                        loaderBg: '#9EC600',
-                        position: 'top-center',
-                });
             });
 
             // When a tab is clicked, populate the to_call form field.

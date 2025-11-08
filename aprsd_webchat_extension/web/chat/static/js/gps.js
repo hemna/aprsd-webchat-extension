@@ -334,7 +334,6 @@ function beacon_toast() {
       position: 'top-left',
       hideAfter: 1500,
   });
-
 }
 
 function sendPosition(position) {
@@ -345,7 +344,6 @@ function sendPosition(position) {
       'longitude': position.coords.longitude,
       'path': path,
   }
-  beacon_toast();
   console.log("Sending GPS: ", msg);
   socket.emit("gps", msg);
 }
