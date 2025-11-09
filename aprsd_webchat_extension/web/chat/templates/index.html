@@ -130,11 +130,7 @@
             <div class="container-sm">
                 <div class="row gx-1 gy-1 justify-content-center align-items-center">
                     <div class="col-sm-2" style="width:300px;">
-                        <span style="font-size: 1.5em;">APRSD WebChat&nbsp;&nbsp;&nbsp;&nbsp;
-                            <svg id="radio_icon_svg" width="25px" height="25px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#999999">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
-                            </svg></span>
+                        <span style="font-size: 1.5em;">APRSD WebChat</span>
                     </div>
                 </div>
                 {% if is_digipi == False %}
@@ -147,8 +143,8 @@
                     </div>
                 </div>
                 {% endif %}
-                <div class="row">
-                    <form class="row gx-1 gy-1 justify-content-center align-items-center" id="sendform" name="sendmsg" action="" autocomplete="off">
+                <div class="row" style="padding-top: 0px; padding-bottom: 0px;margin-top: 0px;margin-bottom: 0px;">
+                    <form class="row gx-1 gy-1 justify-content-center align-items-center" style="margin:0px;padding:0px;" id="sendform" name="sendmsg" action="" autocomplete="off">
                         <div class="col-sm-2" style="width:150px;">
                             <label for="to_call" class="visually-hidden">Callsign</label>
                             <input type="search" class="form-control mb-2 mr-sm-2" name="to_call" id="to_call" placeholder="To Callsign" size="11" maxlength="9">
@@ -213,16 +209,35 @@
                 <ul class="nav nav-tabs" id="msgsTabList" role="tablist"></ul>
             </div>
         </div>
+        <div class="wc-row info">
+            <div class="container" style="max-width: 800px;">
+                <div class="d-sm-flex p-0" style="background-color:#aaaaaa;border: 1px solid #999999;" >
+                    <div class="" id="info_bar_container" style="padding-top: 2px; padding-bottom: 2px;">
+                        <span id="welcome_message" style="font-size: .9rem">Welcome to APRSD WebChat.
+                            &nbsp;&nbsp;Send a message to a callsign to start a conversation.
+                        </span>
+                    </div>
+
+                    <div class="ms-auto p-0 bd-highlight" style="padding: 2px;">
+                        <svg id="radio_icon_svg" width="28px" height="28px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#999999">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
+                        </svg>
+                    </div>
+
+                    <!--
+                    <button onclick="call_callsign_location();" id="get_location_button" style="margin-left:2px;padding:2px;font-size: .8em;" type="button" class="btn btn-primary" disabled>
+                        <span id="location_spinner" class="d-none spinner-border spinner-border-sm" role="status" aria-hidden="true" style="font-size: .9em"></span>Get Location
+                    </button>
+                    &nbsp;<span id="location_str" style="font-size: .9rem"></span>
+                    -->
+                </div>
+            </div>
+        </div>
         <div class="wc-row content" id="wc-content">
             <div class="container" style="max-width: 800px;">
                 <div class="tab-content" id="msgsTabContent">
                 </div>
-            </div>
-        </div>
-        <div class="wc-row content prefooter">
-            <div class="container-sm" style="max-width: 800px; padding-top: 0px;margin-top: 0px;margin-bottom: 0px">
-                <span class="material-symbols-rounded md-10">thumb_down</span><span style="font-size: 10px"> - Message Not Acknowledged&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                <span class="material-symbols-rounded md-10">thumb_up</span><span style="font-size: 10px"> - Message Acknowledged</span>
             </div>
         </div>
         <div class="wc-row footer">

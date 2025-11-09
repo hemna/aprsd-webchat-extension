@@ -47,23 +47,34 @@ body {
   height: 100%;
 }
 .wc-container .wc-row {
-  /*border: 1px dotted #0313fc;*/
   padding: 2px;
 }
 .wc-container .wc-row.header {
   flex: 0 1 auto;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+}
+.wc-container .wc-row.info {
+  flex: 1 1 auto;
+  margin-top: 0px;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+  padding-top: 0px;
 }
 .wc-container .wc-row.content {
   flex: 1 1 auto;
   overflow-y: auto;
   margin-bottom: 0px;
   padding-bottom: 0px;
+  height: 100%;
 }
 .wc-container .wc-row.prefooter {
   flex: 0 1 auto;
+  height: 20px;
 }
 .wc-container .wc-row.footer {
   flex: 0 1 0px;
+  height: 25px;
 }
 
 .material-symbols-rounded.md-10 {

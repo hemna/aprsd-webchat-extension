@@ -130,8 +130,10 @@ function init_chat() {
 
        location_id = callsign_location_content(msg['callsign'], true);
        location_string = build_location_string_small(msg);
-       $(location_id).html(location_string);
-       $(location_id+"Spinner").addClass('d-none');
+       //$(location_id).html(location_string);
+       $("#location_str").html(location_string);
+       //$(location_id+"Spinner").addClass('d-none');
+       $("#location_spinner").addClass('d-none');
        save_data();
    });
 
@@ -261,6 +263,11 @@ function init_messages() {
     if (callsign_location == null) {
        callsign_location = {};
     }
+    if (Object.keys(callsign_list).length > 0) {
+        console.log("callsign_list has " + Object.keys(callsign_list).length + " callsigns");
+        $("#get_location_button").prop('disabled', false);
+        update_info_bar(false);
+    }
     console.log(callsign_list);
     console.log(message_list);
     console.log(callsign_location);
@@ -301,6 +308,15 @@ function init_messages() {
     if (first_callsign !== null) {
       callsign_select(first_callsign);
     }
+
+    //now create a timer that updates the location_str every minute
+    setInterval(function() {
+        //make sure there is a tab
+        console.log("update location string timer.")
+        if (Object.keys(callsign_list).length > 0) {
+            update_location_string(selected_tab_callsign);
+        }
+    }, 10000);
 }
 
 function scroll_main_content(callsign=false) {
@@ -357,6 +373,9 @@ function create_callsign_tab(callsign, active=false) {
 
   callsignTabs.append(item_html);
   create_callsign_tab_content(callsign, active);
+  // we know we have at least one callsign, so we can enable the get location button
+  $("#get_location_button").prop('disabled', false);
+  update_info_bar(true);
 }
 
 function create_callsign_tab_content(callsign, active=false) {
@@ -379,14 +398,15 @@ function create_callsign_tab_content(callsign, active=false) {
   location_id = callsign_location_content(callsign);
 
   item_html = '<div class="tab-pane fade '+active_str+'" id="'+tab_content+'" role="tabpanel" aria-labelledby="'+tab_id+'">';
-  item_html += '<div class="" style="border: 1px solid #999999;background-color:#aaaaaa;">';
+  /*item_html += '<div class="" style="border: 1px solid #999999;background-color:#aaaaaa;">';
   item_html += '<div class="row" style="padding-top:4px;padding-bottom:4px;background-color:#aaaaaa;margin:0px;">';
   item_html +=   '<div class="d-flex col-md-10 justify-content-left" style="padding:0px;margin:0px;">';
   item_html +=     '<button onclick="call_callsign_location(\''+callsign+'\');" style="margin-left:2px;padding: 0px 4px 0px 4px;font-size: .9rem" type="button" class="btn btn-primary">';
   item_html +=     '<span id="'+location_id+'Spinner" class="d-none spinner-border spinner-border-sm" role="status" aria-hidden="true" style="font-size: .9rem"></span>Get Location</button>';
   item_html +=   '&nbsp;<span id="'+location_id+'" style="font-size: .9rem">'+location_str+'</span></div>';
   item_html += '</div>';
-  item_html += '<div class="speech-wrapper" id="'+wrapper_id+'"></div>';
+  */
+  item_html += '<div class="flex min-h-screen overflow-hidden"><div class="speech-wrapper h-auto" id="'+wrapper_id+'"></div></div>';
   item_html += '</div>';
   callsignTabsContent.append(item_html);
 }
@@ -407,6 +427,11 @@ function delete_tab(callsign) {
     console.log(first_tab);
     $(first_tab).click();
     save_data();
+    // if there are no more tabs, disable the get location button
+    if (Object.keys(callsign_list).length == 0) {
+        $("#get_location_button").prop('disabled', true);
+        update_info_bar(false);
+    }
 }
 
 function add_callsign(callsign, msg) {
@@ -430,7 +455,6 @@ function update_callsign_path(callsign, msg) {
   path = msg['path']
   $('#pkt_path').val(path);
   callsign_list[callsign] = path;
-
 }
 
 function append_message(callsign, msg, msg_html) {
@@ -628,9 +652,22 @@ function ack_msg(msg) {
    scroll_main_content();
 }
 
+function update_location_string(callsign) {
+    console.log("update_location_string: " + callsign);
+    if (callsign in callsign_location) {
+        location_data = callsign_location[callsign];
+        location_string = build_location_string_small(location_data);
+        $("#location_str").html(location_string);
+    } else {
+        $("#location_str").html("");
+    }
+}
+
 function activate_callsign_tab(callsign) {
+    console.log("activate_callsign_tab: " + callsign);
     tab_content = tab_string(callsign, id=true);
     $(tab_content).click();
+    update_location_string(callsign);
 }
 
 function callsign_select(callsign) {
@@ -643,11 +680,32 @@ function callsign_select(callsign) {
     $(tab_notify_id).text(0);
     // Now update the path
     // $('#pkt_path').val(callsign_list[callsign]);
+    update_location_string(callsign);
 }
 
 function call_callsign_location(callsign) {
-    msg = {'callsign': callsign};
+    // get the selected tab, so we can get the callsign
+    msg = {'callsign': selected_tab_callsign};
     socket.emit("get_callsign_location", msg);
     location_id = callsign_location_content(callsign, true)+"Spinner";
-    $(location_id).removeClass('d-none');
+    //$(location_id).removeClass('d-none');
+    $("#location_spinner").removeClass('d-none');
+}
+
+function update_info_bar(show_button=false) {
+    // Once we have a callsign tab created, we can update
+    // the info bar's html to include the get location buttton
+    if (show_button) {
+        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:2px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .9em'></span>Get Location</button>&nbsp;<span id='location_str' style='font-size: .9rem'></span>"
+    } else {
+        // show the welcome message instead.
+        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Send a message to a callsign to start a conversation.</span>"
+    }
+
+    $("#info_bar_container").html(html);
+    if (show_button) {
+        $("#get_location_button").prop('disabled', false);
+    } else {
+        $("#get_location_button").prop('disabled', true);
+    }
 }
