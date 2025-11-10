@@ -34,7 +34,10 @@ function build_location_string_small(msg) {
     loc += "&nbsp;" + msg['compass_bearing'];
     //loc += "&nbsp;Distance " + msg['distance'] + " km";
     //loc += "&nbsp;" + dt.toLocaleString();
-    loc += "&nbsp;" + msg['timeago'];
+    //loc += "&nbsp;" + msg['timeago'];
+    loc += "&nbsp;"
+    timeago_str = "<time id='location_timeago' class='timeago' datetime='" + msg['last_updated'] + "'></time>";
+    loc += timeago_str;
     return loc;
 }
 
@@ -135,6 +138,7 @@ function init_chat() {
        //$(location_id+"Spinner").addClass('d-none');
        $("#location_spinner").addClass('d-none');
        save_data();
+       $("time#location_timeago").timeago("update", msg['last_updated']);
    });
 
    $("#sendform").submit(function(event) {
@@ -312,8 +316,8 @@ function init_messages() {
     //now create a timer that updates the location_str every minute
     setInterval(function() {
         //make sure there is a tab
-        console.log("update location string timer.")
         if (Object.keys(callsign_list).length > 0) {
+            console.log("Interval Updating location string for: ", selected_tab_callsign);
             update_location_string(selected_tab_callsign);
         }
     }, 10000);
@@ -388,7 +392,7 @@ function create_callsign_tab_content(callsign, active=false) {
   } else {
     active_str = '';
   }
-
+/*
   location_str = ""
   if (callsign in callsign_location) {
     location_str = build_location_string_small(callsign_location[callsign]);
@@ -396,6 +400,7 @@ function create_callsign_tab_content(callsign, active=false) {
   }
 
   location_id = callsign_location_content(callsign);
+  */
 
   item_html = '<div class="tab-pane fade '+active_str+'" id="'+tab_content+'" role="tabpanel" aria-labelledby="'+tab_id+'">';
   /*item_html += '<div class="" style="border: 1px solid #999999;background-color:#aaaaaa;">';
@@ -426,9 +431,14 @@ function delete_tab(callsign) {
     first_tab = $("#msgsTabList").children().first().children().first();
     console.log(first_tab);
     $(first_tab).click();
+    first_callsign = first_tab.attr('callsign');
+    console.log("Selecting first tab: ", first_callsign);
+    callsign_select(first_callsign);
+    console.log("selected_tab_callsign: ", selected_tab_callsign);
     save_data();
     // if there are no more tabs, disable the get location button
     if (Object.keys(callsign_list).length == 0) {
+        console.log("No more tabs, disabling get location button");
         $("#get_location_button").prop('disabled', true);
         update_info_bar(false);
     }
@@ -487,6 +497,7 @@ function append_message(callsign, msg, msg_html) {
       //Now click the tab if and only if there is only one tab
       callsign_tab_id = callsign_tab(callsign);
       $(callsign_tab_id).click();
+      console.log("append_message: calling callsign_select for: ", callsign);
       callsign_select(callsign);
   }
 }
@@ -658,6 +669,7 @@ function update_location_string(callsign) {
         location_data = callsign_location[callsign];
         location_string = build_location_string_small(location_data);
         $("#location_str").html(location_string);
+        $("time#location_timeago").timeago("update", location_data['last_updated']);
     } else {
         $("#location_str").html("");
     }
@@ -667,10 +679,18 @@ function activate_callsign_tab(callsign) {
     console.log("activate_callsign_tab: " + callsign);
     tab_content = tab_string(callsign, id=true);
     $(tab_content).click();
+    console.log("activate_callsign_tab: updating location string for: ", callsign);
     update_location_string(callsign);
 }
 
 function callsign_select(callsign) {
+    if (!message_list.hasOwnProperty(callsign)) {
+        // this is the case when the user clicks the
+        // delete icon on the tab.  It eventually induces an
+        // onclick callsign_select() for a deleted callsign.
+        // so we do nothing here.
+        return false
+    }
     var tocall = $("#to_call");
     tocall.val(callsign.toUpperCase());
     scroll_main_content(callsign);
@@ -680,6 +700,7 @@ function callsign_select(callsign) {
     $(tab_notify_id).text(0);
     // Now update the path
     // $('#pkt_path').val(callsign_list[callsign]);
+    console.log("callsign_select: updating location string for: ", callsign);
     update_location_string(callsign);
 }
 
@@ -693,10 +714,13 @@ function call_callsign_location(callsign) {
 }
 
 function update_info_bar(show_button=false) {
+    msgs = message_list[selected_tab_callsign];
+    //get the length of the callsign's message list
     // Once we have a callsign tab created, we can update
     // the info bar's html to include the get location buttton
     if (show_button) {
-        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:2px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .9em'></span>Get Location</button>&nbsp;<span id='location_str' style='font-size: .9rem'></span>"
+        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:1px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Get Location</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
+        //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
     } else {
         // show the welcome message instead.
         html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Send a message to a callsign to start a conversation.</span>"

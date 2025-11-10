@@ -173,11 +173,11 @@ function init_gps() {
                 if (gps.latitude === null || gps.longitude === null) {
                     console.log("Beaconing is disabled in config.  We have no lat/lon in the webchat extension.");
                     beaconing_description = 'missing lat/lon in config';
-                    update_gps_info_box(0, 0, 0, 0, 0);
+                    update_gps_info_box(0, 0, 0, 0, 0, new Date());
                     beaconing_setting = 0;
                 } else {
                     console.log("Beaconing is enabled in config.  have to use webchat lat/lon, which is set in the config.");
-                    update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0);
+                    update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
                     beaconing_setting = 1;
                 }
             }
@@ -188,7 +188,7 @@ function init_gps() {
                 //$('#send_beacon').prop('disabled', true);
                 //$('#beaconing_status').text('disabled - No lat/lon in config');
                 //$('#gps_icon').css('opacity', 0.5);
-                update_gps_info_box(0, 0, 0, 0, 0);
+                update_gps_info_box(0, 0, 0, 0, 0, new Date());
                 beaconing_setting = 0;
             } else {
                 //$('#send_beacon').prop('disabled', false);
@@ -221,7 +221,7 @@ function init_gps() {
     }
 }
 
-function update_gps_info_box(latitude, longitude, altitude, speed, course) {
+function update_gps_info_box(latitude, longitude, altitude, speed, course, time) {
     //console.log("update_gps_info_box Called.  Latitude: ", latitude, " Longitude: ", longitude, " Altitude: ", altitude, " Speed: ", speed, " Course: ", course);
     $('#gps_lat').text(latitude);
     $('#gps_lon').text(longitude);
@@ -230,6 +230,7 @@ function update_gps_info_box(latitude, longitude, altitude, speed, course) {
     var speed_kph = speed * 3.6;
     $('#gps_speed').text(Math.floor(speed_kph) + " km/h");
     $('#gps_course').text(Math.floor(course) + "°");
+    $('#gps_timeago').timeago("update", time);
     // now flash a green border around the gps_info_box.
     $('#gps_info_box').fadeOut(200).fadeIn(500);
 }
@@ -271,11 +272,11 @@ function update_gps_fix(data) {
             //console.log("Clearing GPS icon interval.  We have a fix!");
             clearInterval(gps_icon_interval);
             gps_icon_interval = null;
-            update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track);
+            update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track, data.time);
         } else {
             //console.log("we don't have a fix")
             $('#send_beacon').prop('disabled', true);
-            update_gps_info_box(0, 0, 0, 0, 0);
+            update_gps_info_box(0, 0, 0, 0, 0, new Date());
             $('#send_beacon').prop('disabled', true);
             $('#beaconing_status').text('disabled - No fix');
             $('#gps_icon').css('opacity', 0.2);
@@ -296,12 +297,12 @@ function update_gps_fix(data) {
         if (gps.latitude !== null && gps.longitude !== null) {
             // We have hard coded lat/lon in the config, so we can send a beacon.
             $('#send_beacon').prop('disabled', false);
-            update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track);
+            update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
             $('#gps_icon').css('opacity', 1);
         } else {
             // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
             $('#send_beacon').prop('disabled', true);
-            update_gps_info_box(0, 0, 0, 0, 0);
+            update_gps_info_box(0, 0, 0, 0, 0, new Date());
             $('#send_beacon').prop('disabled', true);
             $('#beaconing_status').text('disabled - No lat/lon in config');
             $('#gps_icon').css('opacity', 0.2);
@@ -314,12 +315,12 @@ function update_gps_fix(data) {
     if (gps.latitude !== null && gps.longitude !== null) {
         // We have hard coded lat/lon in the config, so we can send a beacon.
         $('#send_beacon').prop('disabled', false);
-        update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track);
+        update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
         $('#gps_icon').css('opacity', 1);
     } else {
         // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
         $('#send_beacon').prop('disabled', true);
-        update_gps_info_box(0, 0, 0, 0, 0);
+        update_gps_info_box(0, 0, 0, 0, 0, new Date());
     }
 }
 
@@ -337,13 +338,11 @@ function beacon_toast() {
 }
 
 function sendPosition(position) {
-  console.log("showPosition Called");
   path = $('#pkt_path option:selected').val();
   msg = {
       'latitude': position.coords.latitude,
       'longitude': position.coords.longitude,
       'path': path,
   }
-  console.log("Sending GPS: ", msg);
   socket.emit("gps", msg);
 }

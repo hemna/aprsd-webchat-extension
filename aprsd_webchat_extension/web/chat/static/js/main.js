@@ -29,35 +29,14 @@ function update_stats( data ) {
     update_gps(data);
 }
 
-/*
-jQuery('.icons img').each(function () {
-    const $img = jQuery(this);
-    const imgID = $img.attr('id');
-    const imgClass = $img.attr('class');
-    const imgURL = $img.attr('src');
-    jQuery.get(
-        imgURL,
-        (data) => {
-            let $svg = jQuery(data).find('svg');
-            if (imgID) $svg.attr('id', imgID);
-            if (imgClass) $svg.attr('class', `${imgClass} replaced-svg`);
-            $svg.removeAttr('xmlns:a');
-            $img.replaceWith($svg);
-        },
-        'xml',
-    );
-});
-*/
-
-
 function radio_icon_blink(tx=true) {
     // blink the radio icon for 1 second.
     //If tx is true we want the radio svg icon fill color
     //to be red, if false we want it to be blue.
     if (tx) {
-        $('#radio_icon_svg').attr('fill', '#FF0000');
+        $('#radio_icon_svg').attr('fill', '#FF2E2E');
     } else {
-        $('#radio_icon_svg').attr('fill', '#0000FF');
+        $('#radio_icon_svg').attr('fill', '#00A318');
     }
     $('#radio_icon_svg').css('opacity', 1);
     window.setTimeout(function() {
@@ -65,7 +44,7 @@ function radio_icon_blink(tx=true) {
     }, 500);
 
     window.setTimeout(function() {
-        $('#radio_icon_svg').attr('fill', '#999999');
+        $('#radio_icon_svg').attr('fill', '#aaaaaa');
         $('#radio_icon_svg').css('opacity', 0.2);
     }, 500);
 }
