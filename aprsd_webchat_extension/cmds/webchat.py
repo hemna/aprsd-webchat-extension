@@ -218,9 +218,20 @@ def _calculate_location_data(location_data):
     )
     # now calculate distance from our own location
     distance = 0
-    if CONF.aprsd_webchat_extension.latitude and CONF.aprsd_webchat_extension.longitude:
-        our_lat = float(CONF.aprsd_webchat_extension.latitude)
-        our_lon = float(CONF.aprsd_webchat_extension.longitude)
+    # if we have the gps extension installed, then we can use the gps extension to get the location data.
+    if _is_aprsd_gps_extension_installed():
+        gps_stats = GPSStats().stats(serializable=True)
+        if gps_stats.get("fix"):
+            our_lat = gps_stats.get("latitude")
+            our_lon = gps_stats.get("longitude")
+        else:
+            our_lat = CONF.aprsd_webchat_extension.latitude
+            our_lon = CONF.aprsd_webchat_extension.longitude
+    else:
+        our_lat = CONF.aprsd_webchat_extension.latitude
+        our_lon = CONF.aprsd_webchat_extension.longitude
+
+    if our_lat and our_lon:
         distance = haversine((our_lat, our_lon), (lat, lon))
         bearing = aprsd_utils.calculate_initial_compass_bearing(
             (our_lat, our_lon),
@@ -228,8 +239,8 @@ def _calculate_location_data(location_data):
         )
         compass_bearing = aprsd_utils.degrees_to_cardinal(bearing)
     else:
-        bearing = 0
         distance = -1
+        bearing = 0
         compass_bearing = "N"
 
     return {
@@ -402,12 +413,11 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
         # First check if the notify queue has a message
         if not self.notify_queue.empty():
             message = self.notify_queue.get_nowait()
-            LOG.info(f"LocationProcessingThread queue message: {message}")
 
             match message.get("message"):
                 case "beacon sent":
                     # notify the browser that the beacon was sent.
-                    LOG.warning("Sending beacon sent to browser")
+                    LOG.debug("Sending beacon sent to browser")
                     socketio.emit(
                         "gps_beacon_sent",
                         message,
@@ -415,14 +425,13 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
                     )
                 case "gps_settings":
                     # update the browser with the GPS settings.
-                    LOG.warning("Sending GPS settings to browser")
+                    LOG.debug("Sending GPS settings to browser")
                     socketio.emit(
                         "gps_settings",
                         message,
                         namespace="/sendmsg",
                     )
                 case _:
-                    LOG.warning(f"Putting message back on queue: {message}")
                     self.notify_queue.put(message)
 
         # Check every 10 seconds to see if we have a fix.
@@ -431,7 +440,7 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
                 gps_stats = GPSStats().stats(serializable=True)
                 if self._should_send_gps_stats(gps_stats):
                     self.last_gps_fix = gps_stats.get("fix")
-                    LOG.warning(f"Sending GPS stats to browser: {gps_stats}")
+                    LOG.debug(f"Sending GPS stats to browser: {gps_stats}")
                     self.last_gps_sent_time = datetime.datetime.now()
                     socketio.emit(
                         "gps_stats",
