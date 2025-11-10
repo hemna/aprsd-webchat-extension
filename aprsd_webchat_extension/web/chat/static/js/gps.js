@@ -4,6 +4,19 @@ var current_stats = null;
 var gps_settings = null;
 
 
+var beaconing_settings = [
+    { value: 0, description: 'Disabled' },
+    { value: 1, description: 'Manual Enabled' },
+    { value: 2, description: 'Interval Beaconing every N seconds' },
+    { value: 3, description: 'Smart Beaconing' },
+];
+var beaconing_type = [
+    { value: 'none', description: 'Manual' },
+    { value: 'interval', description: 'Interval' },
+    { value: 'smart', description: 'Smart' },
+];
+
+
 function get_beacon_type_from_value(value) {
     // the beaconing type is a string with possible values of none, interval, and smart.
     // when the value is none, it might mean disabled or manual.$
@@ -40,18 +53,12 @@ function update_gps_settings(data) {
 function set_beaconing_setting(value, description='') {
     console.log("setting beaconing setting to", value);
     $('#beaconing_setting').val(value);
-    //$('#beaconing_setting_description').text(beaconing_settings[value].description);
-    $('#interval_beaconing_status').text(beaconing_settings[value].description == 'Interval Beaconing' ? 'enabled' : 'disabled');
-    $('#interval_beaconing_time_window').text(beaconing_settings[value].description == 'Interval Beaconing' ? '1800 seconds' : 'not set');
 
     if (beaconing_enabled == false) {
         $('#send_beacon').prop('disabled', true);
         $('#save_beacon_settings').prop('disabled', true);
         $('#beaconing_setting').prop('disabled', true);
-        $('#beaconing_type').text('disabled in config');
         $('#beaconing_setting_description').text('disabled in config');
-        $('#interval_beaconing_status').text('disabled in config');
-        $('#interval_beaconing_time_window').text('disabled in config');
         $('#gps_icon').css('opacity', 0.5);
         return;
     }
@@ -59,28 +66,43 @@ function set_beaconing_setting(value, description='') {
     if (value == 0) {
         // Beaconing is completely disabled.
         $('#send_beacon').prop('disabled', true);
-        $('#beaconing_type').text('disabled in config');
         if (description != '') {
             beaconing_description = description;
+            //disable the range selection and the save beacon settings button.
+            $('#beaconing_setting').prop('disabled', true);
+            $('#save_beacon_settings').prop('disabled', true);
         } else {
-            beaconing_description = 'disabled in config';
+            beaconing_description = 'disabled';
         }
         $('#beaconing_setting_description').text(beaconing_description);
-        $('#interval_beaconing_status').text('disabled in config');
-        $('#interval_beaconing_time_window').text('disabled in config');
         $('#gps_icon').css('opacity', 0.5);
     } else {
         //Always enable the send beacon if we have a gps fix.
         $('#send_beacon').prop('disabled', false);
     }
 
+    if (value == 1) {
+        description = 'Manual';
+        $('#beaconing_setting_description').text(description);
+    }
+
     // if the beaconing setting is set to interval, enable the beacon interval.
     if (value == 2) {
         $('#beacon_interval_label').show();
         $('#beacon_interval').show();
+        description = 'Interval Beaconing every N seconds';
+        $('#beaconing_setting_description').text(description);
     } else {
         $('#beacon_interval_label').hide();
         $('#beacon_interval').hide();
+    }
+
+    // This can only be enabled if the gps extension is installed and enabled.
+    if (current_stats.stats.gps.gps_extension.is_installed != true) {
+        return;
+    }
+    if (current_stats.stats.gps.gps_extension.enabled != true) {
+        return;
     }
 
     // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
@@ -111,12 +133,17 @@ function init_gps() {
         if (current_stats.stats.gps.gps_extension.is_installed == true && current_stats.stats.gps.gps_extension.enabled == true) {
             // we have the gps extension installed and enabled, so we can get the lat/lon from the current gps position.
             sendPosition({'coords': {'latitude': current_stats.stats.GPSStats.latitude, 'longitude': current_stats.stats.GPSStats.longitude, 'altitude': current_stats.stats.GPSStats.altitude}});
-        } else if (!isNaN(latitude) && !isNaN(longitude)) {
+        } else if (current_stats.stats.gps.latitude !== null && current_stats.stats.gps.longitude !== null) {
             // we don't have the gps extension installed or enabled, so we can't get the lat/lon from the current gps position.
             // we can't send a beacon.
-            sendPosition({'coords': {'latitude': latitude, 'longitude': longitude}})
+            sendPosition({'coords': {'latitude': current_stats.stats.gps.latitude, 'longitude': current_stats.stats.gps.longitude}})
         }
     });
+
+    if (current_stats.stats.gps.gps_extension.is_installed != true) {
+        // Set the max value for the beaconing type to 2 (Interval Beaconing).
+        $('#beaconing_setting').prop('max', 2);
+    }
 
     // When the GPS stats are received, update the GPS fix.
     socket.on("gps_stats", function(msg) {
@@ -154,7 +181,7 @@ function init_gps() {
             $('#gps_icon').css('opacity', gps_icon_opacity);
             gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
         }, 500);*/
-        $('#beaconing_type').text(beaconing_type.find(type => type.value === gps.gps_extension.beacon_type).description);
+        //$('#beaconing_type').text(beaconing_type.find(type => type.value === gps.gps_extension.beacon_type).description);
         if (gps.gps_extension.is_installed == true) {
             if (gps.gps_extension.enabled == true) {
                 //$('#send_beacon').prop('disabled', false);
@@ -183,11 +210,13 @@ function init_gps() {
             }
         } else {
             // If aprsd beaconing is enabled, but we don't have coordinates, disable the beacon button.
-            if (isNaN(gps.latitude) || isNaN(gps.longitude)) {
+            if (gps.latitude === null || gps.longitude === null) {
+                console.log("Beaconing is disabled in config.  We have no lat/lon in the webchat extension.");
                 // Have to disable the beacon button.
                 //$('#send_beacon').prop('disabled', true);
                 //$('#beaconing_status').text('disabled - No lat/lon in config');
                 //$('#gps_icon').css('opacity', 0.5);
+                beaconing_description = 'missing lat/lon in config';
                 update_gps_info_box(0, 0, 0, 0, 0, new Date());
                 beaconing_setting = 0;
             } else {
@@ -301,6 +330,7 @@ function update_gps_fix(data) {
             $('#gps_icon').css('opacity', 1);
         } else {
             // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
+            console.log("We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.");
             $('#send_beacon').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
             $('#send_beacon').prop('disabled', true);
@@ -325,8 +355,15 @@ function update_gps_fix(data) {
 }
 
 function beacon_toast() {
-  lat = current_stats.stats.GPSStats.latitude;
-  lon = current_stats.stats.GPSStats.longitude;
+  //if the gps extension is installed we get the lat/lon from the gps extension.
+  //if the gps extension is not installed we get the lat/lon from the config.
+  if (current_stats.stats.gps.gps_extension.is_installed == true) {
+    lat = current_stats.stats.GPSStats.latitude;
+    lon = current_stats.stats.GPSStats.longitude;
+  } else {
+    lat = current_stats.stats.gps.latitude;
+    lon = current_stats.stats.gps.longitude;
+  }
   $.toast({
       heading: 'Sending GPS Beacon',
       text: "Latitude: "+lat+"<br>Longitude: "+lon,

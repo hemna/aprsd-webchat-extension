@@ -1,6 +1,5 @@
 from oslo_config import cfg
 
-
 extension_group = cfg.OptGroup(
     name="aprsd_webchat_extension",
     title="APRSD aprsd-webchat-extension extension settings",
@@ -31,6 +30,11 @@ extension_opts = [
         "disable_url_request_logging",
         default=False,
         help="Disable the logging of url requests in the webchat command.",
+    ),
+    cfg.IntOpt(
+        "beacon_interval",
+        default=1800,
+        help="The number of seconds between beacon packets.",
     ),
 ]
 

@@ -54,18 +54,6 @@
         // 0 is disabled, 1 is manual enabled, 2 is interval beaconing and 3 is smart beaconing.
         var beaconing_setting = 0;
 
-        var beaconing_settings = [
-            { value: 0, description: 'Disabled' },
-            { value: 1, description: 'Manual Enabled' },
-            { value: 2, description: 'Interval Beaconing every 1800 seconds' },
-            { value: 3, description: 'Smart Beaconing' },
-        ];
-        var beaconing_type = [
-            { value: 'none', description: 'Manual' },
-            { value: 'interval', description: 'Interval' },
-            { value: 'smart', description: 'Smart' },
-        ];
-
         $(document).ready(function() {
             //console.log(initial_stats);
             start_update();
