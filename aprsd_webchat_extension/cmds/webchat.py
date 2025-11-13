@@ -207,9 +207,9 @@ def _build_location_from_repeat(message):
 
 def _calculate_location_data(location_data):
     """Calculate all of the location data from data from aprs.fi or REPEAT."""
-    lat = location_data["lat"]
-    lon = location_data["lon"]
-    alt = location_data["altitude"]
+    lat = float(location_data["lat"])
+    lon = float(location_data["lon"])
+    alt = float(location_data["altitude"])
     speed = location_data["speed"]
     lasttime = location_data["lasttime"]
     timeago_str = location_data.get(
@@ -230,6 +230,9 @@ def _calculate_location_data(location_data):
     else:
         our_lat = CONF.aprsd_webchat_extension.latitude
         our_lon = CONF.aprsd_webchat_extension.longitude
+
+    our_lat = float(our_lat)
+    our_lon = float(our_lon)
 
     if our_lat and our_lon:
         distance = haversine((our_lat, our_lon), (lat, lon))

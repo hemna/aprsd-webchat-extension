@@ -5,6 +5,9 @@ var message_list = {};
 var from_msg_list = {};
 var selected_tab_callsign = null;
 const socket = io("/sendmsg");
+var myModalAlternative = null;
+var socketio_connected = false;
+var socketio_reconnecting = false;
 
 MSG_TYPE_TX = "tx";
 MSG_TYPE_RX = "rx";
@@ -48,7 +51,17 @@ function raise_error(msg) {
        heading: 'Error',
        text: msg,
        loader: true,
-       loaderBg: '#9EC600',
+       loaderBg: '#FF0000',
+       position: 'top-center',
+   });
+}
+
+function raise_info(msg) {
+   $.toast({
+       heading: 'Information',
+       text: msg,
+       loader: true,
+       loaderBg: '#00FF00',
        position: 'top-center',
    });
 }
@@ -56,9 +69,15 @@ function raise_error(msg) {
 function init_chat() {
    socket.on('connect', function () {
       console.log("Connected to socketio webchat extension");
+      if (socketio_reconnecting) {
+        raise_info("Reconnected to APRSD server");
+        socketio_reconnecting = false;
+      }
+      socketio_connected = true;
    });
 
    socket.on('disconnect', function(reason, details) {
+      socketio_connected = false;
       if (socket.active) {
           // temporary disconnection, the scoket will automatically try to reconnect
           console.log("Disconnected from socketio webchat extension.  reconnecting");
@@ -66,15 +85,18 @@ function init_chat() {
           console.log("Disconnected from socketio webchat extension");
           console.log(reason)
       }
+      socketio_reconnecting = true;
    });
 
    socket.on('connect_error', function(error) {
+      socketio_connected = false;
       if (socket.active) {
         // temporary failure, the scoket will automatically try to reconnect
         console.log("connection error from socketio webchat extension.  reconnecting");
       } else {
         console.log("Socket.io connection error: " + error.message);
       }
+      socketio_reconnecting = true;
    });
 
    socket.on("sent", function(msg) {
@@ -146,6 +168,10 @@ function init_chat() {
        to_call = $('#to_call').val().toUpperCase();
        message = $('#message').val();
        path = $('#pkt_path option:selected').val();
+       if (socketio_connected == false) {
+           raise_error("The connection to the APRSD server has been lost.  Please check your APRSD server connection and try again.");
+           return false;
+       }
        if (to_call == "") {
            raise_error("You must enter a callsign to send a message")
            return false;
@@ -705,7 +731,11 @@ function callsign_select(callsign) {
 }
 
 function call_callsign_location(callsign) {
-    // get the selected tab, so we can get the callsign
+    //make sure we are connected to the socketio server
+    if (socketio_connected == false) {
+        raise_error("Not connected to the APRSD server.  Please check your APRSD server connection and try again.");
+        return false;
+    }
     msg = {'callsign': selected_tab_callsign};
     socket.emit("get_callsign_location", msg);
     location_id = callsign_location_content(callsign, true)+"Spinner";
