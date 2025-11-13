@@ -5,6 +5,9 @@ var message_list = {};
 var from_msg_list = {};
 var selected_tab_callsign = null;
 const socket = io("/sendmsg");
+var myModalAlternative = null;
+var socketio_connected = false;
+var socketio_reconnecting = false;
 
 MSG_TYPE_TX = "tx";
 MSG_TYPE_RX = "rx";
@@ -34,7 +37,10 @@ function build_location_string_small(msg) {
     loc += "&nbsp;" + msg['compass_bearing'];
     //loc += "&nbsp;Distance " + msg['distance'] + " km";
     //loc += "&nbsp;" + dt.toLocaleString();
-    loc += "&nbsp;" + msg['timeago'];
+    //loc += "&nbsp;" + msg['timeago'];
+    loc += "&nbsp;"
+    timeago_str = "<time id='location_timeago' class='timeago' datetime='" + msg['last_updated'] + "'></time>";
+    loc += timeago_str;
     return loc;
 }
 
@@ -45,7 +51,17 @@ function raise_error(msg) {
        heading: 'Error',
        text: msg,
        loader: true,
-       loaderBg: '#9EC600',
+       loaderBg: '#FF0000',
+       position: 'top-center',
+   });
+}
+
+function raise_info(msg) {
+   $.toast({
+       heading: 'Information',
+       text: msg,
+       loader: true,
+       loaderBg: '#00FF00',
        position: 'top-center',
    });
 }
@@ -53,9 +69,15 @@ function raise_error(msg) {
 function init_chat() {
    socket.on('connect', function () {
       console.log("Connected to socketio webchat extension");
+      if (socketio_reconnecting) {
+        raise_info("Reconnected to APRSD server");
+        socketio_reconnecting = false;
+      }
+      socketio_connected = true;
    });
 
    socket.on('disconnect', function(reason, details) {
+      socketio_connected = false;
       if (socket.active) {
           // temporary disconnection, the scoket will automatically try to reconnect
           console.log("Disconnected from socketio webchat extension.  reconnecting");
@@ -63,15 +85,18 @@ function init_chat() {
           console.log("Disconnected from socketio webchat extension");
           console.log(reason)
       }
+      socketio_reconnecting = true;
    });
 
    socket.on('connect_error', function(error) {
+      socketio_connected = false;
       if (socket.active) {
         // temporary failure, the scoket will automatically try to reconnect
         console.log("connection error from socketio webchat extension.  reconnecting");
       } else {
         console.log("Socket.io connection error: " + error.message);
       }
+      socketio_reconnecting = true;
    });
 
    socket.on("sent", function(msg) {
@@ -82,11 +107,13 @@ function init_chat() {
        }
        msg["type"] = MSG_TYPE_TX;
        sent_msg(msg);
+       radio_icon_blink(true);
    });
 
    socket.on("ack", function(msg) {
        msg["type"] = MSG_TYPE_ACK;
        ack_msg(msg);
+       radio_icon_blink(false);
    });
 
    socket.on("new", function(msg) {
@@ -97,20 +124,43 @@ function init_chat() {
        }
        msg["type"] = MSG_TYPE_RX;
        from_msg(msg);
+       radio_icon_blink(false);
    });
 
-   socket.on("callsign_location", function(msg) {
-       console.log("CALLSIGN Location!");
+   socket.on("rx", function(msg) {
+       console.log("RX packet received");
        console.log(msg);
+       msg["type"] = MSG_TYPE_RX;
+       from_msg(msg);
+   });
+
+   // For notifying the radio icon
+   // to blink when we tx/rx packets
+   socket.on("rx_pkt", function(msg) {
+       console.log("RX(" + msg._type + ") packet received: " + msg.from_call + " to " + msg.to_call);
+       radio_icon_blink(false);
+   });
+
+   socket.on("tx_pkt", function(msg) {
+       console.log("TX(" + msg._type + ") packet received: " + msg.from_call + " to " + msg.to_call);
+       radio_icon_blink(true);
+   });
+
+
+   socket.on("callsign_location", function(msg) {
+       console.log("CALLSIGN Location!: ", msg);
        now = new Date();
        msg['last_updated'] = now;
        callsign_location[msg['callsign']] = msg;
 
        location_id = callsign_location_content(msg['callsign'], true);
        location_string = build_location_string_small(msg);
-       $(location_id).html(location_string);
-       $(location_id+"Spinner").addClass('d-none');
+       //$(location_id).html(location_string);
+       $("#location_str").html(location_string);
+       //$(location_id+"Spinner").addClass('d-none');
+       $("#location_spinner").addClass('d-none');
        save_data();
+       $("time#location_timeago").timeago("update", msg['last_updated']);
    });
 
    $("#sendform").submit(function(event) {
@@ -118,6 +168,10 @@ function init_chat() {
        to_call = $('#to_call').val().toUpperCase();
        message = $('#message').val();
        path = $('#pkt_path option:selected').val();
+       if (socketio_connected == false) {
+           raise_error("The connection to the APRSD server has been lost.  Please check your APRSD server connection and try again.");
+           return false;
+       }
        if (to_call == "") {
            raise_error("You must enter a callsign to send a message")
            return false;
@@ -239,6 +293,11 @@ function init_messages() {
     if (callsign_location == null) {
        callsign_location = {};
     }
+    if (Object.keys(callsign_list).length > 0) {
+        console.log("callsign_list has " + Object.keys(callsign_list).length + " callsigns");
+        $("#get_location_button").prop('disabled', false);
+        update_info_bar(false);
+    }
     console.log(callsign_list);
     console.log(message_list);
     console.log(callsign_location);
@@ -279,6 +338,15 @@ function init_messages() {
     if (first_callsign !== null) {
       callsign_select(first_callsign);
     }
+
+    //now create a timer that updates the location_str every minute
+    setInterval(function() {
+        //make sure there is a tab
+        if (Object.keys(callsign_list).length > 0) {
+            console.log("Interval Updating location string for: ", selected_tab_callsign);
+            update_location_string(selected_tab_callsign);
+        }
+    }, 10000);
 }
 
 function scroll_main_content(callsign=false) {
@@ -335,6 +403,9 @@ function create_callsign_tab(callsign, active=false) {
 
   callsignTabs.append(item_html);
   create_callsign_tab_content(callsign, active);
+  // we know we have at least one callsign, so we can enable the get location button
+  $("#get_location_button").prop('disabled', false);
+  update_info_bar(true);
 }
 
 function create_callsign_tab_content(callsign, active=false) {
@@ -347,7 +418,7 @@ function create_callsign_tab_content(callsign, active=false) {
   } else {
     active_str = '';
   }
-
+/*
   location_str = ""
   if (callsign in callsign_location) {
     location_str = build_location_string_small(callsign_location[callsign]);
@@ -355,16 +426,18 @@ function create_callsign_tab_content(callsign, active=false) {
   }
 
   location_id = callsign_location_content(callsign);
+  */
 
   item_html = '<div class="tab-pane fade '+active_str+'" id="'+tab_content+'" role="tabpanel" aria-labelledby="'+tab_id+'">';
-  item_html += '<div class="" style="border: 1px solid #999999;background-color:#aaaaaa;">';
+  /*item_html += '<div class="" style="border: 1px solid #999999;background-color:#aaaaaa;">';
   item_html += '<div class="row" style="padding-top:4px;padding-bottom:4px;background-color:#aaaaaa;margin:0px;">';
   item_html +=   '<div class="d-flex col-md-10 justify-content-left" style="padding:0px;margin:0px;">';
   item_html +=     '<button onclick="call_callsign_location(\''+callsign+'\');" style="margin-left:2px;padding: 0px 4px 0px 4px;font-size: .9rem" type="button" class="btn btn-primary">';
   item_html +=     '<span id="'+location_id+'Spinner" class="d-none spinner-border spinner-border-sm" role="status" aria-hidden="true" style="font-size: .9rem"></span>Get Location</button>';
   item_html +=   '&nbsp;<span id="'+location_id+'" style="font-size: .9rem">'+location_str+'</span></div>';
   item_html += '</div>';
-  item_html += '<div class="speech-wrapper" id="'+wrapper_id+'"></div>';
+  */
+  item_html += '<div class="flex min-h-screen overflow-hidden"><div class="speech-wrapper h-auto" id="'+wrapper_id+'"></div></div>';
   item_html += '</div>';
   callsignTabsContent.append(item_html);
 }
@@ -384,7 +457,17 @@ function delete_tab(callsign) {
     first_tab = $("#msgsTabList").children().first().children().first();
     console.log(first_tab);
     $(first_tab).click();
+    first_callsign = first_tab.attr('callsign');
+    console.log("Selecting first tab: ", first_callsign);
+    callsign_select(first_callsign);
+    console.log("selected_tab_callsign: ", selected_tab_callsign);
     save_data();
+    // if there are no more tabs, disable the get location button
+    if (Object.keys(callsign_list).length == 0) {
+        console.log("No more tabs, disabling get location button");
+        $("#get_location_button").prop('disabled', true);
+        update_info_bar(false);
+    }
 }
 
 function add_callsign(callsign, msg) {
@@ -408,7 +491,6 @@ function update_callsign_path(callsign, msg) {
   path = msg['path']
   $('#pkt_path').val(path);
   callsign_list[callsign] = path;
-
 }
 
 function append_message(callsign, msg, msg_html) {
@@ -441,6 +523,7 @@ function append_message(callsign, msg, msg_html) {
       //Now click the tab if and only if there is only one tab
       callsign_tab_id = callsign_tab(callsign);
       $(callsign_tab_id).click();
+      console.log("append_message: calling callsign_select for: ", callsign);
       callsign_select(callsign);
   }
 }
@@ -606,12 +689,34 @@ function ack_msg(msg) {
    scroll_main_content();
 }
 
+function update_location_string(callsign) {
+    console.log("update_location_string: " + callsign);
+    if (callsign in callsign_location) {
+        location_data = callsign_location[callsign];
+        location_string = build_location_string_small(location_data);
+        $("#location_str").html(location_string);
+        $("time#location_timeago").timeago("update", location_data['last_updated']);
+    } else {
+        $("#location_str").html("");
+    }
+}
+
 function activate_callsign_tab(callsign) {
+    console.log("activate_callsign_tab: " + callsign);
     tab_content = tab_string(callsign, id=true);
     $(tab_content).click();
+    console.log("activate_callsign_tab: updating location string for: ", callsign);
+    update_location_string(callsign);
 }
 
 function callsign_select(callsign) {
+    if (!message_list.hasOwnProperty(callsign)) {
+        // this is the case when the user clicks the
+        // delete icon on the tab.  It eventually induces an
+        // onclick callsign_select() for a deleted callsign.
+        // so we do nothing here.
+        return false
+    }
     var tocall = $("#to_call");
     tocall.val(callsign.toUpperCase());
     scroll_main_content(callsign);
@@ -621,11 +726,40 @@ function callsign_select(callsign) {
     $(tab_notify_id).text(0);
     // Now update the path
     // $('#pkt_path').val(callsign_list[callsign]);
+    console.log("callsign_select: updating location string for: ", callsign);
+    update_location_string(callsign);
 }
 
 function call_callsign_location(callsign) {
-    msg = {'callsign': callsign};
+    //make sure we are connected to the socketio server
+    if (socketio_connected == false) {
+        raise_error("Not connected to the APRSD server.  Please check your APRSD server connection and try again.");
+        return false;
+    }
+    msg = {'callsign': selected_tab_callsign};
     socket.emit("get_callsign_location", msg);
     location_id = callsign_location_content(callsign, true)+"Spinner";
-    $(location_id).removeClass('d-none');
+    //$(location_id).removeClass('d-none');
+    $("#location_spinner").removeClass('d-none');
+}
+
+function update_info_bar(show_button=false) {
+    msgs = message_list[selected_tab_callsign];
+    //get the length of the callsign's message list
+    // Once we have a callsign tab created, we can update
+    // the info bar's html to include the get location buttton
+    if (show_button) {
+        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:1px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Get Location</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
+        //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
+    } else {
+        // show the welcome message instead.
+        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Send a message to a callsign to start a conversation.</span>"
+    }
+
+    $("#info_bar_container").html(html);
+    if (show_button) {
+        $("#get_location_button").prop('disabled', false);
+    } else {
+        $("#get_location_button").prop('disabled', true);
+    }
 }

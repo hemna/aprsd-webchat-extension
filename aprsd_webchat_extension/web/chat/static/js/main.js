@@ -19,11 +19,34 @@ function show_aprs_icon(item, symbol) {
 function ord(str){return str.charCodeAt(0);}
 
 function update_stats( data ) {
+    console.log("update_stats() main.js called");
     console.log(data);
     $("#version").text( data["stats"]["APRSDStats"]["version"] );
     $("#aprs_connection").html( data["aprs_connection"] );
     $("#uptime").text( "uptime: " + data["stats"]["APRSDStats"]["uptime"] );
     short_time = data["time"].split(/\s(.+)/)[1];
+
+    update_gps(data);
+}
+
+function radio_icon_blink(tx=true) {
+    // blink the radio icon for 1 second.
+    //If tx is true we want the radio svg icon fill color
+    //to be red, if false we want it to be blue.
+    if (tx) {
+        $('#radio_icon_svg').attr('fill', '#FF2E2E');
+    } else {
+        $('#radio_icon_svg').attr('fill', '#00A318');
+    }
+    $('#radio_icon_svg').css('opacity', 1);
+    window.setTimeout(function() {
+        $('#radio_icon_svg').css('opacity', 0.2);
+    }, 500);
+
+    window.setTimeout(function() {
+        $('#radio_icon_svg').attr('fill', '#aaaaaa');
+        $('#radio_icon_svg').css('opacity', 0.2);
+    }, 500);
 }
 
 

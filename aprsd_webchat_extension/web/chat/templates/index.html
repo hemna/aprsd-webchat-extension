@@ -4,10 +4,16 @@
           content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
     <script src="/static/js/upstream/jquery-3.7.1.min.js"></script>
     <script src="/static/js/upstream/jquery.toast.js"></script>
+    <script src="/static/js/upstream/jquery.timeago.min.js"></script>
     <script src="/static/js/upstream/socket.io.min.js"></script>
 
     <link rel="stylesheet" href="/static/css/upstream/bootstrap.min.css">
-    <script src="/static/js/upstream/bootstrap.bundle.min.js"></script>
+    <script defer src="/static/js/upstream/bootstrap.bundle.min.js"></script>
+
+<!--
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    -->
 
     <!--
      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
@@ -31,29 +37,59 @@
 
     <script type="text/javascript">
         var initial_stats = {{ initial_stats|tojson|safe }};
-        var latitude = parseFloat('{{ latitude|safe }}');
-        var longitude = parseFloat('{{ longitude|safe }}');
+        var gps_lat = '{{ initial_stats.stats.GPSStats.latitude|safe }}';
+        var gps_lon = '{{ initial_stats.stats.GPSStats.longitude|safe }}';
+        var gps_alt = '{{ initial_stats.stats.GPSStats.altitude|safe }}';
+        var gps_speed = parseFloat('{{ initial_stats.stats.GPSStats.speed|safe }}');
+        var gps_course = parseFloat('{{ initial_stats.stats.GPSStats.track|safe }}');
+        var is_digipi = '{{ initial_stats.is_digipi|safe }}';
+        var beaconing_enabled = '{{ beaconing_enabled|safe }}';
+        // set the cutoff time for the timeago plugin to 6 days
+        jQuery.timeago.settings.cutoff = 1000*60*60*24*6;
 
-        var memory_chart = null;
-        var message_chart = null;
+        // now set the values of the gps_lat, gps_lon, gps_alt, gps_speed, and gps_course in the initial_stats.
+        // convert meters per second to kilometers per hour
+        var speed_kph = gps_speed * 3.6;
+
+        // 0 is disabled, 1 is manual enabled, 2 is interval beaconing and 3 is smart beaconing.
+        var beaconing_setting = 0;
 
         $(document).ready(function() {
-            console.log(initial_stats);
+            //console.log(initial_stats);
             start_update();
             init_chat();
             //reset_Tabs();
+            // Have to call it in init_chat() because the socketio connection is not established yet.
+            //init_gps();
 
-            console.log("latitude", latitude);
-            console.log("longitude", longitude);
-
-            if (isNaN(latitude) || isNaN(longitude) && location.protocol != 'https:') {
-                // Have to disable the beacon button.
-                $('#send_beacon').prop('disabled', true);
-            }
+            $('#gps_lat').text(gps_lat);
+            $('#gps_lon').text(gps_lon);
+            $('#gps_alt').text(gps_alt);
+            $('#gps_speed').text(Math.floor(speed_kph) + "km/h");
+            $('#gps_course').text(Math.floor(gps_course) + "°");
 
             $("#wipe_local").click(function() {
                 console.log('Wipe local storage');
                 localStorage.clear();
+            });
+
+            //Now send a message back to the server when the user changes the beaconing setting.
+            $('#save_beacon_settings').click(function() {
+                beacon_type = $('#beaconing_setting').val();
+                gps_settings = {
+                    'beacon_type': beacon_type,
+                    'beacon_interval': $('#beacon_interval').val(),
+                    'smart_beacon_distance_threshold': $('#smart_beacon_distance_threshold').val(),
+                    'smart_beacon_time_window': $('#smart_beacon_time_window').val(),
+                }
+                console.log("Sending beaconing settings to server", gps_settings);
+                socket.emit('set_beaconing_setting', gps_settings);
+                $.toast({heading: 'Beaconing Settings Saved',
+                        text: "Beaconing settings saved",
+                        loader: true,
+                        loaderBg: '#9EC600',
+                        position: 'top-center',
+                });
             });
 
             // When a tab is clicked, populate the to_call form field.
@@ -65,10 +101,18 @@
                 selected_tab_callsign = callsign;
             });
 
+            // set initial opacity of the radio icon to 0.2
+            $('#radio_icon_svg').css('opacity', 0.2);
+
             /*$('[data-bs-toggle="popover"]').popover(
                 {html: true, animation: true}
             );*/
             reload_popovers();
+
+            $('#myModal').on('shown.bs.modal', function () {
+                $('#myInput').trigger('focus')
+            })
+            //$("time.timeago").timeago();
         });
     </script>
 </head>
@@ -77,11 +121,12 @@
     <div class="wc-container">
         <div class="wc-row header">
             <div class="container-sm">
-                <div class="row">
-                    <div class="column">
-                        <h2>APRSD WebChat <span style='color: green;font-size:.5em'>{{ version }}</span></h2>
+                <div class="row gx-1 gy-1 justify-content-center align-items-center">
+                    <div class="col-sm-2" style="width:300px;">
+                        <span style="font-size: 1.5em;">APRSD WebChat</span>
                     </div>
                 </div>
+                {% if is_digipi == False %}
                 <div class="row">
                     <div class="column">
                         <span style='color: green'>{{ callsign }}</span>
@@ -90,8 +135,9 @@
                         <span id='uptime'>NONE</span>
                     </div>
                 </div>
-                <div class="row">
-                    <form class="row gx-1 gy-1 justify-content-center align-items-center" id="sendform" name="sendmsg" action="" autocomplete="off">
+                {% endif %}
+                <div class="row" style="padding-top: 0px; padding-bottom: 0px;margin-top: 0px;margin-bottom: 0px;">
+                    <form class="row gx-1 gy-1 justify-content-center align-items-center" style="margin:0px;padding:0px;" id="sendform" name="sendmsg" action="" autocomplete="off">
                         <div class="col-sm-2" style="width:150px;">
                             <label for="to_call" class="visually-hidden">Callsign</label>
                             <input type="search" class="form-control mb-2 mr-sm-2" name="to_call" id="to_call" placeholder="To Callsign" size="11" maxlength="9">
@@ -112,8 +158,43 @@
                         </div>
                         <div class="col-auto">
                             <input type="submit" name="submit" class="btn btn-primary mb-2" id="send_msg" value="Send"/>
-                            <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Position">Send Position</button>
                             <!-- <button type="button" class="btn btn-primary mb-2" id="wipe_local" value="wipe local storage">Wipe LocalStorage</button> -->
+                            <a class="btn btn-secondary mb-2" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">GPS&nbsp;&nbsp;
+                                <img src="/static/images/satellite-solid.svg" alt="GPS Icon" style="width: 25px; height: 25px; float: right" id="gps_icon">
+                            </a>
+                        </div>
+                        <div class="collapse" id="collapseGPS" style="width: 800px">
+                            <div class="card">
+                                <div class="card-body" style="padding-top: 2px; padding-bottom: 2px;">
+                                   <div id="gps_info_box">
+                                        <span class="small">Lat: <span id="gps_lat"></span></span>&nbsp;
+                                        <span class="small">Lon: <span id="gps_lon"></span></span>&nbsp;
+                                        <span class="small">Alt: <span id="gps_alt"></span></span>&nbsp;
+                                        <span class="small">Speed: <span id="gps_speed"></span></span>&nbsp;
+                                        <span class="small">Course: <span id="gps_course"></span></span>&nbsp;
+                                        <span class="small"><time id="gps_timeago" class="timeago" datetime="0"></time></span><br>
+                                    </div>
+                                    <label for="range3" class="form-label">Beaconing Setting: <span id="beaconing_setting_description"></span></label>
+                                    <input type="range" class="form-range" min="0" max="3" step="1" id="beaconing_setting">
+                                    <script>
+                                        // Beaconing settings are 0 = disabled, 1 = manual enabled, 2 = interval beaconing and 3 = smart beaconing.
+                                        // Set the initial value of the beaconing setting to the initial value of the beaconing setting in the initial stats.
+                                        $('#beaconing_setting').on('input', function() {
+                                            var value = $(this).val();
+                                            set_beaconing_setting(value);
+                                        });
+                                    </script>
+                                    <label for="beacon_interval" id="beacon_interval_label" class="form-label" style="display: none;">Beacon Interval in seconds</label>
+                                    <input type="number" class="form-control" id="beacon_interval" placeholder="Beacon Interval" style="display: none;" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
+                                    <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label" style="display: none;">Interval Beaconing Time Window in seconds</label>
+                                    <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="Interval Beaconing Time Window" style="display: none;">
+                                    <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label" style="display: none;">Smart Beaconing Distance Threshold</label>
+                                    <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="Smart Beaconing Distance Threshold" style="display: none;">
+                                    <br>
+                                    <button type="button" class="btn btn-primary mb-2" id="send_beacon" value="Send Beacon">Send Beacon</button>
+                                    <button type="button" class="btn btn-secondary mb-2" id="save_beacon_settings" value="Save">Save</button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -122,16 +203,27 @@
                 <ul class="nav nav-tabs" id="msgsTabList" role="tablist"></ul>
             </div>
         </div>
+        <div class="wc-row info">
+            <div class="container" style="max-width: 800px;">
+                <div class="d-sm-flex p-0" style="background-color:#aaaaaa;border: 1px solid #999999;" >
+                    <div class="" id="info_bar_container" style="padding-top: 2px; padding-bottom: 2px;font-size: .8em;">
+                        <span id="welcome_message" style="font-size: .9rem">Welcome to APRSD WebChat.
+                            &nbsp;&nbsp;Send a message to a callsign to start a conversation.
+                        </span>
+                    </div>
+                    <div class="ms-auto p-0" style="padding: 2px;">
+                        <svg id="radio_icon_svg" width="22px" height="22px" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#AAAAAA">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="wc-row content" id="wc-content">
             <div class="container" style="max-width: 800px;">
                 <div class="tab-content" id="msgsTabContent">
                 </div>
-            </div>
-        </div>
-        <div class="wc-row content prefooter">
-            <div class="container-sm" style="max-width: 800px; padding-top: 0px;margin-top: 0px;margin-bottom: 0px">
-                <span class="material-symbols-rounded md-10">thumb_down</span><span style="font-size: 10px"> - Message Not Acknowledged&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                <span class="material-symbols-rounded md-10">thumb_up</span><span style="font-size: 10px"> - Message Acknowledged</span>
             </div>
         </div>
         <div class="wc-row footer">

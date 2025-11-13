@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import queue
 import signal
 import sys
 import threading
@@ -15,6 +16,7 @@ from aprsd import cli_helper, client, packets, plugin_utils, stats, threads, uti
 from aprsd import utils as aprsd_utils
 from aprsd.client.client import APRSDClient
 from aprsd.main import cli
+from aprsd.packets import collector as packets_collector
 from aprsd.threads import aprsd as aprsd_threads
 from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
@@ -27,10 +29,18 @@ from oslo_config import cfg
 import aprsd_webchat_extension
 from aprsd_webchat_extension import utils as webchat_utils
 
+try:
+    from aprsd_gps_extension.stats import GPSStats
+except Exception:
+    GPSStats = None
+
 CONF = cfg.CONF
 LOG = logging.getLogger()
 auth = HTTPBasicAuth()
 socketio = None
+# for the gps extension thread to notify
+# when the settings have changed.
+notify_queue = queue.Queue()
 
 # List of callsigns that we don't want to track/fetch their location
 callsign_no_track = [
@@ -70,6 +80,45 @@ def signal_handler(sig, frame):
         time.sleep(1.5)
         LOG.info("Telling flask to bail.")
         signal.signal(signal.SIGTERM, sys.exit(0))
+
+
+def _is_aprsd_gps_extension_installed():
+    try:
+        import aprsd_gps_extension  # noqa: F401
+
+        return True
+    except Exception:
+        return False
+
+
+class WebChatPacketMonitor:
+    """Class to monitor packets for the webchat UI radio icon blinking."""
+
+    def rx(self, packet: packets.Packet):
+        LOG.debug(f"WebChatPacketMonitor rx: {packet}")
+        if packet.get("to_call") == CONF.callsign:
+            LOG.debug(f"WebChatPacketMonitor rx: {packet}")
+            socketio.emit(
+                "rx_pkt",
+                packet.__dict__,
+                namespace="/sendmsg",
+            )
+
+    def tx(self, packet: packets.Packet):
+        LOG.debug(f"WebChatPacketMonitor tx: {packet}")
+        if packet.get("from_call") == CONF.callsign:
+            LOG.debug(f"WebChatPacketMonitor tx: {packet}")
+            socketio.emit(
+                "tx_pkt",
+                packet.__dict__,
+                namespace="/sendmsg",
+            )
+
+    def flush(self):
+        pass
+
+    def load(self):
+        pass
 
 
 class SentMessages:
@@ -158,9 +207,9 @@ def _build_location_from_repeat(message):
 
 def _calculate_location_data(location_data):
     """Calculate all of the location data from data from aprs.fi or REPEAT."""
-    lat = location_data["lat"]
-    lon = location_data["lon"]
-    alt = location_data["altitude"]
+    lat = float(location_data["lat"])
+    lon = float(location_data["lon"])
+    alt = float(location_data["altitude"])
     speed = location_data["speed"]
     lasttime = location_data["lasttime"]
     timeago_str = location_data.get(
@@ -169,9 +218,23 @@ def _calculate_location_data(location_data):
     )
     # now calculate distance from our own location
     distance = 0
-    if CONF.aprsd_webchat_extension.latitude and CONF.aprsd_webchat_extension.longitude:
-        our_lat = float(CONF.aprsd_webchat_extension.latitude)
-        our_lon = float(CONF.aprsd_webchat_extension.longitude)
+    # if we have the gps extension installed, then we can use the gps extension to get the location data.
+    if _is_aprsd_gps_extension_installed():
+        gps_stats = GPSStats().stats(serializable=True)
+        if gps_stats.get("fix"):
+            our_lat = gps_stats.get("latitude")
+            our_lon = gps_stats.get("longitude")
+        else:
+            our_lat = CONF.aprsd_webchat_extension.latitude
+            our_lon = CONF.aprsd_webchat_extension.longitude
+    else:
+        our_lat = CONF.aprsd_webchat_extension.latitude
+        our_lon = CONF.aprsd_webchat_extension.longitude
+
+    our_lat = float(our_lat)
+    our_lon = float(our_lon)
+
+    if our_lat and our_lon:
         distance = haversine((our_lat, our_lon), (lat, lon))
         bearing = aprsd_utils.calculate_initial_compass_bearing(
             (our_lat, our_lon),
@@ -179,8 +242,8 @@ def _calculate_location_data(location_data):
         )
         compass_bearing = aprsd_utils.degrees_to_cardinal(bearing)
     else:
-        bearing = 0
         distance = -1
+        bearing = 0
         compass_bearing = "N"
 
     return {
@@ -333,14 +396,163 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         )
 
 
+class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
+    """Beacon thread for when the gps extension is not installed."""
+
+    def __init__(self, notify_queue):
+        super().__init__("BeaconSendThread")
+        self.notify_queue = notify_queue
+        self.beacon_interval = CONF.aprsd_webchat_extension.beacon_interval
+        # Default this to none.
+        self.beacon_type = "none"
+
+        # Make sure Latitude and Longitude are set.
+        if (
+            not CONF.aprsd_webchat_extension.latitude
+            or not CONF.aprsd_webchat_extension.longitude
+        ):
+            LOG.error(
+                "Latitude and Longitude are not set in the config file."
+                "Beacon will not be sent and thread is STOPPED.",
+            )
+            self.stop()
+        LOG.info(
+            "Beacon thread is running and will send "
+            f"beacons every {CONF.aprsd_webchat_extension.beacon_interval} seconds.",
+        )
+
+    def update_settings(self, message):
+        self.beacon_type = message.get("beacon_type")
+        self.beacon_interval = message.get("beacon_interval")
+
+    def get_gps_settings(self):
+        LOG.info("Getting GPS settings")
+        self.notify_queue.put(
+            {"message": "gps_settings", "settings": self.get_settings()}
+        )
+
+    def get_settings(self):
+        return {
+            "beacon_type": self.beacon_type,
+            "beacon_interval": self.beacon_interval,
+        }
+
+    def loop(self):
+        # First check if the notify queue has a message
+        if not self.notify_queue.empty():
+            message = self.notify_queue.get_nowait()
+            LOG.info(f"Notify queue message: {message}")
+            match message.get("message"):
+                case "get_gps_settings":
+                    self.get_gps_settings()
+                case "beaconing_settings_changed":
+                    self.update_settings(message)
+                case _:
+                    LOG.warning(f"Unknown message: {message}")
+                    self.notify_queue.put(message)
+
+        # we only send beacons if the beacon type is interval.
+        # since we only have hard coded lat/lon in the config
+        if self.beacon_type != "interval":
+            time.sleep(1)
+            return True
+
+        # Only dump out the stats every N seconds
+        if self.loop_count % CONF.beacon_interval == 0:
+            pkt = packets.core.BeaconPacket(
+                from_call=CONF.callsign,
+                to_call="APRS",
+                latitude=float(CONF.latitude),
+                longitude=float(CONF.longitude),
+                comment="APRSD GPS Beacon",
+                symbol=CONF.beacon_symbol,
+            )
+            try:
+                # Only send it once
+                pkt.retry_count = 1
+                tx.send(pkt, direct=True)
+            except Exception as e:
+                LOG.error(f"Failed to send beacon: {e}")
+                APRSDClient().reset()
+                time.sleep(5)
+
+        time.sleep(1)
+        return True
+
+
 class LocationProcessingThread(aprsd_threads.APRSDThread):
     """Class to handle the location processing."""
 
-    def __init__(self):
+    def __init__(self, notify_queue):
         super().__init__("LocationProcessingThread")
+        self.notify_queue = notify_queue
+        self.last_gps_fix = False
+        self.last_gps_sent_time = None
+
+    def _should_send_gps_stats(self, gps_stats):
+        return gps_stats.get("fix") != self.last_gps_fix or (
+            self.last_gps_sent_time
+            and datetime.datetime.now() - self.last_gps_sent_time
+            > datetime.timedelta(seconds=10)
+        )
 
     def loop(self):
-        pass
+        # First check if the notify queue has a message
+        if not self.notify_queue.empty():
+            message = self.notify_queue.get_nowait()
+
+            match message.get("message"):
+                case "beacon sent":
+                    # notify the browser that the beacon was sent.
+                    LOG.debug("Sending beacon sent to browser")
+                    socketio.emit(
+                        "gps_beacon_sent",
+                        message,
+                        namespace="/sendmsg",
+                    )
+                case "gps_settings":
+                    # update the browser with the GPS settings.
+                    LOG.debug("Sending GPS settings to browser")
+                    socketio.emit(
+                        "gps_settings",
+                        message,
+                        namespace="/sendmsg",
+                    )
+                case _:
+                    self.notify_queue.put(message)
+
+        if _is_aprsd_gps_extension_installed():
+            # Check every 10 seconds to see if we have a fix.
+            if self.loop_count % 2 == 0:
+                if GPSStats:
+                    gps_stats = GPSStats().stats(serializable=True)
+                    if self._should_send_gps_stats(gps_stats):
+                        self.last_gps_fix = gps_stats.get("fix")
+                        LOG.debug(f"Sending GPS stats to browser: {gps_stats}")
+                        self.last_gps_sent_time = datetime.datetime.now()
+                        socketio.emit(
+                            "gps_stats",
+                            gps_stats,
+                            namespace="/sendmsg",
+                        )
+        else:
+            if self.loop_count % 60 == 0:
+                gps_stats = {
+                    "fix": False,
+                    "latitude": CONF.aprsd_webchat_extension.latitude,
+                    "longitude": CONF.aprsd_webchat_extension.longitude,
+                    "altitude": 0,
+                    "speed": 0,
+                    "track": 0,
+                }
+                socketio.emit(
+                    "gps_stats",
+                    gps_stats,
+                    namespace="/sendmsg",
+                )
+
+        time.sleep(1)
+        return True
 
 
 def _get_transport(stats):
@@ -395,6 +607,10 @@ def index():
     stats["transport"] = transport
     stats["aprs_connection"] = aprs_connection
     LOG.debug(f"initial stats = {stats}")
+    # The hard coded lat/long are from the
+    # aprsd_webchat_extension.
+    # when the aprsd_gps_extension is installed, we will
+    # Get the lat/long from the gps extension
     latitude = CONF.aprsd_webchat_extension.latitude
     if latitude:
         latitude = float(CONF.aprsd_webchat_extension.latitude)
@@ -402,6 +618,15 @@ def index():
     longitude = CONF.aprsd_webchat_extension.longitude
     if longitude:
         longitude = float(longitude)
+
+    if not latitude or not longitude:
+        LOG.error("Latitude or longitude is not set in the config file.")
+        latitude = 0.0
+        longitude = 0.0
+
+    # since we just hit the index page, we need to fetch
+    # the gps settings from the LocationProcessingThread.
+    notify_queue.put({"message": "get_gps_settings"})
 
     return flask.render_template(
         html_template,
@@ -412,6 +637,8 @@ def index():
         aprsd_version=aprsd.__version__,
         latitude=latitude,
         longitude=longitude,
+        is_digipi=CONF.is_digipi,
+        beaconing_enabled=CONF.enable_beacon,
     )
 
 
@@ -429,6 +656,7 @@ def _stats():
 
     time_format = "%m-%d-%Y %H:%M:%S"
     stats_dict = stats.stats_collector.collect(serializable=True)
+    LOG.debug(f"stats_dict: {stats_dict}")
     # Webchat doesnt need these
     if "WatchList" in stats_dict:
         del stats_dict["WatchList"]
@@ -443,10 +671,77 @@ def _stats():
     if "PluginManager" in stats_dict:
         del stats_dict["PluginManager"]
 
+    # the webchat UI needs to know if we are running on a Digipi.
+    # digipi wants ui elements to be disabled.
+    stats_dict["is_digipi"] = CONF.is_digipi
+
+    if not _is_aprsd_gps_extension_installed():
+        stats_dict["GPSStats"] = {
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "altitude": 0,
+            "speed": 0,
+            "track": 0,
+        }
+    elif "GPSStats" not in stats_dict:
+        stats_dict["GPSStats"] = {
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "altitude": 0,
+            "speed": 0,
+            "track": 0,
+        }
+
+    stats_dict["gps"] = {
+        "beaconing_enabled": CONF.enable_beacon,
+        "latitude": CONF.aprsd_webchat_extension.latitude,
+        "longitude": CONF.aprsd_webchat_extension.longitude,
+        "beacon_interval": CONF.beacon_interval,
+        "gps_extension": {
+            "is_installed": _is_aprsd_gps_extension_installed(),
+            "enabled": False,
+            "gpsd_host": None,
+            "gpsd_port": None,
+            "polling_period": None,
+            "beacon_type": None,
+            "smart_beacon_distance_threshold": None,
+            "smart_beacon_time_window": None,
+        },
+    }
+
+    if _is_aprsd_gps_extension_installed():
+        LOG.debug("aprsd-gps-extension is installed")
+        LOG.debug(f"aprsd-gps-extension enabled: {CONF.aprsd_gps_extension.enabled}")
+        LOG.debug(
+            f"aprsd-gps-extension gpsd_host: {CONF.aprsd_gps_extension.gpsd_host}"
+        )
+        LOG.debug(
+            f"aprsd-gps-extension gpsd_port: {CONF.aprsd_gps_extension.gpsd_port}"
+        )
+        LOG.debug(
+            f"aprsd-gps-extension beacon_type: {CONF.aprsd_gps_extension.beacon_type}"
+        )
+        LOG.debug(
+            f"aprsd-gps-extension smart_beacon_distance_threshold: {CONF.aprsd_gps_extension.smart_beacon_distance_threshold}"
+        )
+        LOG.debug(
+            f"aprsd-gps-extension smart_beacon_time_window: {CONF.aprsd_gps_extension.smart_beacon_time_window}"
+        )
+        stats_dict["gps"]["gps_extension"] = {
+            "is_installed": True,
+            "enabled": CONF.aprsd_gps_extension.enabled,
+            "gpsd_host": CONF.aprsd_gps_extension.gpsd_host,
+            "gpsd_port": CONF.aprsd_gps_extension.gpsd_port,
+            "beacon_type": CONF.aprsd_gps_extension.beacon_type,
+            "smart_beacon_distance_threshold": CONF.aprsd_gps_extension.smart_beacon_distance_threshold,
+            "smart_beacon_time_window": CONF.aprsd_gps_extension.smart_beacon_time_window,
+        }
+
     result = {
         "time": now.strftime(time_format),
         "stats": stats_dict,
     }
+    LOG.debug(f"result: {result}")
     return result
 
 
@@ -513,8 +808,8 @@ class SendMessageNamespace(Namespace):
 
     def on_gps(self, data):
         LOG.debug(f"WS on_GPS: {data}")
-        lat = data["latitude"]
-        long = data["longitude"]
+        lat = float(data["latitude"])
+        long = float(data["longitude"])
         LOG.debug(f"Lat {lat}")
         LOG.debug(f"Long {long}")
         path = data.get("path", None)
@@ -536,6 +831,45 @@ class SendMessageNamespace(Namespace):
                 path=path,
             ),
             direct=True,
+        )
+        # Now let the browser know that the beacon was sent.
+        socketio.emit(
+            "gps_beacon_sent",
+            {"message": "beacon sent"},
+            namespace="/sendmsg",
+        )
+
+    def on_set_beaconing_setting(self, data):
+        global notify_queue
+        LOG.warning(f"WS on_set_beaconing_setting {data}")
+        beacon_type = data["beacon_type"]
+        lookup = {
+            0: "none",
+            1: "none",
+            2: "interval",
+            3: "smart",
+        }
+        beacon_type = lookup[int(beacon_type)]
+        beacon_interval = data["beacon_interval"]
+        smart_beacon_distance_threshold = (
+            0
+            if not data.get("smart_beacon_distance_threshold")
+            else data.get("smart_beacon_distance_threshold", 0)
+        )
+        smart_beacon_time_window = (
+            0
+            if not data.get("smart_beacon_time_window")
+            else data.get("smart_beacon_time_window", 0)
+        )
+        # Now we have to restart the GPSBeaconThread
+        notify_queue.put(
+            {
+                "message": "beaconing_settings_changed",
+                "beacon_type": beacon_type,
+                "beacon_interval": int(beacon_interval),
+                "smart_beacon_distance_threshold": int(smart_beacon_distance_threshold),
+                "smart_beacon_time_window": int(smart_beacon_time_window),
+            }
         )
 
     def handle_message(self, data):
@@ -593,6 +927,7 @@ def init_flask(loglevel, quiet):
 @cli_helper.process_standard_options
 def webchat(ctx, flush, port):
     """Web based HAM Radio chat program!"""
+    global notify_queue
     loglevel = ctx.obj["loglevel"]
     quiet = ctx.obj["quiet"]
 
@@ -652,8 +987,27 @@ def webchat(ctx, flush, port):
             socketio=socketio,
         )
     )
-    service_threads.start()
 
+    # See if the aprsd-gps-extension is installed and enabled
+    if _is_aprsd_gps_extension_installed():
+        if CONF.aprsd_gps_extension.enabled:
+            LOG.info(
+                "aprsd-gps-extension is installed and enabled.  Starting GPSBeaconThread."
+            )
+            from aprsd_gps_extension.threads import GPSBeaconThread
+
+            service_threads.register(GPSBeaconThread.GPSBeaconThread(notify_queue))
+            service_threads.register(LocationProcessingThread(notify_queue))
+    else:
+        # we have to use the built in beaconing thread from aprsd.
+        if CONF.enable_beacon:
+            LOG.info("Beacon Enabled.  Starting Beacon thread.")
+            service_threads.register(NonGPSExtensionBeaconThread(notify_queue))
+            service_threads.register(LocationProcessingThread(notify_queue))
+
+    service_threads.start()
+    # So we can monitor all packets that are TX/RX for the UI.
+    packets_collector.PacketCollector().register(WebChatPacketMonitor)
     LOG.info("Start socketio.run()")
     socketio.run(
         flask_app,
