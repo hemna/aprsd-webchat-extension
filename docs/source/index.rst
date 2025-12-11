@@ -1,5 +1,5 @@
-Welcome to APRSD Nearest station plugin's documentation!
-========================================================
+Welcome to APRSD WebChat Extension's documentation!
+====================================================
 
 .. toctree::
    :maxdepth: 2
