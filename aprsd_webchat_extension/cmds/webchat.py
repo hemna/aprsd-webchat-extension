@@ -95,9 +95,7 @@ class WebChatPacketMonitor:
     """Class to monitor packets for the webchat UI radio icon blinking."""
 
     def rx(self, packet: packets.Packet):
-        LOG.debug(f"WebChatPacketMonitor rx: {packet}")
         if packet.get("to_call") == CONF.callsign:
-            LOG.debug(f"WebChatPacketMonitor rx: {packet}")
             socketio.emit(
                 "rx_pkt",
                 packet.__dict__,
@@ -105,9 +103,7 @@ class WebChatPacketMonitor:
             )
 
     def tx(self, packet: packets.Packet):
-        LOG.debug(f"WebChatPacketMonitor tx: {packet}")
         if packet.get("from_call") == CONF.callsign:
-            LOG.debug(f"WebChatPacketMonitor tx: {packet}")
             socketio.emit(
                 "tx_pkt",
                 packet.__dict__,
@@ -656,7 +652,6 @@ def _stats():
 
     time_format = "%m-%d-%Y %H:%M:%S"
     stats_dict = stats.stats_collector.collect(serializable=True)
-    LOG.debug(f"stats_dict: {stats_dict}")
     # Webchat doesnt need these
     if "WatchList" in stats_dict:
         del stats_dict["WatchList"]
@@ -741,7 +736,6 @@ def _stats():
         "time": now.strftime(time_format),
         "stats": stats_dict,
     }
-    LOG.debug(f"result: {result}")
     return result
 
 
