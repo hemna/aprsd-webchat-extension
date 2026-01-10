@@ -21,8 +21,11 @@ function reload_popovers() {
 
 /**
  * Validate if a string is a valid ham radio callsign
- * Valid format: 1-2 letters, 1 number, 1-3 letters, optional /suffix or -SSID
- * Examples: K1ABC, W1AW, N0CALL, VE3ABC, K1ABC/P, WB4BOR-11, etc.
+ * Valid formats:
+ *   - Standard: 1-2 letters, 1 number, 1-3 letters, optional /suffix or -SSID
+ *     Examples: K1ABC, W1AW, N0CALL, VE3ABC, K1ABC/P, WB4BOR-11
+ *   - All-letter: 3-7 letters (special event callsigns)
+ *     Examples: REPEAT, WXNOW, JOKE
  */
 function is_valid_callsign(callsign) {
     if (!callsign || typeof callsign !== 'string') {
@@ -69,19 +72,26 @@ function is_valid_callsign(callsign) {
         return false;
     }
 
-    // Must contain at least one letter and one number
-    if (!/[A-Z]/.test(baseCallsign) || !/[0-9]/.test(baseCallsign)) {
-        return false;
-    }
-
     // Must start with a letter
     if (!/^[A-Z]/.test(baseCallsign)) {
         return false;
     }
 
-    // Must have at least one number followed by at least one letter
-    // Pattern: letters, number, letters
-    if (!/^[A-Z]{1,2}[0-9][A-Z]{1,3}$/.test(baseCallsign)) {
+    // Must contain at least one letter
+    if (!/[A-Z]/.test(baseCallsign)) {
+        return false;
+    }
+
+    // Check for standard format (letters, number, letters) OR all-letter format
+    var hasNumber = /[0-9]/.test(baseCallsign);
+    var isStandardFormat = /^[A-Z]{1,2}[0-9][A-Z]{1,3}$/.test(baseCallsign);
+    var isAllLetterFormat = /^[A-Z]{3,7}$/.test(baseCallsign);
+
+    // Must match either standard format (with number) or all-letter format
+    if (hasNumber && !isStandardFormat) {
+        return false;
+    }
+    if (!hasNumber && !isAllLetterFormat) {
         return false;
     }
 
