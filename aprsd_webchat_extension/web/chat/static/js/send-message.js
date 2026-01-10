@@ -355,6 +355,60 @@ function init_chat() {
    init_gps();
    // Try and load any existing chat threads from last time
    init_messages();
+
+   // Consolidated tab shown handler - handles all tabs (callsign tabs and add tab)
+   // This prevents duplicate firing and centralizes tab activation logic
+   $('#msgsTabContent').on('shown.bs.tab', function(e) {
+       var target = $(e.target); // The tab button that was clicked
+       var tabPane = $(e.relatedTarget); // The tab pane that was shown
+       var callsign = target.attr('callsign');
+
+       // Handle add tab
+       if (callsign === 'ADD_TAB') {
+           setTimeout(function() {
+               $('#new-callsign-input').focus();
+           }, 100);
+           return;
+       }
+
+       // Handle callsign tabs
+       if (callsign && callsign !== 'ADD_TAB') {
+           // Only process if this is a valid callsign tab
+           if (message_list.hasOwnProperty(callsign)) {
+               // Set selected_tab_callsign
+               selected_tab_callsign = callsign;
+
+               // Clear notification badge
+               var tab_notify_id = tab_notification_id(callsign, true);
+               $(tab_notify_id).addClass('visually-hidden');
+               $(tab_notify_id).text(0);
+
+               // Update send button state
+               if (typeof updateSendButton === 'function') {
+                   updateSendButton();
+               }
+
+               // Restore the path for this callsign
+               if (callsign in callsign_list && callsign_list[callsign]) {
+                   $('#pkt_path').val(callsign_list[callsign]);
+               } else {
+                   // If no path stored, use default (empty)
+                   $('#pkt_path').val('');
+               }
+
+               // Update location string
+               update_location_string(callsign);
+
+               // Scroll to show latest messages
+               scroll_main_content(callsign);
+
+               // Focus the message input
+               setTimeout(function() {
+                   $('#message').focus();
+               }, 100);
+           }
+       }
+   });
 }
 
 
@@ -545,8 +599,8 @@ function create_callsign_tab(callsign, active=false) {
   var escaped_callsign_display = escapeHtml(callsign);
 
   item_html = '<li class="nav-item" role="presentation" callsign="'+escaped_callsign_attr+'" id="'+tab_id_li+'">';
-  //item_html += '<button onClick="callsign_select(\''+escaped_callsign_js+'\');" callsign="'+escaped_callsign_attr+'" class="nav-link '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+escaped_callsign_attr+'" aria-selected="true">';
-  item_html += '<button onClick="callsign_select(\''+escaped_callsign_js+'\');" callsign="'+escaped_callsign_attr+'" class="nav-link position-relative '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+escaped_callsign_attr+'" aria-selected="true">';
+  // Tab activation is now handled by the consolidated shown.bs.tab handler in init_chat()
+  item_html += '<button callsign="'+escaped_callsign_attr+'" class="nav-link position-relative '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+escaped_callsign_attr+'" aria-selected="true">';
   item_html += escaped_callsign_display+'&nbsp;&nbsp;';
   item_html += '<span id="'+tab_notify_id+'" class="position-absolute top-0 start-80 translate-middle badge bg-danger border border-light rounded-pill visually-hidden">0</span>';
   item_html += '<span onclick="delete_tab(\''+escaped_callsign_js+'\');">×</span>';
@@ -1067,12 +1121,7 @@ function ensure_add_tab() {
             }, 0);
         });
 
-        // When the "+" tab is shown via Bootstrap
-        $('#add-tab-content').on('shown.bs.tab', function() {
-            setTimeout(function() {
-                $('#new-callsign-input').focus();
-            }, 100);
-        });
+        // Tab shown handler is now consolidated in init_chat() to avoid duplicate firing
     }
 }
 
@@ -1089,16 +1138,12 @@ function remove_add_tab() {
  */
 function handle_add_tab_click() {
     // Use Bootstrap's tab functionality
+    // Focus is handled by the consolidated shown.bs.tab handler in init_chat()
     var addTabButton = $('#add-tab-button');
     if (addTabButton.length > 0) {
         // Trigger Bootstrap tab show
         var tab = new bootstrap.Tab(addTabButton[0]);
         tab.show();
-
-        // Focus the input after tab is shown
-        setTimeout(function() {
-            $('#new-callsign-input').focus();
-        }, 150);
     }
 }
 
