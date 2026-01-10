@@ -3,6 +3,20 @@ var gps_icon_interval = null;
 var current_stats = null;
 var gps_settings = null;
 
+/**
+ * Escape HTML special characters to prevent XSS attacks
+ * @param {string} text - The text to escape
+ * @returns {string} - The escaped text
+ */
+function escapeHtml(text) {
+    if (text == null || text === undefined) {
+        return '';
+    }
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 
 var beaconing_settings = [
     { value: 0, description: 'Disabled' },
@@ -364,9 +378,12 @@ function beacon_toast() {
     lat = current_stats.stats.gps.latitude;
     lon = current_stats.stats.gps.longitude;
   }
+  // Escape lat/lon values to prevent XSS (even though they should be numbers)
+  var escapedLat = escapeHtml(String(lat || ''));
+  var escapedLon = escapeHtml(String(lon || ''));
   $.toast({
       heading: 'Sending GPS Beacon',
-      text: "Latitude: "+lat+"<br>Longitude: "+lon,
+      text: "Latitude: "+escapedLat+"<br>Longitude: "+escapedLon,
       loader: true,
       loaderBg: '#9EC600',
       position: 'top-left',

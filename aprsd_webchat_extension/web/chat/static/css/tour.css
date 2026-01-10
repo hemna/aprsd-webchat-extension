@@ -1,0 +1,313 @@
+/**
+ * Tour Overlay Styles
+ * Provides an educational overlay to help users learn the UI
+ */
+
+/* Overlay backdrop - transparent, no darkening */
+.tour-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    z-index: 2147483645 !important;
+    opacity: 1;
+    pointer-events: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.tour-overlay.active {
+    opacity: 1 !important;
+    pointer-events: none !important;
+    background: transparent !important;
+}
+
+/* Spotlight effect - highlights the current component with red circle */
+.tour-spotlight {
+    position: fixed !important;
+    border-radius: 50% !important;
+    pointer-events: none !important;
+    transition: all 0.3s ease;
+    z-index: 2147483646 !important;
+    background: transparent !important;
+    border: 4px solid #ef4444 !important;
+    transform: translateZ(0) !important;
+    will-change: transform !important;
+    /* Red glow effect - no dark overlay */
+    box-shadow: 0 0 0 4px #ef4444,
+                0 0 20px rgba(239, 68, 68, 0.8),
+                0 0 40px rgba(239, 68, 68, 0.5) !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Tour tooltip/description box - Dialog/Bubble style */
+.tour-tooltip {
+    position: fixed !important;
+    background: var(--bg-primary) !important;
+    border: 2px solid var(--primary-color) !important;
+    border-radius: 16px !important;
+    padding: 0 !important;
+    max-width: 360px !important;
+    min-width: 280px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.2) !important;
+    z-index: 2147483647 !important;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: all !important;
+    display: block !important;
+    visibility: visible !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+}
+
+.tour-tooltip.active {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+/* Tooltip content wrapper */
+.tour-tooltip-content {
+    padding: 5px !important;
+    background: var(--bg-primary) !important;
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+/* Ensure all child elements respect the padding */
+.tour-tooltip-content > * {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+/* Tooltip arrow/pointer */
+.tour-tooltip::before {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 12px;
+}
+
+/* Arrow pointing down (when tooltip is above element) */
+.tour-tooltip[data-position="top"]::before {
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: var(--primary-color) transparent transparent transparent;
+}
+
+/* Arrow pointing up (when tooltip is below element) */
+.tour-tooltip[data-position="bottom"]::before {
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: transparent transparent var(--primary-color) transparent;
+}
+
+/* Arrow pointing right (when tooltip is left of element) */
+.tour-tooltip[data-position="left"]::before {
+    right: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-color: transparent transparent transparent var(--primary-color);
+}
+
+/* Arrow pointing left (when tooltip is right of element) */
+.tour-tooltip[data-position="right"]::before {
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-color: transparent var(--primary-color) transparent transparent;
+}
+
+/* Inner arrow (white/background colored) */
+.tour-tooltip::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 10px;
+}
+
+.tour-tooltip[data-position="top"]::after {
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: var(--bg-primary) transparent transparent transparent;
+}
+
+.tour-tooltip[data-position="bottom"]::after {
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: transparent transparent var(--bg-primary) transparent;
+}
+
+.tour-tooltip[data-position="left"]::after {
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-color: transparent transparent transparent var(--bg-primary);
+}
+
+.tour-tooltip[data-position="right"]::after {
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-color: transparent var(--bg-primary) transparent transparent;
+}
+
+.tour-tooltip-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tour-tooltip-title .material-symbols-rounded {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.tour-tooltip-description {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1.5rem !important;
+    padding-top: var(--spacing-xs);
+    padding-bottom: 0 !important;
+}
+
+.tour-tooltip-footer {
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: var(--spacing-sm) !important;
+    padding-top: 0.75rem !important;
+    margin-top: 1.5rem !important;
+    border-top: 1px solid var(--border-color) !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.tour-progress {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    padding-left: 1rem !important;
+    margin-left: 1.5rem !important;
+}
+
+.tour-buttons {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+    width: 100%;
+}
+
+/* Override Bootstrap button padding for tour buttons */
+.tour-buttons .btn,
+.tour-buttons .btn-sm,
+.tour-buttons .tour-button,
+.tour-buttons .tour-skip {
+    padding-top: 0.125rem !important;
+    padding-bottom: 0.125rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.tour-button {
+    pointer-events: all !important;
+    padding: 0.125rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.tour-buttons .btn,
+.tour-buttons .tour-button {
+    padding: 0.125rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+/* Skip button - now inside tour dialog, uses Bootstrap btn classes */
+.tour-skip,
+.tour-buttons .tour-skip {
+    pointer-events: all !important;
+    margin-right: var(--spacing-xs) !important;
+    padding: 0.125rem 0.5rem !important;
+    font-size: 0.8125rem !important;
+    line-height: 1.2 !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.tour-skip:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--primary-color);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .tour-tooltip {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .tour-spotlight {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(59, 130, 246, 0.6),
+                inset 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tour-tooltip {
+        max-width: calc(100vw - 2rem);
+        margin: 0 var(--spacing-md);
+    }
+
+    .tour-tooltip-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .tour-buttons {
+        width: 100%;
+    }
+
+    .tour-button {
+        flex: 1;
+    }
+}

@@ -20,7 +20,6 @@ from aprsd.packets import collector as packets_collector
 from aprsd.threads import aprsd as aprsd_threads
 from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
-from flask import request
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import Namespace, SocketIO
 from haversine import haversine
@@ -595,14 +594,10 @@ def index():
 
     # For development
     html_template = "index.html"
-    LOG.debug(f"Template {html_template}")
-
     transport, aprs_connection = _get_transport(stats["stats"])
-    LOG.debug(f"transport {transport} aprs_connection {aprs_connection}")
 
     stats["transport"] = transport
     stats["aprs_connection"] = aprs_connection
-    LOG.debug(f"initial stats = {stats}")
     # The hard coded lat/long are from the
     # aprsd_webchat_extension.
     # when the aprsd_gps_extension is installed, we will
@@ -641,7 +636,6 @@ def index():
 @auth.login_required
 @flask_app.route("/send-message-status")
 def send_message_status():
-    LOG.debug(request)
     msgs = SentMessages()
     info = msgs.get_all()
     return json.dumps(info)
@@ -705,23 +699,6 @@ def _stats():
     }
 
     if _is_aprsd_gps_extension_installed():
-        LOG.debug("aprsd-gps-extension is installed")
-        LOG.debug(f"aprsd-gps-extension enabled: {CONF.aprsd_gps_extension.enabled}")
-        LOG.debug(
-            f"aprsd-gps-extension gpsd_host: {CONF.aprsd_gps_extension.gpsd_host}"
-        )
-        LOG.debug(
-            f"aprsd-gps-extension gpsd_port: {CONF.aprsd_gps_extension.gpsd_port}"
-        )
-        LOG.debug(
-            f"aprsd-gps-extension beacon_type: {CONF.aprsd_gps_extension.beacon_type}"
-        )
-        LOG.debug(
-            f"aprsd-gps-extension smart_beacon_distance_threshold: {CONF.aprsd_gps_extension.smart_beacon_distance_threshold}"
-        )
-        LOG.debug(
-            f"aprsd-gps-extension smart_beacon_time_window: {CONF.aprsd_gps_extension.smart_beacon_time_window}"
-        )
         stats_dict["gps"]["gps_extension"] = {
             "is_installed": True,
             "enabled": CONF.aprsd_gps_extension.enabled,
