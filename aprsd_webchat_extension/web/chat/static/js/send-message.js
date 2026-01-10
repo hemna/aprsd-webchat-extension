@@ -20,6 +20,58 @@ function reload_popovers() {
 }
 
 /**
+ * Escape HTML special characters to prevent XSS attacks
+ * @param {string} text - The text to escape
+ * @returns {string} - The escaped text
+ */
+function escapeHtml(text) {
+    if (text == null || text === undefined) {
+        return '';
+    }
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * Escape HTML attribute values to prevent XSS attacks
+ * Escapes both HTML entities and quotes
+ * @param {string} text - The text to escape for use in HTML attributes
+ * @returns {string} - The escaped text safe for use in attributes
+ */
+function escapeHtmlAttribute(text) {
+    if (text == null || text === undefined) {
+        return '';
+    }
+    var div = document.createElement('div');
+    div.textContent = text;
+    var escaped = div.innerHTML;
+    // Also escape quotes for attribute safety
+    escaped = escaped.replace(/"/g, '&quot;');
+    escaped = escaped.replace(/'/g, '&#x27;');
+    return escaped;
+}
+
+/**
+ * Escape JavaScript string for use in JavaScript code
+ * Escapes quotes and backslashes to prevent JS injection
+ * @param {string} text - The text to escape for use in JavaScript strings
+ * @returns {string} - The escaped text safe for use in JavaScript strings
+ */
+function escapeJsString(text) {
+    if (text == null || text === undefined) {
+        return '';
+    }
+    return String(text)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r')
+        .replace(/\t/g, '\\t');
+}
+
+/**
  * Validate if a string is a valid ham radio callsign
  * Valid formats:
  *   - Standard: 1-2 letters, 1 number, 1-3 letters, optional /suffix or -SSID
@@ -118,25 +170,27 @@ function is_valid_callsign(callsign) {
 
 function build_location_string(msg) {
     dt = new Date(parseInt(msg['lasttime']) * 1000);
-    loc = "Last Location Update: " + dt.toLocaleString();
-    loc += "<br>Latitude: " + msg['lat'] + "<br>Longitude: " + msg['lon'];
-    loc += "<br>" + "Altitude: " + msg['altitude'] + " m";
-    loc += "<br>" + "Speed: " + msg['speed'] + " kph";
-    loc += "<br>" + "Bearing: " + msg['compass_bearing'];
-    loc += "<br>" + "distance: " + msg['distance'] + " km";
+    loc = "Last Location Update: " + escapeHtml(dt.toLocaleString());
+    loc += "<br>Latitude: " + escapeHtml(String(msg['lat'] || '')) + "<br>Longitude: " + escapeHtml(String(msg['lon'] || ''));
+    loc += "<br>" + "Altitude: " + escapeHtml(String(msg['altitude'] || '')) + " m";
+    loc += "<br>" + "Speed: " + escapeHtml(String(msg['speed'] || '')) + " kph";
+    loc += "<br>" + "Bearing: " + escapeHtml(String(msg['compass_bearing'] || ''));
+    loc += "<br>" + "distance: " + escapeHtml(String(msg['distance'] || '')) + " km";
     return loc;
 }
 
 function build_location_string_small(msg) {
     dt = new Date(parseInt(msg['lasttime']) * 1000);
-    loc = "" + msg['distance'] + "km";
-    //loc += "Lat " + msg['lat'] + "&nbsp;Lon " + msg['lon'];
-    loc += "&nbsp;" + msg['compass_bearing'];
-    //loc += "&nbsp;Distance " + msg['distance'] + " km";
-    //loc += "&nbsp;" + dt.toLocaleString();
-    //loc += "&nbsp;" + msg['timeago'];
+    loc = "" + escapeHtml(String(msg['distance'] || '')) + "km";
+    //loc += "Lat " + escapeHtml(String(msg['lat'] || '')) + "&nbsp;Lon " + escapeHtml(String(msg['lon'] || ''));
+    loc += "&nbsp;" + escapeHtml(String(msg['compass_bearing'] || ''));
+    //loc += "&nbsp;Distance " + escapeHtml(String(msg['distance'] || '')) + " km";
+    //loc += "&nbsp;" + escapeHtml(dt.toLocaleString());
+    //loc += "&nbsp;" + escapeHtml(String(msg['timeago'] || ''));
     loc += "&nbsp;"
-    timeago_str = "<time id='location_timeago' class='timeago' datetime='" + msg['last_updated'] + "'></time>";
+    // Escape datetime attribute value
+    var escaped_datetime = escapeHtmlAttribute(String(msg['last_updated'] || ''));
+    timeago_str = "<time id='location_timeago' class='timeago' datetime='" + escaped_datetime + "'></time>";
     loc += timeago_str;
     return loc;
 }
@@ -485,12 +539,17 @@ function create_callsign_tab(callsign, active=false) {
     active_str = "";
   }
 
-  item_html = '<li class="nav-item" role="presentation" callsign="'+callsign+'" id="'+tab_id_li+'">';
-  //item_html += '<button onClick="callsign_select(\''+callsign+'\');" callsign="'+callsign+'" class="nav-link '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+callsign+'" aria-selected="true">';
-  item_html += '<button onClick="callsign_select(\''+callsign+'\');" callsign="'+callsign+'" class="nav-link position-relative '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+callsign+'" aria-selected="true">';
-  item_html += callsign+'&nbsp;&nbsp;';
+  // Escape callsign for HTML attributes and JavaScript strings
+  var escaped_callsign_attr = escapeHtmlAttribute(callsign);
+  var escaped_callsign_js = escapeJsString(callsign);
+  var escaped_callsign_display = escapeHtml(callsign);
+
+  item_html = '<li class="nav-item" role="presentation" callsign="'+escaped_callsign_attr+'" id="'+tab_id_li+'">';
+  //item_html += '<button onClick="callsign_select(\''+escaped_callsign_js+'\');" callsign="'+escaped_callsign_attr+'" class="nav-link '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+escaped_callsign_attr+'" aria-selected="true">';
+  item_html += '<button onClick="callsign_select(\''+escaped_callsign_js+'\');" callsign="'+escaped_callsign_attr+'" class="nav-link position-relative '+active_str+'" id="'+tab_id+'" data-bs-toggle="tab" data-bs-target="#'+tab_content+'" type="button" role="tab" aria-controls="'+escaped_callsign_attr+'" aria-selected="true">';
+  item_html += escaped_callsign_display+'&nbsp;&nbsp;';
   item_html += '<span id="'+tab_notify_id+'" class="position-absolute top-0 start-80 translate-middle badge bg-danger border border-light rounded-pill visually-hidden">0</span>';
-  item_html += '<span onclick="delete_tab(\''+callsign+'\');">×</span>';
+  item_html += '<span onclick="delete_tab(\''+escaped_callsign_js+'\');">×</span>';
   item_html += '</button></li>'
 
   callsignTabs.append(item_html);
@@ -734,23 +793,31 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
       popover_placement = "right";
     }
 
+    // Escape all user-provided data to prevent XSS
+    var escaped_from = escapeHtml(from);
+    var escaped_date_str = escapeHtml(date_str);
+    var escaped_message = escapeHtml(message);
+    var escaped_raw = escapeHtmlAttribute(msg['raw'] || '');
+    var escaped_bubble_msgid = escapeHtmlAttribute(bubble_msgid);
+    var escaped_ack_id = ack_id ? escapeHtmlAttribute(ack_id) : '';
+
     msg_html = '<div class="bubble-row'+alt+'">';
-    msg_html += '<div id="'+bubble_msgid+'" class="'+ bubble_class + '" ';
+    msg_html += '<div id="'+escaped_bubble_msgid+'" class="'+ bubble_class + '" ';
     msg_html +=  'title="APRS Raw Packet" data-bs-placement="'+popover_placement+'" data-bs-toggle="popover" ';
-    msg_html +=  'data-bs-trigger="hover" data-bs-content="'+msg['raw']+'">';
+    msg_html +=  'data-bs-trigger="hover" data-bs-content="'+escaped_raw+'">';
     msg_html += '<div class="bubble-text">';
-    msg_html += '<p class="'+ bubble_name_class +'">'+from+'&nbsp;&nbsp;';
-    msg_html += '<span class="bubble-timestamp">'+date_str+'</span>';
+    msg_html += '<p class="'+ bubble_name_class +'">'+escaped_from+'&nbsp;&nbsp;';
+    msg_html += '<span class="bubble-timestamp">'+escaped_date_str+'</span>';
 
     if (ack_id) {
         if (acked) {
-            msg_html += '<span class="material-symbols-rounded md-10" id="' + ack_id + '">thumb_up</span>';
+            msg_html += '<span class="material-symbols-rounded md-10" id="' + escaped_ack_id + '">thumb_up</span>';
         } else {
-            msg_html += '<span class="material-symbols-rounded md-10" id="' + ack_id + '">thumb_down</span>';
+            msg_html += '<span class="material-symbols-rounded md-10" id="' + escaped_ack_id + '">thumb_down</span>';
         }
     }
     msg_html += "</p>";
-    msg_html += '<p class="' +bubble_msg_class+ '">'+message+'</p>';
+    msg_html += '<p class="' +bubble_msg_class+ '">'+escaped_message+'</p>';
     msg_html += '<div class="'+ bubble_arrow_class + '"></div>';
     msg_html += "</div></div></div>";
 
@@ -1055,7 +1122,8 @@ function handle_new_callsign_input() {
 
     // Check if callsign already exists
     if (newCallsign in callsign_list) {
-        raise_error("A conversation with " + newCallsign + " already exists");
+        // Escape callsign for display in error message
+        raise_error("A conversation with " + escapeHtml(newCallsign) + " already exists");
         // Switch to that tab instead
         callsign_select(newCallsign);
         activate_callsign_tab(newCallsign);
