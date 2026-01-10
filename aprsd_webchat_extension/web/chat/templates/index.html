@@ -35,6 +35,7 @@
     <script src="/static/js/main.js"></script>
     <script src="/static/js/gps.js"></script>
     <script src="/static/js/send-message.js"></script>
+    <script src="/static/js/tour.js"></script>
 
     <script type="text/javascript">
         var initial_stats = {{ initial_stats|tojson|safe }};
@@ -72,6 +73,45 @@
             $("#wipe_local").click(function() {
                 console.log('Wipe local storage');
                 localStorage.clear();
+            });
+
+            // Tour restart button - use document ready to ensure tour.js is loaded
+            $(document).ready(function() {
+                $("#tour-restart-button").on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    console.log('Tour button clicked');
+                    console.log('window.aprsdTour:', typeof window.aprsdTour);
+
+                    // Function to start tour
+                    function startTourNow() {
+                        if (typeof window.aprsdTour !== 'undefined') {
+                            console.log('Tour object found, calling reset');
+                            if (window.aprsdTour.reset) {
+                                window.aprsdTour.reset();
+                            } else if (window.aprsdTour.start) {
+                                window.aprsdTour.start();
+                            } else {
+                                console.error('Tour functions not available');
+                            }
+                        } else {
+                            console.warn('Tour script not loaded, waiting...');
+                            // Wait a bit more and try again
+                            setTimeout(function() {
+                                if (typeof window.aprsdTour !== 'undefined' && window.aprsdTour.reset) {
+                                    console.log('Tour object found after wait, calling reset');
+                                    window.aprsdTour.reset();
+                                } else {
+                                    console.error('Tour script still not loaded');
+                                }
+                            }, 500);
+                        }
+                    }
+
+                    // Try immediately
+                    startTourNow();
+                });
             });
 
             // iPhone-style message input behavior
@@ -182,9 +222,6 @@
             //$("time.timeago").timeago();
         });
     </script>
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/gps.js"></script>
-    <script src="/static/js/send-message.js"></script>
 </head>
 
 <body>
@@ -210,6 +247,9 @@
                         </button>
                         <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
                             <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" title="Start tour">
+                            <span class="material-symbols-rounded">help</span>
                         </button>
                     </div>
                 </div>
@@ -299,7 +339,7 @@
             <div class="container-fluid">
                 <div class="info-bar-content">
                     <div id="info_bar_container" class="info-message">
-                        <span id="welcome_message">Welcome to APRSD WebChat. Send a message to a callsign to start a conversation.</span>
+                        <span id="welcome_message">Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>
                     </div>
                     <div class="radio-indicator">
                         <svg id="radio_icon_svg" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">

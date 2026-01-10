@@ -196,6 +196,35 @@ body {
     font-size: 1.125rem;
 }
 
+/* Tour Button */
+.theme-toggle-container .btn-tour {
+    padding: 0.5rem;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-tour {
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    transition: all var(--transition-base);
+}
+
+.btn-tour:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-tour .material-symbols-rounded {
+    font-size: 1.25rem;
+}
+
 /* GPS Satellite Icon */
 .gps-satellite-icon {
     width: 20px;

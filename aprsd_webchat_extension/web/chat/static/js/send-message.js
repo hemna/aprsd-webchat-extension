@@ -19,6 +19,93 @@ function reload_popovers() {
     );
 }
 
+/**
+ * Validate if a string is a valid ham radio callsign
+ * Valid format: 1-2 letters, 1 number, 1-3 letters, optional /suffix or -SSID
+ * Examples: K1ABC, W1AW, N0CALL, VE3ABC, K1ABC/P, WB4BOR-11, etc.
+ */
+function is_valid_callsign(callsign) {
+    if (!callsign || typeof callsign !== 'string') {
+        return false;
+    }
+
+    // Remove whitespace and convert to uppercase
+    callsign = callsign.trim().toUpperCase();
+
+    // Check length (3-15 characters to allow for suffixes and SSIDs)
+    if (callsign.length < 3 || callsign.length > 15) {
+        return false;
+    }
+
+    // Check for valid characters only: A-Z, 0-9, /, and - (for SSIDs)
+    if (!/^[A-Z0-9/\-]+$/.test(callsign)) {
+        return false;
+    }
+
+    // Handle dash-separated SSID (e.g., WB4BOR-11)
+    var baseCallsign = callsign;
+    var ssid = null;
+    if (callsign.includes('-')) {
+        var dashParts = callsign.split('-');
+        if (dashParts.length === 2) {
+            baseCallsign = dashParts[0];
+            ssid = dashParts[1];
+            // SSID should be numeric (0-15 typically, but allow 0-99)
+            if (!/^[0-9]{1,2}$/.test(ssid)) {
+                return false;
+            }
+        } else {
+            // Multiple dashes not allowed
+            return false;
+        }
+    }
+
+    // Split on / to handle slash suffixes (e.g., K1ABC/P)
+    var parts = baseCallsign.split('/');
+    baseCallsign = parts[0];
+
+    // Base callsign must be 3-7 characters
+    if (baseCallsign.length < 3 || baseCallsign.length > 7) {
+        return false;
+    }
+
+    // Must contain at least one letter and one number
+    if (!/[A-Z]/.test(baseCallsign) || !/[0-9]/.test(baseCallsign)) {
+        return false;
+    }
+
+    // Must start with a letter
+    if (!/^[A-Z]/.test(baseCallsign)) {
+        return false;
+    }
+
+    // Must have at least one number followed by at least one letter
+    // Pattern: letters, number, letters
+    if (!/^[A-Z]{1,2}[0-9][A-Z]{1,3}$/.test(baseCallsign)) {
+        return false;
+    }
+
+    // If there's a suffix after /, validate it
+    if (parts.length > 1) {
+        var suffix = parts[1];
+        // Common suffixes: P, M, MM, AM, etc. (1-4 characters)
+        if (suffix.length < 1 || suffix.length > 4) {
+            return false;
+        }
+        // Suffix should only contain letters
+        if (!/^[A-Z]+$/.test(suffix)) {
+            return false;
+        }
+    }
+
+    // Don't allow multiple slashes
+    if (parts.length > 2) {
+        return false;
+    }
+
+    return true;
+}
+
 function build_location_string(msg) {
     dt = new Date(parseInt(msg['lasttime']) * 1000);
     loc = "Last Location Update: " + dt.toLocaleString();
@@ -837,7 +924,7 @@ function update_info_bar(show_button=false) {
         //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
     } else {
         // show the welcome message instead.
-        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Click the + tab to start a conversation.</span>"
+        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>"
     }
 
     $("#info_bar_container").html(html);
@@ -865,7 +952,7 @@ function ensure_add_tab() {
         var tabContent = $("#msgsTabContent");
         var addTabContentHtml = '<div class="tab-pane fade" id="add-tab-content" role="tabpanel" aria-labelledby="add-tab-button">';
         addTabContentHtml += '<div class="add-tab-input-container">';
-        addTabContentHtml += '<input type="text" class="add-tab-input" id="new-callsign-input" placeholder="Enter callsign..." maxlength="9" autocomplete="off">';
+        addTabContentHtml += '<input type="text" class="add-tab-input" id="new-callsign-input" placeholder="Enter callsign (e.g., K1ABC)..." maxlength="15" autocomplete="off">';
         addTabContentHtml += '<div class="add-tab-hint">Press Enter to create a new conversation</div>';
         addTabContentHtml += '</div></div>';
         tabContent.append(addTabContentHtml);
@@ -881,6 +968,26 @@ function ensure_add_tab() {
                 e.preventDefault();
                 handle_new_callsign_input();
             }
+        });
+
+        // Restrict input to valid callsign characters only
+        $('#new-callsign-input').on('input', function(e) {
+            var value = $(this).val();
+            // Only allow A-Z, 0-9, /, and - characters
+            var cleaned = value.replace(/[^A-Za-z0-9/\-]/g, '').toUpperCase();
+            if (cleaned !== value) {
+                $(this).val(cleaned);
+            }
+        });
+
+        // Validate on paste
+        $('#new-callsign-input').on('paste', function(e) {
+            var self = this;
+            setTimeout(function() {
+                var value = $(self).val();
+                var cleaned = value.replace(/[^A-Za-z0-9/\-]/g, '').toUpperCase();
+                $(self).val(cleaned);
+            }, 0);
         });
 
         // When the "+" tab is shown via Bootstrap
@@ -926,6 +1033,13 @@ function handle_new_callsign_input() {
 
     if (!newCallsign || newCallsign === '') {
         raise_error("Please enter a callsign");
+        return;
+    }
+
+    // Validate the callsign format
+    if (!is_valid_callsign(newCallsign)) {
+        raise_error("Invalid callsign format. Please enter a valid ham radio callsign (e.g., K1ABC, W1AW, N0CALL)");
+        $('#new-callsign-input').focus();
         return;
     }
 
