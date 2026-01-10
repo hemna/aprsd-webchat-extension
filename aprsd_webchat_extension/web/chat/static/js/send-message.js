@@ -361,7 +361,10 @@ function init_chat() {
    $('#msgsTabContent').on('shown.bs.tab', function(e) {
        var target = $(e.target); // The tab button that was clicked
        var tabPane = $(e.relatedTarget); // The tab pane that was shown
-       var callsign = target.attr('callsign');
+       // Read callsign from attribute - it's already escaped when set, but sanitize to prevent XSS
+       // Only allow alphanumeric, /, and - characters (valid callsign characters)
+       var rawCallsign = String(target.attr('callsign') || '');
+       var callsign = rawCallsign.replace(/[^A-Z0-9/\-]/gi, '').toUpperCase();
 
        // Handle add tab
        if (callsign === 'ADD_TAB') {
@@ -669,7 +672,9 @@ function delete_tab(callsign) {
     var first_callsign_tab = null;
     for (var i = 0; i < tabs.length; i++) {
         var tab = $(tabs[i]).children().first();
-        var tab_callsign = tab.attr('callsign');
+        // Sanitize callsign read from DOM attribute to prevent XSS
+        var rawTabCallsign = String(tab.attr('callsign') || '');
+        var tab_callsign = rawTabCallsign.replace(/[^A-Z0-9/\-]/gi, '').toUpperCase();
         if (tab_callsign && tab_callsign !== 'ADD_TAB') {
             first_callsign_tab = tab;
             break;
@@ -678,7 +683,9 @@ function delete_tab(callsign) {
 
     if (first_callsign_tab && first_callsign_tab.length > 0) {
         first_callsign_tab.click();
-        first_callsign = first_callsign_tab.attr('callsign');
+        // Sanitize callsign read from DOM attribute to prevent XSS
+        var rawFirstCallsign = String(first_callsign_tab.attr('callsign') || '');
+        first_callsign = rawFirstCallsign.replace(/[^A-Z0-9/\-]/gi, '').toUpperCase();
         console.log("Selecting first tab: ", first_callsign);
         callsign_select(first_callsign);
     } else {
