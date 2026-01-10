@@ -165,25 +165,37 @@ function init_chat() {
 
    $("#sendform").submit(function(event) {
        event.preventDefault();
-       to_call = $('#to_call').val().toUpperCase();
+       // Use the selected tab callsign instead of input field
+       to_call = selected_tab_callsign;
        message = $('#message').val();
        path = $('#pkt_path option:selected').val();
        if (socketio_connected == false) {
            raise_error("The connection to the APRSD server has been lost.  Please check your APRSD server connection and try again.");
            return false;
        }
-       if (to_call == "") {
-           raise_error("You must enter a callsign to send a message")
+       if (!to_call || to_call == "") {
+           raise_error("You must select a callsign tab to send a message")
            return false;
        } else {
            if (message == "") {
                raise_error("You must enter a message to send")
                return false;
            }
+           // Save the path for this callsign
+           if (path) {
+               callsign_list[to_call] = path;
+               save_data();
+           }
            msg = {'to': to_call, 'message': message, 'path': path};
            //console.log(msg);
            socket.emit("send", msg);
            $('#message').val('');
+           // Disable send button after clearing
+           $('#send_msg').prop('disabled', true);
+           // Refocus input for next message
+           setTimeout(function() {
+               $('#message').focus();
+           }, 100);
            callsign_select(to_call);
            activate_callsign_tab(to_call);
        }
@@ -335,6 +347,9 @@ function init_messages() {
         }
     }
 
+    // Always ensure the "+" tab exists
+    ensure_add_tab();
+
     if (first_callsign !== null) {
       callsign_select(first_callsign);
     }
@@ -350,38 +365,18 @@ function init_messages() {
 }
 
 function scroll_main_content(callsign=false) {
-   var wc = $('#wc-content');
-   var d = $('#msgsTabContent');
-   var scrollHeight = wc.prop('scrollHeight');
-   var clientHeight = wc.prop('clientHeight');
-
+   // Use the new scroll_to_bottom function for better reliability
    if (callsign) {
-       div_id = content_divname(callsign);
-       c_div = $(content_divname(callsign));
-       //console.log("c_div("+div_id+") " + c_div);
-       c_height = c_div.height();
-       c_scroll_height = c_div.prop('scrollHeight');
-       //console.log("callsign height " + c_height + " scrollHeight " + c_scroll_height);
-       if (c_height === undefined) {
-           return false;
-       }
-       if (c_height > clientHeight) {
-           wc.animate({ scrollTop: c_scroll_height }, 500);
-       } else {
-           wc.animate({ scrollTop: 0 }, 500);
-       }
-   } else {
-       if (scrollHeight > clientHeight) {
-           wc.animate({ scrollTop: wc.prop('scrollHeight') }, 500);
-       } else {
-           wc.animate({ scrollTop: 0 }, 500);
-       }
+       scroll_to_bottom(callsign);
    }
 }
 
 function create_callsign_tab(callsign, active=false) {
   //Create the html for the callsign tab and insert it into the DOM
   var callsignTabs = $("#msgsTabList");
+  // Remove the "+" tab before adding the new callsign tab
+  remove_add_tab();
+
   tab_id = tab_string(callsign);
   tab_id_li = tab_li_string(callsign);
   tab_notify_id = tab_notification_id(callsign);
@@ -406,6 +401,9 @@ function create_callsign_tab(callsign, active=false) {
   // we know we have at least one callsign, so we can enable the get location button
   $("#get_location_button").prop('disabled', false);
   update_info_bar(true);
+
+  // Always ensure the "+" tab exists after creating a callsign tab
+  ensure_add_tab();
 }
 
 function create_callsign_tab_content(callsign, active=false) {
@@ -437,7 +435,7 @@ function create_callsign_tab_content(callsign, active=false) {
   item_html +=   '&nbsp;<span id="'+location_id+'" style="font-size: .9rem">'+location_str+'</span></div>';
   item_html += '</div>';
   */
-  item_html += '<div class="flex min-h-screen overflow-hidden"><div class="speech-wrapper h-auto" id="'+wrapper_id+'"></div></div>';
+  item_html += '<div class="speech-wrapper" id="'+wrapper_id+'"></div>';
   item_html += '</div>';
   callsignTabsContent.append(item_html);
 }
@@ -453,13 +451,31 @@ function delete_tab(callsign) {
     delete message_list[callsign];
     delete callsign_location[callsign];
 
-    // Now select the first tab
-    first_tab = $("#msgsTabList").children().first().children().first();
-    console.log(first_tab);
-    $(first_tab).click();
-    first_callsign = first_tab.attr('callsign');
-    console.log("Selecting first tab: ", first_callsign);
-    callsign_select(first_callsign);
+    // Ensure "+" tab exists
+    ensure_add_tab();
+
+    // Now select the first tab (skip the "+" tab)
+    var tabs = $("#msgsTabList").children();
+    var first_callsign_tab = null;
+    for (var i = 0; i < tabs.length; i++) {
+        var tab = $(tabs[i]).children().first();
+        var tab_callsign = tab.attr('callsign');
+        if (tab_callsign && tab_callsign !== 'ADD_TAB') {
+            first_callsign_tab = tab;
+            break;
+        }
+    }
+
+    if (first_callsign_tab && first_callsign_tab.length > 0) {
+        first_callsign_tab.click();
+        first_callsign = first_callsign_tab.attr('callsign');
+        console.log("Selecting first tab: ", first_callsign);
+        callsign_select(first_callsign);
+    } else {
+        selected_tab_callsign = null;
+        update_info_bar(false);
+    }
+
     console.log("selected_tab_callsign: ", selected_tab_callsign);
     save_data();
     // if there are no more tabs, disable the get location button
@@ -482,7 +498,8 @@ function add_callsign(callsign, msg) {
       active = false;
   }
   create_callsign_tab(callsign, active);
-  callsign_list[callsign] = '';
+  // Initialize with path from message if available, otherwise empty
+  callsign_list[callsign] = (msg && msg['path']) ? msg['path'] : '';
   return true;
 }
 
@@ -516,7 +533,11 @@ function append_message(callsign, msg, msg_html) {
 
   // Find the right div to place the html
   new_callsign = add_callsign(callsign, msg);
-  //update_callsign_path(callsign, msg);
+  // Update the path if it's in the message
+  if (msg && msg['path'] && msg['path'] !== '') {
+      callsign_list[callsign] = msg['path'];
+      save_data();
+  }
   append_message_html(callsign, msg_html, new_callsign);
   len = Object.keys(callsign_list).length;
   if (new_callsign) {
@@ -538,9 +559,59 @@ function append_message_html(callsign, msg_html, new_callsign) {
 
   $(wrapper_id).append(msg_html);
 
-  if ($(wrapper_id).children().length > 0) {
-      $(wrapper_id).animate({scrollTop: $(wrapper_id)[0].scrollHeight}, "fast");
-  }
+  // Scroll to bottom to show new message
+  // Use setTimeout to ensure DOM is updated
+  setTimeout(function() {
+      scroll_to_bottom(callsign);
+  }, 50);
+}
+
+/**
+ * Scroll the message area to show the latest message
+ */
+function scroll_to_bottom(callsign) {
+    if (!callsign) {
+        return;
+    }
+
+    wrapper_id = tab_content_speech_wrapper_id(callsign);
+    var wrapper = $(wrapper_id);
+
+    if (wrapper.length === 0) {
+        // Try again after a short delay if element doesn't exist yet
+        setTimeout(function() {
+            scroll_to_bottom(callsign);
+        }, 100);
+        return;
+    }
+
+    // Get the scrollable container (speech-wrapper)
+    var scrollContainer = wrapper[0];
+
+    if (scrollContainer) {
+        // Use requestAnimationFrame to ensure DOM is fully updated
+        requestAnimationFrame(function() {
+            // Calculate the scroll position to show the bottom
+            var scrollHeight = scrollContainer.scrollHeight;
+            var clientHeight = scrollContainer.clientHeight;
+
+            // Only scroll if content is taller than container
+            if (scrollHeight > clientHeight) {
+                // Try native smooth scroll first
+                if (typeof scrollContainer.scrollTo === 'function') {
+                    scrollContainer.scrollTo({
+                        top: scrollHeight,
+                        behavior: 'smooth'
+                    });
+                } else {
+                    // Fallback: use jQuery animate
+                    $(scrollContainer).animate({
+                        scrollTop: scrollHeight
+                    }, 300);
+                }
+            }
+        });
+    }
 }
 
 function create_message_html(date, time, from, to, message, ack_id, msg, acked=false) {
@@ -604,7 +675,10 @@ function sent_msg(msg) {
     msg_html = create_message_html(d, t, msg['from_call'], msg['to_call'], msg['message_text'], ack_id, msg, false);
     append_message(msg['to_call'], msg, msg_html);
     save_data();
-    scroll_main_content(msg['to_call']);
+    // Scroll is handled in append_message_html, but ensure it happens
+    setTimeout(function() {
+        scroll_to_bottom(msg['to_call']);
+    }, 100);
     reload_popovers();
 }
 
@@ -650,7 +724,10 @@ function from_msg(msg) {
    msg_html = create_message_html(d, t, from, false, msg['message_text'], false, msg, false);
    append_message(from, msg, msg_html);
    save_data();
-   scroll_main_content(from);
+   // Scroll is handled in append_message_html, but ensure it happens
+   setTimeout(function() {
+       scroll_to_bottom(from);
+   }, 100);
    reload_popovers();
 }
 
@@ -717,15 +794,22 @@ function callsign_select(callsign) {
         // so we do nothing here.
         return false
     }
-    var tocall = $("#to_call");
-    tocall.val(callsign.toUpperCase());
     scroll_main_content(callsign);
     selected_tab_callsign = callsign;
     tab_notify_id = tab_notification_id(callsign, true);
     $(tab_notify_id).addClass('visually-hidden');
     $(tab_notify_id).text(0);
-    // Now update the path
-    // $('#pkt_path').val(callsign_list[callsign]);
+    // Update send button state
+    if (typeof updateSendButton === 'function') {
+        updateSendButton();
+    }
+    // Restore the path for this callsign
+    if (callsign in callsign_list && callsign_list[callsign]) {
+        $('#pkt_path').val(callsign_list[callsign]);
+    } else {
+        // If no path stored, use default (empty)
+        $('#pkt_path').val('');
+    }
     console.log("callsign_select: updating location string for: ", callsign);
     update_location_string(callsign);
 }
@@ -753,7 +837,7 @@ function update_info_bar(show_button=false) {
         //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
     } else {
         // show the welcome message instead.
-        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Send a message to a callsign to start a conversation.</span>"
+        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat.  &nbsp;&nbsp;Click the + tab to start a conversation.</span>"
     }
 
     $("#info_bar_container").html(html);
@@ -762,4 +846,117 @@ function update_info_bar(show_button=false) {
     } else {
         $("#get_location_button").prop('disabled', true);
     }
+}
+
+/**
+ * Ensure the "+" tab exists in the tab list
+ */
+function ensure_add_tab() {
+    var addTabId = '#add-tab-li';
+    if ($(addTabId).length === 0) {
+        var callsignTabs = $("#msgsTabList");
+        var addTabHtml = '<li class="nav-item" role="presentation" id="add-tab-li">';
+        addTabHtml += '<button class="nav-link add-tab-button" id="add-tab-button" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#add-tab-content" callsign="ADD_TAB">';
+        addTabHtml += '<span class="add-tab-icon">+</span>';
+        addTabHtml += '</button></li>';
+        callsignTabs.append(addTabHtml);
+
+        // Create the tab content for the "+" tab
+        var tabContent = $("#msgsTabContent");
+        var addTabContentHtml = '<div class="tab-pane fade" id="add-tab-content" role="tabpanel" aria-labelledby="add-tab-button">';
+        addTabContentHtml += '<div class="add-tab-input-container">';
+        addTabContentHtml += '<input type="text" class="add-tab-input" id="new-callsign-input" placeholder="Enter callsign..." maxlength="9" autocomplete="off">';
+        addTabContentHtml += '<div class="add-tab-hint">Press Enter to create a new conversation</div>';
+        addTabContentHtml += '</div></div>';
+        tabContent.append(addTabContentHtml);
+
+        // Set up event handlers
+        $('#add-tab-button').on('click', function(e) {
+            e.preventDefault();
+            handle_add_tab_click();
+        });
+
+        $('#new-callsign-input').on('keydown', function(e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                handle_new_callsign_input();
+            }
+        });
+
+        // When the "+" tab is shown via Bootstrap
+        $('#add-tab-content').on('shown.bs.tab', function() {
+            setTimeout(function() {
+                $('#new-callsign-input').focus();
+            }, 100);
+        });
+    }
+}
+
+/**
+ * Remove the "+" tab
+ */
+function remove_add_tab() {
+    $('#add-tab-li').remove();
+    $('#add-tab-content').remove();
+}
+
+/**
+ * Handle click on the "+" tab
+ */
+function handle_add_tab_click() {
+    // Use Bootstrap's tab functionality
+    var addTabButton = $('#add-tab-button');
+    if (addTabButton.length > 0) {
+        // Trigger Bootstrap tab show
+        var tab = new bootstrap.Tab(addTabButton[0]);
+        tab.show();
+
+        // Focus the input after tab is shown
+        setTimeout(function() {
+            $('#new-callsign-input').focus();
+        }, 150);
+    }
+}
+
+/**
+ * Handle Enter key in the new callsign input
+ */
+function handle_new_callsign_input() {
+    var newCallsign = $('#new-callsign-input').val().trim().toUpperCase();
+
+    if (!newCallsign || newCallsign === '') {
+        raise_error("Please enter a callsign");
+        return;
+    }
+
+    // Check if callsign already exists
+    if (newCallsign in callsign_list) {
+        raise_error("A conversation with " + newCallsign + " already exists");
+        // Switch to that tab instead
+        callsign_select(newCallsign);
+        activate_callsign_tab(newCallsign);
+        $('#new-callsign-input').val('');
+        return;
+    }
+
+    // Create the new tab
+    var active = Object.keys(callsign_list).length === 0;
+    create_callsign_tab(newCallsign, active);
+    // Initialize with empty path (will be set when first message is sent)
+    callsign_list[newCallsign] = '';
+    message_list[newCallsign] = {};
+
+    // Clear the input
+    $('#new-callsign-input').val('');
+
+    // Select the new tab
+    callsign_select(newCallsign);
+    activate_callsign_tab(newCallsign);
+
+    // Focus the message input
+    setTimeout(function() {
+        $('#message').focus();
+    }, 100);
+
+    save_data();
 }

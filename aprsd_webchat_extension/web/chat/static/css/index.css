@@ -130,6 +130,15 @@ body {
     gap: var(--spacing-sm);
 }
 
+.theme-toggle-container .btn-gps {
+    padding: 0.5rem;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .header-title {
     display: flex;
     flex-direction: column;
@@ -181,44 +190,221 @@ body {
     font-size: 0.875rem;
 }
 
-/* Message Form Styles */
-.message-form {
-    padding: 0 var(--spacing-lg);
-    margin-bottom: var(--spacing-md);
+/* Header Controls - Removed, GPS button moved to theme-toggle-container */
+
+.btn-sm .material-symbols-rounded {
+    font-size: 1.125rem;
 }
 
-.form-row {
+/* GPS Satellite Icon */
+.gps-satellite-icon {
+    width: 20px;
+    height: 20px;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+    opacity: 0.7;
+    filter: brightness(0.8);
+}
+
+.btn-gps:hover .gps-satellite-icon {
+    opacity: 1;
+    filter: brightness(1.2);
+    transform: scale(1.1);
+}
+
+.btn-gps[aria-expanded="true"] .gps-satellite-icon {
+    opacity: 1;
+    filter: brightness(1.2);
+}
+
+/* Dark theme adjustments for GPS icon */
+[data-theme="dark"] .gps-satellite-icon {
+    filter: brightness(1.5);
+}
+
+[data-theme="dark"] .btn-gps:hover .gps-satellite-icon,
+[data-theme="dark"] .btn-gps[aria-expanded="true"] .gps-satellite-icon {
+    filter: brightness(2);
+}
+
+/* iPhone-style Message Input Container */
+.message-input-container {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-primary);
+    border-top: 1px solid var(--border-color);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    z-index: 50;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    /* Ensure it stays above content */
+    margin-top: auto;
+}
+
+[data-theme="dark"] .message-input-container {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.message-input-form {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.message-input-wrapper {
     display: flex;
-    gap: var(--spacing-md);
-    align-items: flex-end;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: var(--spacing-xs) var(--spacing-sm) var(--spacing-xs) var(--spacing-md);
+    transition: all var(--transition-base);
 }
 
-.form-group {
+.message-input-wrapper:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background: var(--bg-primary);
+}
+
+.message-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: var(--spacing-sm) 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+    outline: none;
+    resize: none;
+    min-height: 20px;
+    max-height: 120px;
+    line-height: 1.5;
+}
+
+.message-input::placeholder {
+    color: var(--text-muted);
+}
+
+.message-path-select {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-repeat: no-repeat;
+    background-position: right var(--spacing-xs) center;
+    padding-right: calc(var(--spacing-md) + 8px);
+    border-left: 1px solid var(--border-color);
+    margin-left: var(--spacing-xs);
+    transition: color var(--transition-base), border-color var(--transition-base);
+}
+
+.message-path-select:hover {
+    color: var(--text-primary);
+    border-left-color: var(--border-hover);
+}
+
+.message-path-select:focus {
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+/* Light theme dropdown arrow */
+.message-path-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+/* Dark theme dropdown arrow */
+[data-theme="dark"] .message-path-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .message-path-select:hover {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23cbd5e1' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .message-path-select:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%233b82f6' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+}
+
+/* Style the dropdown options to match theme */
+.message-path-select option {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.message-send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+
+.message-send-button:not(:disabled):hover {
+    background: var(--primary-hover);
+    transform: scale(1.05);
+}
+
+.message-send-button:not(:disabled):active {
+    transform: scale(0.95);
+}
+
+.message-send-button:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.message-send-button .material-symbols-rounded {
+    font-size: 1.25rem;
+}
+
+/* Ensure content area has padding for input */
+.wc-content .container-fluid {
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xs);
-    flex: 1;
-    min-width: 120px;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    padding-bottom: var(--spacing-md);
+    position: relative;
 }
 
-.form-group.callsign-group {
-    max-width: 150px;
-}
+/* Responsive adjustments for message input */
+@media (max-width: 768px) {
+    .message-input-container {
+        padding: var(--spacing-sm);
+    }
 
-.form-group.path-group {
-    max-width: 180px;
-}
+    .message-path-select {
+        font-size: 0.75rem;
+        padding-right: calc(var(--spacing-sm) + 8px);
+        min-width: 70px;
+    }
 
-.form-group.message-group {
-    flex: 2;
-    min-width: 200px;
-}
-
-.form-group.actions-group {
-    flex: 0 0 auto;
-    flex-direction: row;
-    gap: var(--spacing-sm);
+    .theme-toggle-container {
+        gap: var(--spacing-xs);
+    }
 }
 
 .form-label {
@@ -461,27 +647,13 @@ body {
 /* Content Area */
 .wc-content {
     flex: 1 1 auto;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     background: var(--bg-secondary);
-    padding: var(--spacing-md) 0;
-}
-
-.wc-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.wc-content::-webkit-scrollbar-track {
-    background: var(--bg-secondary);
-}
-
-.wc-content::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: var(--radius-sm);
-}
-
-.wc-content::-webkit-scrollbar-thumb:hover {
-    background: var(--border-hover);
+    padding: var(--spacing-md) 0 0 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Important for flexbox scrolling */
 }
 
 /* Footer Styles */

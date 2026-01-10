@@ -74,6 +74,62 @@
                 localStorage.clear();
             });
 
+            // iPhone-style message input behavior
+            var messageInput = $('#message');
+            var sendButton = $('#send_msg');
+
+            // Enable/disable send button based on input
+            function updateSendButton() {
+                var hasText = messageInput.val().trim().length > 0;
+                var hasCallsign = selected_tab_callsign && selected_tab_callsign !== null && selected_tab_callsign !== '';
+                sendButton.prop('disabled', !hasText || !hasCallsign);
+            }
+
+            // Update on input
+            messageInput.on('input', function() {
+                updateSendButton();
+            });
+
+            // Initial state
+            updateSendButton();
+
+            // Make updateSendButton available globally
+            window.updateSendButton = updateSendButton;
+
+            // Save path when user manually changes it
+            $('#pkt_path').on('change', function() {
+                if (selected_tab_callsign && selected_tab_callsign !== '') {
+                    var path = $(this).val();
+                    if (typeof callsign_list !== 'undefined') {
+                        callsign_list[selected_tab_callsign] = path || '';
+                        if (typeof save_data === 'function') {
+                            save_data();
+                        }
+                    }
+                }
+            });
+
+            // Auto-focus message input when tab is selected (but not the "+" tab)
+            // Also restore the path for the selected callsign
+            $(document).on('shown.bs.tab', 'button[data-bs-toggle="tab"]', function (e) {
+                var callsign = $(e.target).attr('callsign');
+                if (callsign && callsign !== 'ADD_TAB') {
+                    // Restore the path for this callsign
+                    if (typeof callsign_list !== 'undefined' && callsign in callsign_list && callsign_list[callsign]) {
+                        $('#pkt_path').val(callsign_list[callsign]);
+                    } else {
+                        $('#pkt_path').val('');
+                    }
+                    setTimeout(function() {
+                        messageInput.focus();
+                    }, 100);
+                } else if (callsign === 'ADD_TAB') {
+                    setTimeout(function() {
+                        $('#new-callsign-input').focus();
+                    }, 100);
+                }
+            });
+
             //Now send a message back to the server when the user changes the beaconing setting.
             $('#save_beacon_settings').click(function() {
                 beacon_type = $('#beaconing_setting').val();
@@ -93,13 +149,23 @@
                 });
             });
 
-            // When a tab is clicked, populate the to_call form field.
+            // When a tab is clicked, update selected_tab_callsign
             $(document).on('shown.bs.tab', 'button[data-bs-toggle="tab"]', function (e) {
                 var tab = $(e.target);
                 var callsign = tab.attr("callsign");
-                var to_call = $('#to_call');
-                to_call.val(callsign);
-                selected_tab_callsign = callsign;
+                if (callsign && callsign !== 'ADD_TAB') {
+                    selected_tab_callsign = callsign;
+                    updateSendButton();
+                    // Auto-focus message input when a callsign tab is selected
+                    setTimeout(function() {
+                        $('#message').focus();
+                    }, 100);
+                } else if (callsign === 'ADD_TAB') {
+                    // Focus the new callsign input when "+" tab is selected
+                    setTimeout(function() {
+                        $('#new-callsign-input').focus();
+                    }, 100);
+                }
             });
 
             // set initial opacity of the radio icon to 0.2
@@ -142,116 +208,86 @@
                             <span class="material-symbols-rounded light-icon">light_mode</span>
                             <span class="material-symbols-rounded dark-icon">dark_mode</span>
                         </button>
+                        <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
+                            <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
+                        </button>
                     </div>
                 </div>
 
-                <form class="message-form" id="sendform" name="sendmsg" action="" autocomplete="off">
-                    <div class="form-row">
-                        <div class="form-group callsign-group">
-                            <label for="to_call" class="form-label">To</label>
-                            <input type="search" class="form-control" name="to_call" id="to_call" placeholder="Callsign" maxlength="9">
+                <div class="collapse gps-panel" id="collapseGPS">
+                    <div class="gps-card">
+                        <div class="gps-header">
+                            <h3>GPS & Beaconing</h3>
                         </div>
-                        <div class="form-group path-group">
-                            <label for="pkt_path" class="form-label">Path</label>
-                            <select class="form-control" name="pkt_path" id="pkt_path">
-                                <option value="" disabled selected>Default</option>
-                                <option value="WIDE1-1">WIDE1-1</option>
-                                <option value="WIDE1-1,WIDE2-1">WIDE1-1,WIDE2-1</option>
-                                <option value="ARISS">ARISS</option>
-                                <option value="GATE">GATE</option>
-                            </select>
-                        </div>
-                        <div class="form-group message-group">
-                            <label for="message" class="form-label">Message</label>
-                            <input type="search" class="form-control" name="message" id="message" maxlength="67" placeholder="Type your message...">
-                        </div>
-                        <div class="form-group actions-group">
-                            <button type="submit" class="btn btn-primary btn-send" id="send_msg">
-                                <span class="btn-text">Send</span>
-                                <span class="material-symbols-rounded">send</span>
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
-                                <span class="material-symbols-rounded" id="gps_icon">satellite</span>
-                                <span class="btn-text">GPS</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="collapse gps-panel" id="collapseGPS">
-                        <div class="gps-card">
-                            <div class="gps-header">
-                                <h3>GPS & Beaconing</h3>
+                        <div class="gps-body">
+                            <div id="gps_info_box" class="gps-info">
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Latitude:</span>
+                                    <span class="gps-value" id="gps_lat">-</span>
+                                </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Longitude:</span>
+                                    <span class="gps-value" id="gps_lon">-</span>
+                                </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Altitude:</span>
+                                    <span class="gps-value" id="gps_alt">-</span>
+                                </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Speed:</span>
+                                    <span class="gps-value" id="gps_speed">-</span>
+                                </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Course:</span>
+                                    <span class="gps-value" id="gps_course">-</span>
+                                </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Updated:</span>
+                                    <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
+                                </div>
                             </div>
-                            <div class="gps-body">
-                                <div id="gps_info_box" class="gps-info">
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Latitude:</span>
-                                        <span class="gps-value" id="gps_lat">-</span>
+
+                            <div class="beaconing-controls">
+                                <label for="beaconing_setting" class="form-label">
+                                    Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
+                                </label>
+                                <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
+                                <script>
+                                    $('#beaconing_setting').on('input', function() {
+                                        var value = $(this).val();
+                                        set_beaconing_setting(value);
+                                    });
+                                </script>
+
+                                <div class="beaconing-options">
+                                    <div class="form-group" id="beacon_interval_group" style="display: none;">
+                                        <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval (seconds)</label>
+                                        <input type="number" class="form-control" id="beacon_interval" placeholder="1800" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
                                     </div>
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Longitude:</span>
-                                        <span class="gps-value" id="gps_lon">-</span>
+                                    <div class="form-group" id="smart_beacon_time_window_group" style="display: none;">
+                                        <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label">Time Window (seconds)</label>
+                                        <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="600">
                                     </div>
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Altitude:</span>
-                                        <span class="gps-value" id="gps_alt">-</span>
-                                    </div>
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Speed:</span>
-                                        <span class="gps-value" id="gps_speed">-</span>
-                                    </div>
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Course:</span>
-                                        <span class="gps-value" id="gps_course">-</span>
-                                    </div>
-                                    <div class="gps-info-item">
-                                        <span class="gps-label">Updated:</span>
-                                        <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
+                                    <div class="form-group" id="smart_beacon_distance_threshold_group" style="display: none;">
+                                        <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label">Distance Threshold (meters)</label>
+                                        <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="100">
                                     </div>
                                 </div>
 
-                                <div class="beaconing-controls">
-                                    <label for="beaconing_setting" class="form-label">
-                                        Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
-                                    </label>
-                                    <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
-                                    <script>
-                                        $('#beaconing_setting').on('input', function() {
-                                            var value = $(this).val();
-                                            set_beaconing_setting(value);
-                                        });
-                                    </script>
-
-                                    <div class="beaconing-options">
-                                        <div class="form-group" id="beacon_interval_group" style="display: none;">
-                                            <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval (seconds)</label>
-                                            <input type="number" class="form-control" id="beacon_interval" placeholder="1800" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
-                                        </div>
-                                        <div class="form-group" id="smart_beacon_time_window_group" style="display: none;">
-                                            <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label">Time Window (seconds)</label>
-                                            <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="600">
-                                        </div>
-                                        <div class="form-group" id="smart_beacon_distance_threshold_group" style="display: none;">
-                                            <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label">Distance Threshold (meters)</label>
-                                            <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="100">
-                                        </div>
-                                    </div>
-
-                                    <div class="beaconing-actions">
-                                        <button type="button" class="btn btn-primary" id="send_beacon">
-                                            <span class="material-symbols-rounded">location_on</span>
-                                            Send Beacon
-                                        </button>
-                                        <button type="button" class="btn btn-outline-primary" id="save_beacon_settings">
-                                            <span class="material-symbols-rounded">save</span>
-                                            Save Settings
-                                        </button>
-                                    </div>
+                                <div class="beaconing-actions">
+                                    <button type="button" class="btn btn-primary" id="send_beacon">
+                                        <span class="material-symbols-rounded">location_on</span>
+                                        Send Beacon
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="save_beacon_settings">
+                                        <span class="material-symbols-rounded">save</span>
+                                        Save Settings
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
+                </div>
 
                 <div class="tabs-container">
                     <ul class="nav nav-tabs modern-tabs" id="msgsTabList" role="tablist"></ul>
@@ -278,6 +314,35 @@
         <main class="wc-content" id="wc-content">
             <div class="container-fluid">
                 <div class="tab-content" id="msgsTabContent"></div>
+            </div>
+            <!-- iPhone-style message input at bottom -->
+            <div class="message-input-container">
+                <form class="message-input-form" id="sendform" name="sendmsg" action="" autocomplete="off">
+                    <div class="message-input-wrapper">
+                        <input type="text"
+                               class="message-input"
+                               name="message"
+                               id="message"
+                               maxlength="67"
+                               placeholder="Message"
+                               autocomplete="off"
+                               spellcheck="true">
+                        <select class="message-path-select" name="pkt_path" id="pkt_path" aria-label="Message path">
+                            <option value="" disabled selected>Path</option>
+                            <option value="WIDE1-1">WIDE1-1</option>
+                            <option value="WIDE1-1,WIDE2-1">WIDE1-1,WIDE2-1</option>
+                            <option value="ARISS">ARISS</option>
+                            <option value="GATE">GATE</option>
+                        </select>
+                        <button type="submit"
+                                class="message-send-button"
+                                id="send_msg"
+                                aria-label="Send message"
+                                disabled>
+                            <span class="material-symbols-rounded">send</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </main>
 

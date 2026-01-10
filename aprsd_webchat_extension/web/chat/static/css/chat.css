@@ -39,11 +39,19 @@ input[type=search]::-webkit-search-cancel-button {
 
 .speech-wrapper {
     padding: var(--spacing-lg);
+    padding-bottom: var(--spacing-lg);
     background: var(--bg-secondary);
-    min-height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    position: relative;
 }
 
 .bubble-row {
