@@ -553,10 +553,8 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
 def _get_transport(stats):
     if CONF.aprs_network.enabled:
         transport = "aprs-is"
-        aprs_connection = (
-            "APRS-IS Server: <a href='http://status.aprs2.net' >" "{}</a>".format(
-                stats["APRSClientStats"]["server_string"]
-            )
+        aprs_connection = "<a href='http://status.aprs2.net' >" "{}</a>".format(
+            stats["APRSClientStats"]["server_string"]
         )
     elif CONF.kiss_tcp.enabled:
         transport = "kiss_tcp"
@@ -718,7 +716,11 @@ def _stats():
 
 @flask_app.route("/stats")
 def get_stats():
-    return json.dumps(_stats())
+    stats = _stats()
+    transport, aprs_connection = _get_transport(stats["stats"])
+    stats["transport"] = transport
+    stats["aprs_connection"] = aprs_connection
+    return json.dumps(stats)
 
 
 class SendMessageNamespace(Namespace):

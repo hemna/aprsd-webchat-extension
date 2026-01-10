@@ -690,14 +690,47 @@ body {
     flex: 0 0 auto;
     background: var(--bg-footer);
     border-top: 1px solid var(--border-color);
-    padding: var(--spacing-sm) 0;
+    padding: 0;
+}
+
+.footer-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    font-size: 0.875rem;
+}
+
+.footer-toggle:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.footer-toggle-text {
+    font-weight: 500;
+}
+
+.footer-toggle-icon {
+    font-size: 1.25rem;
+    transition: transform var(--transition-base);
+}
+
+.footer-toggle[aria-expanded="true"] .footer-toggle-icon {
+    transform: rotate(180deg);
 }
 
 .footer-badges {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: 0 var(--spacing-lg);
+    padding: var(--spacing-sm) var(--spacing-lg);
     flex-wrap: wrap;
 }
 

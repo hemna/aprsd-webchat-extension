@@ -36,9 +36,8 @@ function update_stats( data ) {
     console.log("update_stats() main.js called");
     console.log(data);
     $("#version").text( data["stats"]["APRSDStats"]["version"] );
-    // Escape server-provided data to prevent XSS (may contain user data)
-    $("#aprs_connection").html( escapeHtml( data["aprs_connection"] || '' ) );
-    $("#uptime").text( "uptime: " + data["stats"]["APRSDStats"]["uptime"] );
+    // aprs_connection contains intentional HTML (link to APRS-IS server) from backend
+    $("#aprs_connection").html( data["aprs_connection"] || '' );
     short_time = data["time"].split(/\s(.+)/)[1];
 
     update_gps(data);

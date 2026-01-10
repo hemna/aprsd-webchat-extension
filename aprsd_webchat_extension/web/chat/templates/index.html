@@ -136,6 +136,37 @@
             // Make updateSendButton available globally
             window.updateSendButton = updateSendButton;
 
+            // Set footer collapse state based on screen size
+            var footerCollapse = document.getElementById('footer-badges-collapse');
+            var footerToggle = document.querySelector('.footer-toggle');
+            if (footerCollapse && footerToggle) {
+                // Check if mobile (screen width <= 768px)
+                function isMobile() {
+                    return window.innerWidth <= 768;
+                }
+
+                // Set initial state: expanded on desktop, collapsed on mobile
+                function setFooterState() {
+                    if (isMobile()) {
+                        // Collapsed on mobile
+                        footerCollapse.classList.remove('show');
+                        footerToggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        // Expanded on desktop
+                        footerCollapse.classList.add('show');
+                        footerToggle.setAttribute('aria-expanded', 'true');
+                    }
+                }
+
+                // Set initial state
+                setFooterState();
+
+                // Update on resize
+                window.addEventListener('resize', function() {
+                    setFooterState();
+                });
+            }
+
             // Save path when user manually changes it
             $('#pkt_path').on('change', function() {
                 if (selected_tab_callsign && selected_tab_callsign !== '') {
@@ -236,7 +267,6 @@
                             <span class="callsign-badge">{{ callsign }}</span>
                             <span class="connection-text">connected to</span>
                             <span class="connection-link" id='aprs_connection'>{{ aprs_connection|safe }}</span>
-                            <span class="uptime" id='uptime'></span>
                         </div>
                         {% endif %}
                     </div>
@@ -388,16 +418,22 @@
 
         <footer class="wc-footer">
             <div class="container-fluid">
-                <div class="footer-badges">
-                    <a href="https://badge.fury.io/py/aprsd" target="_blank" rel="noopener">
-                        <img src="https://img.shields.io/badge/aprsd-{{aprsd_version}}-darkgreen" alt="APRSD version" height="18">
-                    </a>
-                    <a href="https://badge.fury.io/py/aprsd-webchat-extension" target="_blank" rel="noopener">
-                        <img src="https://img.shields.io/badge/aprsd_webchat_extension-{{version}}-darkgreen" alt="APRSD WebChat version" height="18">
-                    </a>
-                    <a href="https://github.com/hemna/aprsd-webchat-extension" target="_blank" rel="noopener">
-                        <img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" alt="Made with Python" height="18">
-                    </a>
+                <button class="footer-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#footer-badges-collapse" aria-expanded="false" aria-controls="footer-badges-collapse">
+                    <span class="footer-toggle-text">Version Info</span>
+                    <span class="material-symbols-rounded footer-toggle-icon">expand_more</span>
+                </button>
+                <div class="collapse" id="footer-badges-collapse">
+                    <div class="footer-badges">
+                        <a href="https://badge.fury.io/py/aprsd" target="_blank" rel="noopener">
+                            <img src="https://img.shields.io/badge/aprsd-{{aprsd_version}}-darkgreen" alt="APRSD version" height="18">
+                        </a>
+                        <a href="https://badge.fury.io/py/aprsd-webchat-extension" target="_blank" rel="noopener">
+                            <img src="https://img.shields.io/badge/aprsd_webchat_extension-{{version}}-darkgreen" alt="APRSD WebChat version" height="18">
+                        </a>
+                        <a href="https://github.com/hemna/aprsd-webchat-extension" target="_blank" rel="noopener">
+                            <img src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" alt="Made with Python" height="18">
+                        </a>
+                    </div>
                 </div>
             </div>
         </footer>
