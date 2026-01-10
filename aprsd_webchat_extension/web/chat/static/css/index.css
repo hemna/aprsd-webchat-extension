@@ -118,16 +118,24 @@ body {
 
 .header-top {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: var(--spacing-xs);
     margin-bottom: var(--spacing-md);
     padding: 0 var(--spacing-lg);
+}
+
+.header-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
 }
 
 .theme-toggle-container {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 .theme-toggle-container .btn-gps {
@@ -143,6 +151,13 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+}
+
+.connection-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
 }
 
 .app-title {
@@ -816,13 +831,20 @@ body {
     }
 
     .header-top {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-md);
+        gap: var(--spacing-xs);
+    }
+
+    .header-title-row {
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
     }
 
     .theme-toggle-container {
-        align-self: flex-end;
+        gap: var(--spacing-xs);
+    }
+
+    .app-title {
+        font-size: 1.5rem;
     }
 }
 

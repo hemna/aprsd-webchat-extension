@@ -136,36 +136,6 @@
             // Make updateSendButton available globally
             window.updateSendButton = updateSendButton;
 
-            // Set footer collapse state based on screen size
-            var footerCollapse = document.getElementById('footer-badges-collapse');
-            var footerToggle = document.querySelector('.footer-toggle');
-            if (footerCollapse && footerToggle) {
-                // Check if mobile (screen width <= 768px)
-                function isMobile() {
-                    return window.innerWidth <= 768;
-                }
-
-                // Set initial state: expanded on desktop, collapsed on mobile
-                function setFooterState() {
-                    if (isMobile()) {
-                        // Collapsed on mobile
-                        footerCollapse.classList.remove('show');
-                        footerToggle.setAttribute('aria-expanded', 'false');
-                    } else {
-                        // Expanded on desktop
-                        footerCollapse.classList.add('show');
-                        footerToggle.setAttribute('aria-expanded', 'true');
-                    }
-                }
-
-                // Set initial state
-                setFooterState();
-
-                // Update on resize
-                window.addEventListener('resize', function() {
-                    setFooterState();
-                });
-            }
 
             // Save path when user manually changes it
             $('#pkt_path').on('change', function() {
@@ -260,28 +230,28 @@
         <header class="wc-header">
             <div class="container-fluid">
                 <div class="header-top">
-                    <div class="header-title">
+                    <div class="header-title-row">
                         <h1 class="app-title">APRSD WebChat</h1>
-                        {% if is_digipi == False %}
-                        <div class="connection-info">
-                            <span class="callsign-badge">{{ callsign }}</span>
-                            <span class="connection-text">connected to</span>
-                            <span class="connection-link" id='aprs_connection'>{{ aprs_connection|safe }}</span>
+                        <div class="theme-toggle-container">
+                            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                                <span class="material-symbols-rounded light-icon">light_mode</span>
+                                <span class="material-symbols-rounded dark-icon">dark_mode</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
+                                <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" title="Start tour">
+                                <span class="material-symbols-rounded">help</span>
+                            </button>
                         </div>
-                        {% endif %}
                     </div>
-                    <div class="theme-toggle-container">
-                        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
-                            <span class="material-symbols-rounded light-icon">light_mode</span>
-                            <span class="material-symbols-rounded dark-icon">dark_mode</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
-                            <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
-                        </button>
-                        <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" title="Start tour">
-                            <span class="material-symbols-rounded">help</span>
-                        </button>
+                    {% if is_digipi == False %}
+                    <div class="connection-info">
+                        <span class="callsign-badge">{{ callsign }}</span>
+                        <span class="connection-text">connected to</span>
+                        <span class="connection-link" id='aprs_connection'>{{ aprs_connection|safe }}</span>
                     </div>
+                    {% endif %}
                 </div>
 
                 <div class="collapse gps-panel" id="collapseGPS">
