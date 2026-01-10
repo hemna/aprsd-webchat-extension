@@ -6,6 +6,14 @@ function openTab(evt, tabName) {
       return
   }
 
+  // Sanitize tabName to prevent XSS - only allow alphanumeric, hyphens, and underscores
+  // This prevents injection attacks via getElementById
+  var sanitizedTabName = String(tabName).replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!sanitizedTabName || sanitizedTabName !== tabName) {
+      console.warn("Invalid tabName provided to openTab, sanitized:", tabName, "->", sanitizedTabName);
+      return;
+  }
+
   // Get all elements with class="tabcontent" and hide them
   tabcontent = document.getElementsByClassName("tabcontent");
   for (i = 0; i < tabcontent.length; i++) {
@@ -19,7 +27,10 @@ function openTab(evt, tabName) {
   }
 
   // Show the current tab, and add an "active" class to the button that opened the tab
-  document.getElementById(tabName).style.display = "block";
+  var tabElement = document.getElementById(sanitizedTabName);
+  if (tabElement) {
+      tabElement.style.display = "block";
+  }
   if (typeof evt.currentTarget == 'undefined') {
       return
   } else {

@@ -416,7 +416,9 @@ function init_chat() {
 
 
 function tab_string(callsign, id=false) {
-    name = "msgs"+callsign;
+    // Sanitize callsign to prevent XSS in ID generation
+    var sanitized_callsign = String(callsign || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    name = "msgs"+sanitized_callsign;
     if (id) {
         return "#"+name;
     } else {
@@ -464,7 +466,10 @@ function callsign_location_content(callsign, id=false) {
 
 function bubble_msg_id(msg, id=false) {
     // The id of the div that contains a specific message
-    name = msg["from_call"] + "_" + msg["msgNo"];
+    // Sanitize from_call and msgNo to prevent XSS in ID generation
+    var from_call = String(msg["from_call"] || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    var msgNo = String(msg["msgNo"] || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    name = from_call + "_" + msgNo;
     if (id) {
         return "#"+name;
     } else {
