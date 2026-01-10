@@ -88,6 +88,10 @@ input[type=search]::-webkit-search-cancel-button {
     position: relative;
     margin: 0;
     transition: transform var(--transition-base), box-shadow var(--transition-base);
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
 }
 
 .bubble:hover {
@@ -139,6 +143,9 @@ input[type=search]::-webkit-search-cancel-button {
     text-align: left;
     line-height: 1.5;
     word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
 }
 
 .bubble.alt .bubble-message {

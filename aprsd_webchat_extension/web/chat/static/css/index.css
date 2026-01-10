@@ -763,6 +763,9 @@ body {
     padding: 0 var(--spacing-lg);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-header);
+    display: block;
+    visibility: visible;
+    overflow: visible;
 }
 
 /* Theme Toggle Button */
@@ -832,6 +835,7 @@ body {
 
     .header-top {
         gap: var(--spacing-xs);
+        margin-bottom: var(--spacing-xs);
     }
 
     .header-title-row {
@@ -845,6 +849,14 @@ body {
 
     .app-title {
         font-size: 1.5rem;
+    }
+
+    .tabs-container {
+        padding: var(--spacing-xs) var(--spacing-md);
+    }
+
+    .wc-header {
+        padding: var(--spacing-sm) 0;
     }
 }
 

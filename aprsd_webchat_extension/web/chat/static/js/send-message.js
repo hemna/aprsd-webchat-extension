@@ -844,7 +844,7 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
       alt = ""
     }
 
-    bubble_class = "bubble" + alt + " text-nowrap"
+    bubble_class = "bubble" + alt
     bubble_name_class = "bubble-name" + alt
     bubble_msgid = bubble_msg_id(msg);
     date_str = date + " " + time;
