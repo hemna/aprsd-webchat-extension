@@ -97,7 +97,7 @@ function is_valid_callsign(callsign) {
         return false;
     }
 
-    // Handle dash-separated SSID (e.g., WB4BOR-11)
+    // Handle dash-separated SSID or suffix (e.g., WB4BOR-11, AE5PL-WX)
     var baseCallsign = callsign;
     var ssid = null;
     if (callsign.includes('-')) {
@@ -105,8 +105,9 @@ function is_valid_callsign(callsign) {
         if (dashParts.length === 2) {
             baseCallsign = dashParts[0];
             ssid = dashParts[1];
-            // SSID should be numeric (0-15 typically, but allow 0-99)
-            if (!/^[0-9]{1,2}$/.test(ssid)) {
+            // SSID can be numeric (0-15 typically, but allow 0-99) or letter suffix (e.g., WX, GPS)
+            // Allow 1-2 digits for numeric SSID or 1-4 letters for letter suffix
+            if (!/^[0-9]{1,2}$/.test(ssid) && !/^[A-Z]{1,4}$/.test(ssid)) {
                 return false;
             }
         } else {
