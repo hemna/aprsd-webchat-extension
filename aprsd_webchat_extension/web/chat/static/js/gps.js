@@ -66,6 +66,8 @@ function update_gps_settings(data) {
 
 function set_beaconing_setting(value, description='') {
     console.log("setting beaconing setting to", value);
+    // Convert value to number if it's a string
+    value = parseInt(value, 10);
     $('#beaconing_setting').val(value);
 
     if (beaconing_enabled == false) {
@@ -74,6 +76,10 @@ function set_beaconing_setting(value, description='') {
         $('#beaconing_setting').prop('disabled', true);
         $('#beaconing_setting_description').text('disabled in config');
         $('#gps_icon').css('opacity', 0.5);
+        // Hide all optional UI elements
+        $('#beacon_interval_group').hide();
+        $('#smart_beacon_time_window_group').hide();
+        $('#smart_beacon_distance_threshold_group').hide();
         return;
     }
 
@@ -90,6 +96,10 @@ function set_beaconing_setting(value, description='') {
         }
         $('#beaconing_setting_description').text(beaconing_description);
         $('#gps_icon').css('opacity', 0.5);
+        // Hide all optional UI elements
+        $('#beacon_interval_group').hide();
+        $('#smart_beacon_time_window_group').hide();
+        $('#smart_beacon_distance_threshold_group').hide();
     } else {
         //Always enable the send beacon if we have a gps fix.
         $('#send_beacon').prop('disabled', false);
@@ -98,39 +108,52 @@ function set_beaconing_setting(value, description='') {
     if (value == 1) {
         description = 'Manual';
         $('#beaconing_setting_description').text(description);
+        // Hide interval and smart beaconing UI elements for manual mode
+        $('#beacon_interval_group').hide();
+        $('#smart_beacon_time_window_group').hide();
+        $('#smart_beacon_distance_threshold_group').hide();
     }
 
     // if the beaconing setting is set to interval, enable the beacon interval.
     if (value == 2) {
-        $('#beacon_interval_label').show();
-        $('#beacon_interval').show();
+        $('#beacon_interval_group').show();
         description = 'Interval Beaconing every N seconds';
         $('#beaconing_setting_description').text(description);
-    } else {
-        $('#beacon_interval_label').hide();
-        $('#beacon_interval').hide();
+        // Hide smart beaconing UI elements
+        $('#smart_beacon_time_window_group').hide();
+        $('#smart_beacon_distance_threshold_group').hide();
     }
 
-    // This can only be enabled if the gps extension is installed and enabled.
-    if (current_stats.stats.gps.gps_extension.is_installed != true) {
-        return;
-    }
-    if (current_stats.stats.gps.gps_extension.enabled != true) {
-        return;
-    }
+    // Check if GPS extension is installed and enabled for smart beaconing
+    var gps_extension_available = current_stats &&
+                                   current_stats.stats &&
+                                   current_stats.stats.gps &&
+                                   current_stats.stats.gps.gps_extension &&
+                                   current_stats.stats.gps.gps_extension.is_installed == true &&
+                                   current_stats.stats.gps.gps_extension.enabled == true;
 
     // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
     if (value == 3) {
-        $('#smart_beacon_time_window_label').show();
-        $('#smart_beacon_time_window').show();
-        $('#smart_beacon_distance_threshold_label').show();
-        $('#smart_beacon_distance_threshold').show();
-    } else {
-        $('#smart_beacon_time_window_label').hide();
-        $('#smart_beacon_time_window').hide();
-        $('#smart_beacon_distance_threshold_label').hide();
-        $('#smart_beacon_distance_threshold').hide();
-
+        if (gps_extension_available) {
+            $('#smart_beacon_time_window_group').show();
+            $('#smart_beacon_distance_threshold_group').show();
+            description = 'Smart Beaconing';
+            $('#beaconing_setting_description').text(description);
+            // Hide interval UI elements
+            $('#beacon_interval_group').hide();
+        } else {
+            // GPS extension not available, can't use smart beaconing
+            // Reset to manual mode
+            console.warn("Smart beaconing requires GPS extension to be installed and enabled");
+            $('#beaconing_setting').val(1);
+            // Call set_beaconing_setting with a flag to prevent recursion
+            description = 'Manual (Smart requires GPS extension)';
+            $('#beaconing_setting_description').text(description);
+            // Hide all optional UI elements
+            $('#beacon_interval_group').hide();
+            $('#smart_beacon_time_window_group').hide();
+            $('#smart_beacon_distance_threshold_group').hide();
+        }
     }
 
 }
@@ -168,7 +191,7 @@ function init_gps() {
     // When we send a beacon, update the radio icon
     socket.on("gps_beacon_sent", function(msg) {
         console.log("Beacon sent: ", msg);
-        beacon_toast();
+        beacon_toast(msg);
     });
 
     // When the GPS settings are received, update the GPS settings.
@@ -368,15 +391,23 @@ function update_gps_fix(data) {
     }
 }
 
-function beacon_toast() {
-  //if the gps extension is installed we get the lat/lon from the gps extension.
-  //if the gps extension is not installed we get the lat/lon from the config.
-  if (current_stats.stats.gps.gps_extension.is_installed == true) {
-    lat = current_stats.stats.GPSStats.latitude;
-    lon = current_stats.stats.GPSStats.longitude;
+function beacon_toast(msg) {
+  // First try to get lat/lon from the message if provided
+  var lat = null;
+  var lon = null;
+  if (msg && msg.latitude !== undefined && msg.longitude !== undefined) {
+    lat = msg.latitude;
+    lon = msg.longitude;
   } else {
-    lat = current_stats.stats.gps.latitude;
-    lon = current_stats.stats.gps.longitude;
+    // Fallback: if the gps extension is installed we get the lat/lon from the gps extension.
+    // if the gps extension is not installed we get the lat/lon from the config.
+    if (current_stats.stats.gps.gps_extension.is_installed == true) {
+      lat = current_stats.stats.GPSStats.latitude;
+      lon = current_stats.stats.GPSStats.longitude;
+    } else {
+      lat = current_stats.stats.gps.latitude;
+      lon = current_stats.stats.gps.longitude;
+    }
   }
   // Escape lat/lon values to prevent XSS (even though they should be numbers)
   var escapedLat = escapeHtml(String(lat || ''));

@@ -808,7 +808,11 @@ class SendMessageNamespace(Namespace):
         # Now let the browser know that the beacon was sent.
         socketio.emit(
             "gps_beacon_sent",
-            {"message": "beacon sent"},
+            {
+                "message": "beacon sent",
+                "latitude": lat,
+                "longitude": long,
+            },
             namespace="/sendmsg",
         )
 
