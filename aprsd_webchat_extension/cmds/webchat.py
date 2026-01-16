@@ -553,7 +553,7 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
 def _get_transport(stats):
     if CONF.aprs_network.enabled:
         transport = "aprs-is"
-        aprs_connection = "<a href='http://status.aprs2.net' >" "{}</a>".format(
+        aprs_connection = "<a href='http://status.aprs2.net' >{}</a>".format(
             stats["APRSClientStats"]["server_string"]
         )
     elif CONF.kiss_tcp.enabled:

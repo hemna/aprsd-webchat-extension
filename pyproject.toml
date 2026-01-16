@@ -18,9 +18,9 @@ description = "APRSD Webchat"
 # 'Programming Language' classifiers in this file, 'pip install' will check this
 # and refuse to install the project if the version does not match. See
 # https://packaging.python.org/guides/distributing-packages-using-setuptools/#python-requires
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
-dynamic = ["version", "dependencies", "optional-dependencies"]
+dynamic = ["version"]
 
 # This is an optional longer description of your project that represents
 # the body of text which users will see when they visit PyPI.
@@ -82,10 +82,8 @@ classifiers = [
     "Topic :: Internet",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 # This field lists other packages that your project depends on to run.
@@ -94,9 +92,31 @@ classifiers = [
 #
 # For an analysis of this field vs pip's requirements files see:
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
-[tool.setuptools.dynamic]
-dependencies = {file = ["./requirements.txt"]}
-optional-dependencies.dev = {file = ["./requirements-dev.txt"]}
+dependencies = [
+    "aprsd>=4.2.1",
+    "click",
+    "flask",
+    "flask-httpauth",
+    "flask-socketio",
+    "haversine",
+    "oslo_config",
+    "python-socketio",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pip",
+    "pip-tools",
+    "bump2version",
+    "wheel",
+    "watchdog",
+    "tox",
+    "tox-uv",
+    "pytest",
+    "ruff",
+    "Sphinx",
+    "twine",
+]
 
 # List additional groups of dependencies here (e.g. development
 # dependencies). Users will be able to install these using the "extras"
