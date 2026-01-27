@@ -93,7 +93,6 @@ classifiers = [
 # For an analysis of this field vs pip's requirements files see:
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
 dependencies = [
-    "aprsd>=4.2.1",
     "click",
     "flask",
     "flask-httpauth",
