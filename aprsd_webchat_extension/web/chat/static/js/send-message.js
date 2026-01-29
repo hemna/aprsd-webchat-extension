@@ -191,19 +191,28 @@ function build_location_string(msg) {
     return loc;
 }
 
+/**
+ * Return a "time ago" style string for the given date (Date, ISO string, or timestamp).
+ * Uses jQuery timeago plugin when available for consistent formatting.
+ */
+function get_location_timeago_string(lastUpdated) {
+    if (lastUpdated == null || lastUpdated === undefined) {
+        return '';
+    }
+    var d = lastUpdated instanceof Date ? lastUpdated : new Date(lastUpdated);
+    if (isNaN(d.getTime())) {
+        return '';
+    }
+    return (typeof $.timeago === 'function') ? $.timeago(d) : d.toLocaleString();
+}
+
 function build_location_string_small(msg) {
     dt = new Date(parseInt(msg['lasttime']) * 1000);
     loc = "" + escapeHtml(String(msg['distance'] || '')) + "km";
-    //loc += "Lat " + escapeHtml(String(msg['lat'] || '')) + "&nbsp;Lon " + escapeHtml(String(msg['lon'] || ''));
     loc += "&nbsp;" + escapeHtml(String(msg['compass_bearing'] || ''));
-    //loc += "&nbsp;Distance " + escapeHtml(String(msg['distance'] || '')) + " km";
-    //loc += "&nbsp;" + escapeHtml(dt.toLocaleString());
-    //loc += "&nbsp;" + escapeHtml(String(msg['timeago'] || ''));
-    loc += "&nbsp;"
-    // Escape datetime attribute value
-    var escaped_datetime = escapeHtmlAttribute(String(msg['last_updated'] || ''));
-    timeago_str = "<time id='location_timeago' class='timeago' datetime='" + escaped_datetime + "'></time>";
-    loc += timeago_str;
+    loc += "&nbsp;";
+    var timeago_str = escapeHtml(get_location_timeago_string(msg['last_updated']));
+    loc += "<span id='location_timeago_text'>" + timeago_str + "</span>";
     return loc;
 }
 
@@ -318,12 +327,9 @@ function init_chat() {
 
        location_id = callsign_location_content(msg['callsign'], true);
        location_string = build_location_string_small(msg);
-       //$(location_id).html(location_string);
        $("#location_str").html(location_string);
-       //$(location_id+"Spinner").addClass('d-none');
        $("#location_spinner").addClass('d-none');
        save_data();
-       $("time#location_timeago").timeago("update", msg['last_updated']);
    });
 
    $("#sendform").submit(function(event) {
@@ -579,14 +585,12 @@ function init_messages() {
       callsign_select(first_callsign);
     }
 
-    //now create a timer that updates the location_str every minute
+    // Update the "time ago" string every 60 seconds so it stays relative to current time
     setInterval(function() {
-        //make sure there is a tab
         if (Object.keys(callsign_list).length > 0) {
-            console.log("Interval Updating location string for: ", selected_tab_callsign);
-            update_location_string(selected_tab_callsign);
+            refresh_location_timeago();
         }
-    }, 10000);
+    }, 60000);
 }
 
 function scroll_main_content(callsign=false) {
@@ -1007,13 +1011,27 @@ function ack_msg(msg) {
    scroll_main_content();
 }
 
+/**
+ * Update only the "time ago" text in #location_str for the selected tab.
+ * Called every 60 seconds so the relative time stays current.
+ */
+function refresh_location_timeago() {
+    if (!selected_tab_callsign || !(selected_tab_callsign in callsign_location)) {
+        return;
+    }
+    var location_data = callsign_location[selected_tab_callsign];
+    var timeago_el = $("#location_timeago_text");
+    if (timeago_el.length) {
+        timeago_el.text(get_location_timeago_string(location_data['last_updated']));
+    }
+}
+
 function update_location_string(callsign) {
     console.log("update_location_string: " + callsign);
     if (callsign in callsign_location) {
         location_data = callsign_location[callsign];
         location_string = build_location_string_small(location_data);
         $("#location_str").html(location_string);
-        $("time#location_timeago").timeago("update", location_data['last_updated']);
     } else {
         $("#location_str").html("");
     }
