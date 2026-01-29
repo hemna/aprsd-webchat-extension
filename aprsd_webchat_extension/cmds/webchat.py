@@ -707,6 +707,14 @@ def _stats():
             "smart_beacon_time_window": CONF.aprsd_gps_extension.smart_beacon_time_window,
         }
 
+    # Get Location button is enabled when gps extension (installed & enabled) OR lat/lon set
+    stats_dict["gps"]["get_location_available"] = (
+        _is_aprsd_gps_extension_installed() and CONF.aprsd_gps_extension.enabled
+    ) or (
+        bool(CONF.aprsd_webchat_extension.latitude)
+        and bool(CONF.aprsd_webchat_extension.longitude)
+    )
+
     result = {
         "time": now.strftime(time_format),
         "stats": stats_dict,

@@ -13,6 +13,17 @@ MSG_TYPE_TX = "tx";
 MSG_TYPE_RX = "rx";
 MSG_TYPE_ACK = "ack";
 
+/**
+ * Returns true if the Get Location button should be enabled: either the
+ * aprsd-gps-extension is installed and enabled, or latitude/longitude are set in config.
+ * Relies on current_stats set by gps.js from initial_stats.
+ */
+function is_get_location_available() {
+    return !!(typeof current_stats !== 'undefined' &&
+        current_stats && current_stats.stats && current_stats.stats.gps &&
+        current_stats.stats.gps.get_location_available === true);
+}
+
 function reload_popovers() {
     $('[data-bs-toggle="popover"]').popover(
         {html: true, animation: true}
@@ -358,8 +369,8 @@ function init_chat() {
    init_messages();
 
    // Consolidated tab shown handler - handles all tabs (callsign tabs and add tab)
-   // This prevents duplicate firing and centralizes tab activation logic
-   $('#msgsTabContent').on('shown.bs.tab', function(e) {
+   // Listen on msgsTabList because Bootstrap fires shown.bs.tab on the tab button, which bubbles to the list (not to msgsTabContent)
+   $('#msgsTabList').on('shown.bs.tab', function(e) {
        var target = $(e.target); // The tab button that was clicked
        var tabPane = $(e.relatedTarget); // The tab pane that was shown
        // Read callsign from attribute - it's already escaped when set, but sanitize to prevent XSS
@@ -369,16 +380,17 @@ function init_chat() {
 
        // Handle add tab
        if (callsign === 'ADD_TAB') {
+           $("#location_str").html("");
            setTimeout(function() {
                $('#new-callsign-input').focus();
            }, 100);
            return;
        }
 
-       // Handle callsign tabs
+       // Handle callsign tabs - use callsign_list so location updates for every tab (including new tabs with no messages yet)
        if (callsign && callsign !== 'ADD_TAB') {
            // Only process if this is a valid callsign tab
-           if (message_list.hasOwnProperty(callsign)) {
+           if (callsign_list.hasOwnProperty(callsign)) {
                // Set selected_tab_callsign
                selected_tab_callsign = callsign;
 
@@ -521,7 +533,6 @@ function init_messages() {
     }
     if (Object.keys(callsign_list).length > 0) {
         console.log("callsign_list has " + Object.keys(callsign_list).length + " callsigns");
-        $("#get_location_button").prop('disabled', false);
         update_info_bar(false);
     }
     console.log(callsign_list);
@@ -617,8 +628,7 @@ function create_callsign_tab(callsign, active=false) {
 
   callsignTabs.append(item_html);
   create_callsign_tab_content(callsign, active);
-  // we know we have at least one callsign, so we can enable the get location button
-  $("#get_location_button").prop('disabled', false);
+  // Show Get Location button; enabled only when get_location_available (gps extension or lat/lon set)
   update_info_bar(true);
 
   // Always ensure the "+" tab exists after creating a callsign tab
@@ -1073,7 +1083,7 @@ function update_info_bar(show_button=false) {
 
     $("#info_bar_container").html(html);
     if (show_button) {
-        $("#get_location_button").prop('disabled', false);
+        $("#get_location_button").prop('disabled', !is_get_location_available());
     } else {
         $("#get_location_button").prop('disabled', true);
     }
@@ -1150,6 +1160,8 @@ function remove_add_tab() {
  * Handle click on the "+" tab
  */
 function handle_add_tab_click() {
+    // Clear location display immediately - we are leaving a callsign tab for the add-tab
+    $("#location_str").html("");
     // Use Bootstrap's tab functionality
     // Focus is handled by the consolidated shown.bs.tab handler in init_chat()
     var addTabButton = $('#add-tab-button');
@@ -1199,7 +1211,9 @@ function handle_new_callsign_input() {
     // Clear the input
     $('#new-callsign-input').val('');
 
-    // Select the new tab
+    // Select the new tab and show its location (none for a new callsign)
+    selected_tab_callsign = newCallsign;
+    update_location_string(newCallsign);
     callsign_select(newCallsign);
     activate_callsign_tab(newCallsign);
 
