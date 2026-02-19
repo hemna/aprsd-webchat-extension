@@ -877,6 +877,8 @@ def init_flask(loglevel, quiet):
         logger=False,
         engineio_logger=False,
         async_mode="threading",
+        manage_session=False,  # Avoid Flask 3.x AttributeError: session has no setter
+        cors_allowed_origins="*",  # Allow UI when served from reverse proxy / different host
     )
 
     socketio.on_namespace(
