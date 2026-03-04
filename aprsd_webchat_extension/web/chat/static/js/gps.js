@@ -196,6 +196,10 @@ function init_gps() {
         // Mark that a beacon has been sent
         beacon_sent = true;
         localStorage.setItem('aprsd-webchat-beacon-sent', 'true');
+        // Close the beacon warning toast if it's open
+        if (typeof window.closeBeaconWarningToast === 'function') {
+            window.closeBeaconWarningToast();
+        }
         beacon_toast(msg);
     });
 

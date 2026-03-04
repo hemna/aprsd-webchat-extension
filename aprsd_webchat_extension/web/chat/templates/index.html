@@ -70,6 +70,9 @@
                 localStorage.setItem('aprsd-webchat-gps-seen', 'true');
             }
 
+            // Variable to store beacon warning toast reference
+            var beaconWarningToast = null;
+
             // Show warning toasts for beaconing
             // Function to show the beacon warning toast
             function showBeaconWarning() {
@@ -80,7 +83,7 @@
                 if (beaconing_enabled === 'True') {
                     // Beaconing is enabled - warn if beacon hasn't been sent yet
                     if (!beacon_sent) {
-                        $.toast({
+                        beaconWarningToast = $.toast({
                             heading: 'Beacon Required',
                             text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
                             loader: false,
@@ -93,7 +96,7 @@
                     }
                 } else if (isKissConnection) {
                     // Beaconing is disabled but using KISS connection - warn to enable beaconing
-                    $.toast({
+                    beaconWarningToast = $.toast({
                         heading: 'Beaconing Disabled',
                         text: 'Beaconing is disabled. Enable beaconing in your configuration so other stations can route packets to you.',
                         loader: false,
@@ -111,6 +114,17 @@
                     $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
                 }
             }
+
+            // Function to close beacon warning toast
+            function closeBeaconWarningToast() {
+                if (beaconWarningToast) {
+                    beaconWarningToast.close();
+                    beaconWarningToast = null;
+                }
+            }
+
+            // Make closeBeaconWarningToast available globally for gps.js
+            window.closeBeaconWarningToast = closeBeaconWarningToast;
 
             // Check if tour is completed - if so, show toast immediately (with small delay)
             // If tour is not completed, wait for it to finish by polling
