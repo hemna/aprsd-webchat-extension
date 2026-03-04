@@ -52,11 +52,12 @@
             id: 'send-beacon',
             selector: '#send_beacon_quick',
             title: 'Send Beacon',
-            description: 'Click to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
+            description: 'Click either button to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
             spotlightShape: 'rectangle',
-            spotlightBorderRadius: 6
+            spotlightBorderRadius: 6,
+            additionalSelectors: ['#send_beacon']
         },
         {
             id: 'save-beacon-settings',
@@ -132,6 +133,7 @@
     let tooltipClickHandler = null; // Store handler reference for proper removal
     let overlay = null;
     let spotlight = null;
+    let additionalSpotlights = []; // Array to hold additional spotlight elements
     let tooltip = null;
     let skipButton = null;
 
@@ -327,6 +329,110 @@
             parent = parent.parentElement;
             depth++;
         }
+    }
+
+    /**
+     * Clear all additional spotlights
+     */
+    function clearAdditionalSpotlights() {
+        additionalSpotlights.forEach(s => {
+            if (s && s.parentNode) {
+                s.parentNode.removeChild(s);
+            }
+        });
+        additionalSpotlights = [];
+    }
+
+    /**
+     * Create and update additional spotlights for a step
+     */
+    function updateAdditionalSpotlights(step) {
+        // Clear any existing additional spotlights
+        clearAdditionalSpotlights();
+
+        if (!step.additionalSelectors || !Array.isArray(step.additionalSelectors)) {
+            return;
+        }
+
+        step.additionalSelectors.forEach((selector, index) => {
+            const element = document.querySelector(selector);
+            if (!element || !overlay) return;
+
+            // Create a new spotlight element
+            const additionalSpotlight = document.createElement('div');
+            additionalSpotlight.className = 'tour-spotlight tour-spotlight-additional';
+            additionalSpotlight.id = `tour-spotlight-additional-${index}`;
+
+            // Get element position
+            const rect = element.getBoundingClientRect();
+            const padding = 8;
+
+            // Use step settings for shape
+            const useRectangle = step.spotlightShape === 'rectangle';
+            const borderRadius = step.spotlightBorderRadius || 8;
+
+            if (useRectangle) {
+                additionalSpotlight.style.cssText = `
+                    position: fixed !important;
+                    top: ${rect.top - padding}px !important;
+                    left: ${rect.left - padding}px !important;
+                    width: ${rect.width + (padding * 2)}px !important;
+                    height: ${rect.height + (padding * 2)}px !important;
+                    border-radius: ${borderRadius}px !important;
+                    border: 4px solid #ef4444 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    z-index: 2147483646 !important;
+                    background: transparent !important;
+                    box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                    pointer-events: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    transform: translateZ(0) !important;
+                    will-change: transform !important;
+                `;
+            } else {
+                const elementSize = Math.max(rect.width, rect.height);
+                const minCircleSize = 60;
+                const maxCircleSize = step.spotlightSize || 120;
+                const calculatedSize = elementSize + (padding * 4);
+                const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
+                const centerX = rect.left + (rect.width / 2);
+                const centerY = rect.top + (rect.height / 2);
+
+                additionalSpotlight.style.cssText = `
+                    position: fixed !important;
+                    top: ${centerY - (circleSize / 2)}px !important;
+                    left: ${centerX - (circleSize / 2)}px !important;
+                    width: ${circleSize}px !important;
+                    height: ${circleSize}px !important;
+                    border-radius: 50% !important;
+                    border: 4px solid #ef4444 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    z-index: 2147483646 !important;
+                    background: transparent !important;
+                    box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                    pointer-events: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    transform: translateZ(0) !important;
+                    will-change: transform !important;
+                `;
+            }
+
+            overlay.appendChild(additionalSpotlight);
+            additionalSpotlights.push(additionalSpotlight);
+
+            // Set z-index for additional element
+            element.style.zIndex = '2147483645';
+            const originalPosition = window.getComputedStyle(element).position;
+            if (originalPosition === 'static') {
+                element.style.position = 'relative';
+            }
+        });
     }
 
     /**
@@ -693,6 +799,9 @@
         // Update spotlight IMMEDIATELY (before scrolling) so it's visible right away
         updateSpotlight(element, step);
 
+        // Update additional spotlights if defined
+        updateAdditionalSpotlights(step);
+
         // Explicitly ensure spotlight is visible immediately with multiple attempts
         if (spotlight) {
             spotlight.style.display = 'block';
@@ -720,6 +829,9 @@
         setTimeout(() => {
             // Update spotlight position again after scroll (element may have moved)
             updateSpotlight(element, step);
+
+            // Update additional spotlights after scroll
+            updateAdditionalSpotlights(step);
 
             // Force a reflow to ensure spotlight is rendered
             void spotlight.offsetWidth;
@@ -877,6 +989,15 @@
             if (element) {
                 resetElementZIndex(element);
             }
+            // Also reset additional selector elements
+            if (step.additionalSelectors) {
+                step.additionalSelectors.forEach(selector => {
+                    const additionalElement = document.querySelector(selector);
+                    if (additionalElement) {
+                        resetElementZIndex(additionalElement);
+                    }
+                });
+            }
         });
 
         // Hide spotlight immediately
@@ -885,6 +1006,9 @@
             spotlight.style.visibility = 'hidden';
             spotlight.style.opacity = '0';
         }
+
+        // Clear additional spotlights
+        clearAdditionalSpotlights();
 
         if (overlay) {
             overlay.classList.remove('active');
