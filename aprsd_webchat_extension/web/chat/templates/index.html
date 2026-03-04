@@ -74,18 +74,19 @@
             }
 
             // Show warning toast if user hasn't sent a beacon yet
-            // Only show if tour has been completed (to avoid conflict with tour overlay)
-            var tourCompleted = localStorage.getItem('aprsd-webchat-tour-completed') === 'true';
-            if (!beacon_sent && tourCompleted) {
-                $.toast({
-                    heading: 'Beacon Required',
-                    text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
-                    loader: false,
-                    position: 'top-center',
-                    allowToastClose: true,
-                    hideAfter: false,
-                    icon: 'warning',
-                });
+            // Delay to avoid being cleared by tour initialization
+            if (!beacon_sent) {
+                setTimeout(function() {
+                    $.toast({
+                        heading: 'Beacon Required',
+                        text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
+                        loader: false,
+                        position: 'top-center',
+                        allowToastClose: true,
+                        hideAfter: false,
+                        icon: 'warning',
+                    });
+                }, 1000);
             }
 
             $('#gps_lat').text(gps_lat);
