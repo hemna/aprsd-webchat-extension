@@ -43,9 +43,10 @@
             id: 'beaconing-mode',
             selector: '#beaconing_setting',
             title: 'Beaconing Mode',
-            description: 'Control how beacons are sent: Disabled, Manual (send on demand), Interval (automatic every N seconds), or Smart (based on movement).',
+            description: 'Drag the slider to control how beacons are sent: Disabled, Manual (send on demand), Interval (automatic every N seconds), or Smart (based on movement).',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle'
         },
         {
             id: 'send-beacon',
