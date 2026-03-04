@@ -2,6 +2,8 @@ var gps_icon_opacity = 0.2;
 var gps_icon_interval = null;
 var current_stats = null;
 var gps_settings = null;
+// Track if a beacon has been sent (for warning users to beacon before messaging)
+var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
 
 /**
  * Escape HTML special characters to prevent XSS attacks
@@ -191,6 +193,9 @@ function init_gps() {
     // When we send a beacon, update the radio icon
     socket.on("gps_beacon_sent", function(msg) {
         console.log("Beacon sent: ", msg);
+        // Mark that a beacon has been sent
+        beacon_sent = true;
+        localStorage.setItem('aprsd-webchat-beacon-sent', 'true');
         beacon_toast(msg);
     });
 
