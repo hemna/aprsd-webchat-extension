@@ -78,6 +78,7 @@
             function showBeaconWarning() {
                 var transport = initial_stats.transport;
                 var isKissConnection = (transport === 'kiss_tcp' || transport === 'kiss_serial');
+                var showWarning = false;
 
                 if (beaconing_enabled === 'True') {
                     // Beaconing is enabled - warn if beacon hasn't been sent yet
@@ -91,6 +92,7 @@
                             hideAfter: false,
                             icon: 'warning',
                         });
+                        showWarning = true;
                     }
                 } else if (isKissConnection) {
                     // Beaconing is disabled but using KISS connection - warn to enable beaconing
@@ -103,6 +105,13 @@
                         hideAfter: false,
                         icon: 'warning',
                     });
+                    showWarning = true;
+                }
+
+                // If a warning was shown, make sure GPS panel is visible
+                if (showWarning) {
+                    $('#collapseGPS').addClass('show');
+                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
                 }
             }
 
