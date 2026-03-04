@@ -75,7 +75,12 @@
             title: 'Add New Conversation',
             description: 'Click the + tab to start a new conversation. Enter a valid ham radio callsign (e.g., K1ABC) and press Enter.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Close the GPS panel when moving to conversation steps
+                $('#collapseGPS').removeClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+            }
         },
         {
             id: 'callsign-tabs',
