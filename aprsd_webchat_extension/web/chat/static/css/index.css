@@ -701,9 +701,9 @@ body {
 }
 
 .btn-beacon:hover {
-    background: var(--accent-color);
+    background: var(--primary-color);
     color: white;
-    border-color: var(--accent-color);
+    border-color: var(--primary-color);
 }
 
 .btn-beacon:disabled {

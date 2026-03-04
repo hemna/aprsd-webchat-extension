@@ -18,7 +18,7 @@
             beforeShow: function() {
                 // Ensure GPS panel is closed at the start of the tour
                 $('#collapseGPS').removeClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+                $('[href="#collapseGPS"]').attr('aria-expanded', 'false');
             }
         },
         {
@@ -32,7 +32,7 @@
                 // Expand the GPS panel when entering GPS section
                 if (!$('#collapseGPS').hasClass('show')) {
                     $('#collapseGPS').addClass('show');
-                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                    $('[href="#collapseGPS"]').attr('aria-expanded', 'true');
                 }
             }
         },
@@ -78,7 +78,7 @@
             beforeShow: function() {
                 // Ensure GPS panel is open (for when navigating backwards from step 7)
                 $('#collapseGPS').addClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                $('[href="#collapseGPS"]').attr('aria-expanded', 'true');
             }
         },
         {
@@ -91,7 +91,7 @@
             beforeShow: function() {
                 // Close the GPS panel when moving to conversation steps
                 $('#collapseGPS').removeClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+                $('[href="#collapseGPS"]').attr('aria-expanded', 'false');
             }
         },
         {
