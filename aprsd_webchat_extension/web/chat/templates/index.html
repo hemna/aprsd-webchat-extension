@@ -74,8 +74,8 @@
             }
 
             // Show warning toasts for beaconing
-            // Delay to avoid being cleared by tour initialization
-            setTimeout(function() {
+            // Function to show the beacon warning toast
+            function showBeaconWarning() {
                 var transport = initial_stats.transport;
                 var isKissConnection = (transport === 'kiss_tcp' || transport === 'kiss_serial');
 
@@ -104,7 +104,22 @@
                         icon: 'warning',
                     });
                 }
-            }, 1000);
+            }
+
+            // Check if tour is completed - if so, show toast immediately (with small delay)
+            // If tour is not completed, wait for it to finish by polling
+            var tourCompleted = localStorage.getItem('aprsd-webchat-tour-completed') === 'true';
+            if (tourCompleted) {
+                setTimeout(showBeaconWarning, 500);
+            } else {
+                // Poll for tour completion
+                var tourCheckInterval = setInterval(function() {
+                    if (localStorage.getItem('aprsd-webchat-tour-completed') === 'true') {
+                        clearInterval(tourCheckInterval);
+                        setTimeout(showBeaconWarning, 500);
+                    }
+                }, 1000);
+            }
 
             $('#gps_lat').text(gps_lat);
             $('#gps_lon').text(gps_lon);
