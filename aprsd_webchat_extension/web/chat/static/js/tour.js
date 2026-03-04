@@ -22,12 +22,7 @@
             title: 'GPS & Beaconing',
             description: 'View your GPS coordinates and configure beaconing settings. Click to expand the GPS panel.',
             position: 'bottom',
-            offset: { x: 0, y: 10 },
-            beforeShow: function() {
-                // Expand the GPS panel before showing GPS-related steps
-                $('#collapseGPS').addClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
-            }
+            offset: { x: 0, y: 10 }
         },
         {
             id: 'gps-info',
@@ -37,7 +32,12 @@
             position: 'right',
             offset: { x: 10, y: 0 },
             spotlightShape: 'rectangle',
-            spotlightBorderRadius: 8
+            spotlightBorderRadius: 8,
+            beforeShow: function() {
+                // Expand the GPS panel before showing GPS info step
+                $('#collapseGPS').addClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+            }
         },
         {
             id: 'beaconing-mode',
