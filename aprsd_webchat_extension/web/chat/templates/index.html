@@ -73,21 +73,38 @@
                 localStorage.setItem('aprsd-webchat-gps-seen', 'true');
             }
 
-            // Show warning toast if user hasn't sent a beacon yet
+            // Show warning toasts for beaconing
             // Delay to avoid being cleared by tour initialization
-            if (!beacon_sent) {
-                setTimeout(function() {
+            setTimeout(function() {
+                var transport = initial_stats.transport;
+                var isKissConnection = (transport === 'kiss_tcp' || transport === 'kiss_serial');
+
+                if (beaconing_enabled === 'True') {
+                    // Beaconing is enabled - warn if beacon hasn't been sent yet
+                    if (!beacon_sent) {
+                        $.toast({
+                            heading: 'Beacon Required',
+                            text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
+                            loader: false,
+                            position: 'top-center',
+                            allowToastClose: true,
+                            hideAfter: false,
+                            icon: 'warning',
+                        });
+                    }
+                } else if (isKissConnection) {
+                    // Beaconing is disabled but using KISS connection - warn to enable beaconing
                     $.toast({
-                        heading: 'Beacon Required',
-                        text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
+                        heading: 'Beaconing Disabled',
+                        text: 'Beaconing is disabled. Enable beaconing in your configuration so other stations can route packets to you.',
                         loader: false,
                         position: 'top-center',
                         allowToastClose: true,
                         hideAfter: false,
                         icon: 'warning',
                     });
-                }, 1000);
-            }
+                }
+            }, 1000);
 
             $('#gps_lat').text(gps_lat);
             $('#gps_lon').text(gps_lon);
