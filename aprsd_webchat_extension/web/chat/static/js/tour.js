@@ -36,7 +36,8 @@
             description: 'Shows your current GPS coordinates, altitude, speed, and course. This information is used when sending beacons.',
             position: 'right',
             offset: { x: 10, y: 0 },
-            spotlightSize: 300
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 8
         },
         {
             id: 'beaconing-mode',
@@ -222,41 +223,70 @@
         const rect = element.getBoundingClientRect();
         const padding = 8;
 
-        // Calculate dimensions for a circle that encompasses the element
-        // Use the larger dimension (width or height) plus extra padding for visibility
-        // For very large elements (like input boxes), cap the circle size
-        const elementSize = Math.max(rect.width, rect.height);
-        const minCircleSize = 60; // Minimum circle size for visibility
-        const maxCircleSize = step && step.spotlightSize ? step.spotlightSize : 120; // Allow override per step
-        const calculatedSize = elementSize + (padding * 4);
-        const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
-        const centerX = rect.left + (rect.width / 2);
-        const centerY = rect.top + (rect.height / 2);
+        // Check if this step should use rectangular spotlight
+        const useRectangle = step && step.spotlightShape === 'rectangle';
 
-        // Position spotlight to create a red circle around the element
-        // Overlay is fixed, so use viewport coordinates directly
-        // Use maximum z-index to ensure it's above everything, including headers
-        // Set z-index to be just below tooltip (2147483647) but above all page content
-        spotlight.style.cssText = `
-            position: fixed !important;
-            top: ${centerY - (circleSize / 2)}px !important;
-            left: ${centerX - (circleSize / 2)}px !important;
-            width: ${circleSize}px !important;
-            height: ${circleSize}px !important;
-            border-radius: 50% !important;
-            border: 4px solid #ef4444 !important;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 2147483646 !important;
-            background: transparent !important;
-            box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
-            pointer-events: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            transform: translateZ(0) !important;
-            will-change: transform !important;
-        `;
+        if (useRectangle) {
+            // Rectangular spotlight that fits the element
+            const borderRadius = step.spotlightBorderRadius || 8;
+            spotlight.style.cssText = `
+                position: fixed !important;
+                top: ${rect.top - padding}px !important;
+                left: ${rect.left - padding}px !important;
+                width: ${rect.width + (padding * 2)}px !important;
+                height: ${rect.height + (padding * 2)}px !important;
+                border-radius: ${borderRadius}px !important;
+                border: 4px solid #ef4444 !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 2147483646 !important;
+                background: transparent !important;
+                box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                pointer-events: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: translateZ(0) !important;
+                will-change: transform !important;
+            `;
+        } else {
+            // Circular spotlight (default behavior)
+            // Calculate dimensions for a circle that encompasses the element
+            // Use the larger dimension (width or height) plus extra padding for visibility
+            // For very large elements (like input boxes), cap the circle size
+            const elementSize = Math.max(rect.width, rect.height);
+            const minCircleSize = 60; // Minimum circle size for visibility
+            const maxCircleSize = step && step.spotlightSize ? step.spotlightSize : 120; // Allow override per step
+            const calculatedSize = elementSize + (padding * 4);
+            const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
+            const centerX = rect.left + (rect.width / 2);
+            const centerY = rect.top + (rect.height / 2);
+
+            // Position spotlight to create a red circle around the element
+            // Overlay is fixed, so use viewport coordinates directly
+            // Use maximum z-index to ensure it's above everything, including headers
+            // Set z-index to be just below tooltip (2147483647) but above all page content
+            spotlight.style.cssText = `
+                position: fixed !important;
+                top: ${centerY - (circleSize / 2)}px !important;
+                left: ${centerX - (circleSize / 2)}px !important;
+                width: ${circleSize}px !important;
+                height: ${circleSize}px !important;
+                border-radius: 50% !important;
+                border: 4px solid #ef4444 !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 2147483646 !important;
+                background: transparent !important;
+                box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                pointer-events: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: translateZ(0) !important;
+                will-change: transform !important;
+            `;
+        }
 
         // Also ensure overlay has high z-index
         if (overlay) {
