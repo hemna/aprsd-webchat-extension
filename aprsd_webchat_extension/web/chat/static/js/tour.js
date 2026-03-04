@@ -14,7 +14,12 @@
             title: 'Theme Toggle',
             description: 'Switch between light and dark themes. Your preference is saved automatically.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Ensure GPS panel is closed at the start of the tour
+                $('#collapseGPS').removeClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+            }
         },
         {
             id: 'gps-button',
@@ -25,8 +30,10 @@
             offset: { x: 0, y: 10 },
             beforeShow: function() {
                 // Expand the GPS panel when entering GPS section
-                $('#collapseGPS').addClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                if (!$('#collapseGPS').hasClass('show')) {
+                    $('#collapseGPS').addClass('show');
+                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                }
             }
         },
         {
