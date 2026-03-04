@@ -64,7 +64,9 @@
             title: 'Save Beacon Settings',
             description: 'Save your beaconing mode and interval settings to the server.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'add-tab',
