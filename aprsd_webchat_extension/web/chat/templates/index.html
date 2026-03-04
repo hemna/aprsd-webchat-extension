@@ -65,6 +65,14 @@
             // Have to call it in init_chat() because the socketio connection is not established yet.
             //init_gps();
 
+            // Show GPS panel on first visit
+            if (!localStorage.getItem('aprsd-webchat-gps-seen')) {
+                $('#collapseGPS').addClass('show');
+                // Update the button's aria-expanded attribute
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                localStorage.setItem('aprsd-webchat-gps-seen', 'true');
+            }
+
             $('#gps_lat').text(gps_lat);
             $('#gps_lon').text(gps_lon);
             $('#gps_alt').text(gps_alt);
