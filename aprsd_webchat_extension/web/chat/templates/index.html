@@ -108,19 +108,20 @@
                     showWarning = true;
                 }
 
-                // If a warning was shown, make sure GPS panel is visible
+                // If a warning was shown, highlight the quick beacon button with a red halo
                 if (showWarning) {
-                    $('#collapseGPS').addClass('show');
-                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                    $('#send_beacon_quick').addClass('beacon-highlight');
                 }
             }
 
-            // Function to close beacon warning toast
+            // Function to close beacon warning toast and remove highlight
             function closeBeaconWarningToast() {
                 if (beaconWarningToast) {
                     beaconWarningToast.close();
                     beaconWarningToast = null;
                 }
+                // Remove the beacon button highlight
+                $('#send_beacon_quick').removeClass('beacon-highlight');
             }
 
             // Make closeBeaconWarningToast available globally for gps.js

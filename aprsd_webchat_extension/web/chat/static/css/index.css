@@ -715,6 +715,20 @@ body {
     font-size: 18px;
 }
 
+.btn-beacon.beacon-highlight {
+    animation: beacon-pulse 1.5s ease-in-out infinite;
+    box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5);
+}
+
+@keyframes beacon-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 0 6px #ef4444, 0 0 30px rgba(239, 68, 68, 1), 0 0 60px rgba(239, 68, 68, 0.7);
+    }
+}
+
 #radio_icon_svg {
     transition: all var(--transition-base);
 }
