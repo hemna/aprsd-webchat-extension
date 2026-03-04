@@ -1112,7 +1112,7 @@ function update_info_bar(show_button=false) {
     // Once we have a callsign tab created, we can update
     // the info bar's html to include the get location buttton
     if (show_button) {
-        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:1px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Get Location</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
+        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:1px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Locate</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
         //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
     } else {
         // show the welcome message instead.

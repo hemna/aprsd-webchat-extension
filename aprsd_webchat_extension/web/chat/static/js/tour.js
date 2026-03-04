@@ -106,7 +106,7 @@
         {
             id: 'get-location',
             selector: '#get_location_button',
-            title: 'Get Location',
+            title: 'Locate',
             description: 'Request the last known APRS position for the selected callsign. Distance, direction, and last update time appear next to the button. Available only when a callsign tab is selected.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
