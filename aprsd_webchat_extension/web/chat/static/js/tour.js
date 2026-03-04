@@ -35,7 +35,8 @@
             title: 'GPS Information',
             description: 'Shows your current GPS coordinates, altitude, speed, and course. This information is used when sending beacons.',
             position: 'right',
-            offset: { x: 10, y: 0 }
+            offset: { x: 10, y: 0 },
+            spotlightSize: 300
         },
         {
             id: 'beaconing-mode',
@@ -211,7 +212,7 @@
     /**
      * Update spotlight to highlight current element
      */
-    function updateSpotlight(element) {
+    function updateSpotlight(element, step) {
         if (!element || !spotlight) {
             return;
         }
@@ -226,7 +227,7 @@
         // For very large elements (like input boxes), cap the circle size
         const elementSize = Math.max(rect.width, rect.height);
         const minCircleSize = 60; // Minimum circle size for visibility
-        const maxCircleSize = 120; // Maximum circle size to avoid covering entire large elements
+        const maxCircleSize = step && step.spotlightSize ? step.spotlightSize : 120; // Allow override per step
         const calculatedSize = elementSize + (padding * 4);
         const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
         const centerX = rect.left + (rect.width / 2);
@@ -655,7 +656,7 @@
         }
 
         // Update spotlight IMMEDIATELY (before scrolling) so it's visible right away
-        updateSpotlight(element);
+        updateSpotlight(element, step);
 
         // Explicitly ensure spotlight is visible immediately with multiple attempts
         if (spotlight) {
@@ -683,7 +684,7 @@
         // Wait for scroll to complete, then update positions and show tooltip
         setTimeout(() => {
             // Update spotlight position again after scroll (element may have moved)
-            updateSpotlight(element);
+            updateSpotlight(element, step);
 
             // Force a reflow to ensure spotlight is rendered
             void spotlight.offsetWidth;
