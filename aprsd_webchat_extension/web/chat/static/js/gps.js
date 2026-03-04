@@ -4,6 +4,7 @@ var current_stats = null;
 var gps_settings = null;
 // Track if a beacon has been sent (for warning users to beacon before messaging)
 var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
+console.log("GPS.js loaded - beacon_sent initialized to:", beacon_sent, "localStorage value:", localStorage.getItem('aprsd-webchat-beacon-sent'));
 
 /**
  * Escape HTML special characters to prevent XSS attacks
