@@ -74,7 +74,9 @@
             }
 
             // Show warning toast if user hasn't sent a beacon yet
-            if (!beacon_sent) {
+            // Only show if tour has been completed (to avoid conflict with tour overlay)
+            var tourCompleted = localStorage.getItem('aprsd-webchat-tour-completed') === 'true';
+            if (!beacon_sent && tourCompleted) {
                 $.toast({
                     heading: 'Beacon Required',
                     text: 'You should send a GPS beacon before messaging so other stations can route packets to you.',
