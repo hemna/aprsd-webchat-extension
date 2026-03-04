@@ -46,6 +46,7 @@
         var gps_course = parseFloat('{{ initial_stats.stats.GPSStats.track|safe }}');
         var is_digipi = '{{ initial_stats.is_digipi|safe }}';
         var beaconing_enabled = '{{ beaconing_enabled|safe }}';
+        var default_path = '{{ default_path|safe }}';
         // set the cutoff time for the timeago plugin to 6 days
         jQuery.timeago.settings.cutoff = 1000*60*60*24*6;
 
@@ -159,7 +160,7 @@
                     if (typeof callsign_list !== 'undefined' && callsign in callsign_list && callsign_list[callsign]) {
                         $('#pkt_path').val(callsign_list[callsign]);
                     } else {
-                        $('#pkt_path').val('');
+                        $('#pkt_path').val(default_path);
                     }
                     setTimeout(function() {
                         messageInput.focus();
@@ -368,11 +369,22 @@
                                autocomplete="off"
                                spellcheck="true">
                         <select class="message-path-select" name="pkt_path" id="pkt_path" aria-label="Message path">
-                            <option value="" disabled selected>Path</option>
+                            <option value="{{ default_path }}" selected>{{ default_path if default_path else 'Direct' }}</option>
+                            {% if default_path != 'WIDE1-1' %}
                             <option value="WIDE1-1">WIDE1-1</option>
+                            {% endif %}
+                            {% if default_path != 'WIDE1-1,WIDE2-1' %}
                             <option value="WIDE1-1,WIDE2-1">WIDE1-1,WIDE2-1</option>
+                            {% endif %}
+                            {% if default_path != 'ARISS' %}
                             <option value="ARISS">ARISS</option>
+                            {% endif %}
+                            {% if default_path != 'GATE' %}
                             <option value="GATE">GATE</option>
+                            {% endif %}
+                            {% if default_path %}
+                            <option value="">Direct</option>
+                            {% endif %}
                         </select>
                         <button type="submit"
                                 class="message-send-button"

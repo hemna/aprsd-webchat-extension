@@ -578,6 +578,22 @@ def _get_transport(stats):
     return transport, aprs_connection
 
 
+def _get_default_path():
+    """Get the default path based on the configured transport."""
+    if CONF.kiss_tcp.enabled:
+        path = CONF.kiss_tcp.path
+    elif CONF.kiss_serial.enabled:
+        path = CONF.kiss_serial.path
+    else:
+        # For aprs-is or fake client, no default path
+        path = []
+
+    # Convert list to comma-separated string for display
+    if isinstance(path, list):
+        return ",".join(path) if path else ""
+    return path if path else ""
+
+
 @flask_app.route("/location/<callsign>", methods=["POST"])
 def location(callsign):
     LOG.debug(f"Fetch location for callsign {callsign}")
@@ -617,6 +633,9 @@ def index():
     # the gps settings from the LocationProcessingThread.
     notify_queue.put({"message": "get_gps_settings"})
 
+    # Get the default path based on the configured transport
+    default_path = _get_default_path()
+
     return flask.render_template(
         html_template,
         initial_stats=stats,
@@ -628,6 +647,7 @@ def index():
         longitude=longitude,
         is_digipi=CONF.is_digipi,
         beaconing_enabled=CONF.enable_beacon,
+        default_path=default_path,
     )
 
 
