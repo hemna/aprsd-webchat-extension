@@ -22,6 +22,43 @@
             title: 'GPS & Beaconing',
             description: 'View your GPS coordinates and configure beaconing settings. Click to expand the GPS panel.',
             position: 'bottom',
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Expand the GPS panel before showing GPS-related steps
+                $('#collapseGPS').addClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+            }
+        },
+        {
+            id: 'gps-info',
+            selector: '#gps_info_box',
+            title: 'GPS Information',
+            description: 'Shows your current GPS coordinates, altitude, speed, and course. This information is used when sending beacons.',
+            position: 'right',
+            offset: { x: 10, y: 0 }
+        },
+        {
+            id: 'beaconing-mode',
+            selector: '#beaconing_setting',
+            title: 'Beaconing Mode',
+            description: 'Control how beacons are sent: Disabled, Manual (send on demand), Interval (automatic every N seconds), or Smart (based on movement).',
+            position: 'bottom',
+            offset: { x: 0, y: 10 }
+        },
+        {
+            id: 'send-beacon',
+            selector: '#send_beacon',
+            title: 'Send Beacon',
+            description: 'Click to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
+            position: 'bottom',
+            offset: { x: 0, y: 10 }
+        },
+        {
+            id: 'save-beacon-settings',
+            selector: '#save_beacon_settings',
+            title: 'Save Beacon Settings',
+            description: 'Save your beaconing mode and interval settings to the server.',
+            position: 'bottom',
             offset: { x: 0, y: 10 }
         },
         {
@@ -591,6 +628,11 @@
                 }
             }, 100);
             return;
+        }
+
+        // Call beforeShow hook if defined
+        if (step.beforeShow && typeof step.beforeShow === 'function') {
+            step.beforeShow();
         }
 
         // Show overlay first (before scrolling)
