@@ -410,12 +410,12 @@ function init_chat() {
                    updateSendButton();
                }
 
-               // Restore the path for this callsign
-               if (callsign in callsign_list && callsign_list[callsign]) {
-                   $('#pkt_path').val(callsign_list[callsign]);
-               } else {
-                   // If no path stored, use default (empty)
-                   $('#pkt_path').val('');
+                // Restore the path for this callsign
+                if (callsign in callsign_list && callsign_list[callsign]) {
+                    $('#pkt_path').val(callsign_list[callsign]);
+                } else {
+                    // If no path stored, use default path from config
+                    $('#pkt_path').val(typeof default_path !== 'undefined' ? default_path : '');
                }
 
                // Update location string
@@ -1066,8 +1066,8 @@ function callsign_select(callsign) {
     if (callsign in callsign_list && callsign_list[callsign]) {
         $('#pkt_path').val(callsign_list[callsign]);
     } else {
-        // If no path stored, use default (empty)
-        $('#pkt_path').val('');
+        // If no path stored, use default path from config
+        $('#pkt_path').val(typeof default_path !== 'undefined' ? default_path : '');
     }
     console.log("callsign_select: updating location string for: ", callsign);
     update_location_string(callsign);
