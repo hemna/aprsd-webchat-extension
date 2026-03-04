@@ -364,7 +364,7 @@ function init_chat() {
                return false;
            }
            // Warn user if they haven't sent a beacon yet
-           if (typeof beacon_sent !== 'undefined' && !beacon_sent) {
+           if (!beacon_sent) {
                raise_warning("You should send a GPS beacon before messaging so other stations can route packets to you. Click the GPS button and send a beacon.");
            }
            // Save the path for this callsign
