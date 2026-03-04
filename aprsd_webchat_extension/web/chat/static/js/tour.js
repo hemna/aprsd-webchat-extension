@@ -109,7 +109,9 @@
             title: 'Message Input',
             description: 'Type your message here. Messages are limited to 67 characters. The send button enables when you have text and a callsign selected.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'path-selector',
@@ -117,7 +119,9 @@
             title: 'Message Path',
             description: 'Select the APRS path for your message. Common paths include WIDE1-1, WIDE2-1, ARISS, and GATE. Your choice is remembered per callsign.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'send-button',
@@ -125,7 +129,9 @@
             title: 'Send Message',
             description: 'Click to send your message. The button is disabled until you have entered text and selected a callsign tab.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         }
     ];
 
