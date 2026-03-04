@@ -54,7 +54,9 @@
             title: 'Send Beacon',
             description: 'Click to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'save-beacon-settings',
