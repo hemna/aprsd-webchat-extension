@@ -2,6 +2,8 @@ var gps_icon_opacity = 0.2;
 var gps_icon_interval = null;
 var current_stats = null;
 var gps_settings = null;
+// Track if a beacon has been sent (for warning users to beacon before messaging)
+var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
 
 /**
  * Escape HTML special characters to prevent XSS attacks
@@ -71,7 +73,7 @@ function set_beaconing_setting(value, description='') {
     $('#beaconing_setting').val(value);
 
     if (beaconing_enabled == false) {
-        $('#send_beacon').prop('disabled', true);
+        $('#send_beacon, #send_beacon_quick').prop('disabled', true);
         $('#save_beacon_settings').prop('disabled', true);
         $('#beaconing_setting').prop('disabled', true);
         $('#beaconing_setting_description').text('disabled in config');
@@ -85,7 +87,7 @@ function set_beaconing_setting(value, description='') {
 
     if (value == 0) {
         // Beaconing is completely disabled.
-        $('#send_beacon').prop('disabled', true);
+        $('#send_beacon, #send_beacon_quick').prop('disabled', true);
         if (description != '') {
             beaconing_description = description;
             //disable the range selection and the save beacon settings button.
@@ -102,7 +104,7 @@ function set_beaconing_setting(value, description='') {
         $('#smart_beacon_distance_threshold_group').hide();
     } else {
         //Always enable the send beacon if we have a gps fix.
-        $('#send_beacon').prop('disabled', false);
+        $('#send_beacon, #send_beacon_quick').prop('disabled', false);
     }
 
     if (value == 1) {
@@ -164,7 +166,7 @@ function init_gps() {
     console.log(current_stats);
 
     // register the send beacon button click event.
-    $("#send_beacon").click(function() {
+    $("#send_beacon, #send_beacon_quick").click(function() {
         // If the gps extension is installed and enabled,
         // we try and get the lat/lon from current gps position.
         if (current_stats.stats.gps.gps_extension.is_installed == true && current_stats.stats.gps.gps_extension.enabled == true) {
@@ -191,6 +193,13 @@ function init_gps() {
     // When we send a beacon, update the radio icon
     socket.on("gps_beacon_sent", function(msg) {
         console.log("Beacon sent: ", msg);
+        // Mark that a beacon has been sent
+        beacon_sent = true;
+        localStorage.setItem('aprsd-webchat-beacon-sent', 'true');
+        // Close the beacon warning toast if it's open
+        if (typeof window.closeBeaconWarningToast === 'function') {
+            window.closeBeaconWarningToast();
+        }
         beacon_toast(msg);
     });
 
@@ -328,10 +337,10 @@ function update_gps_fix(data) {
         //console.log("gps extension installed and enabled")
         if (data.fix == true) {
             //console.log("we have a fix")
-            $('#send_beacon').prop('disabled', false);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', false);
             //Only set the send_beacon enabled if the beaconing type is 1 (manual).
             if (beaconing_setting == 1) {
-                $('#send_beacon').prop('disabled', false);
+                $('#send_beacon, #send_beacon_quick').prop('disabled', false);
             }
             $('#beaconing_status').text('enabled');
             $('#gps_icon').css('opacity', 1);
@@ -341,9 +350,9 @@ function update_gps_fix(data) {
             update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track, data.time);
         } else {
             //console.log("we don't have a fix")
-            $('#send_beacon').prop('disabled', true);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
-            $('#send_beacon').prop('disabled', true);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             $('#beaconing_status').text('disabled - No fix');
             $('#gps_icon').css('opacity', 0.2);
             if (gps_icon_interval == null) {
@@ -362,15 +371,15 @@ function update_gps_fix(data) {
         // but we can try to use the hard coded lat/lon in the config.
         if (gps.latitude !== null && gps.longitude !== null) {
             // We have hard coded lat/lon in the config, so we can send a beacon.
-            $('#send_beacon').prop('disabled', false);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', false);
             update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
             $('#gps_icon').css('opacity', 1);
         } else {
             // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
             console.log("We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.");
-            $('#send_beacon').prop('disabled', true);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
-            $('#send_beacon').prop('disabled', true);
+            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             $('#beaconing_status').text('disabled - No lat/lon in config');
             $('#gps_icon').css('opacity', 0.2);
         }
@@ -381,12 +390,12 @@ function update_gps_fix(data) {
     // we know the gps extension is not installed or enabled, so we can't get the lat/lon from the current gps position.
     if (gps.latitude !== null && gps.longitude !== null) {
         // We have hard coded lat/lon in the config, so we can send a beacon.
-        $('#send_beacon').prop('disabled', false);
+        $('#send_beacon, #send_beacon_quick').prop('disabled', false);
         update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
         $('#gps_icon').css('opacity', 1);
     } else {
         // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
-        $('#send_beacon').prop('disabled', true);
+        $('#send_beacon, #send_beacon_quick').prop('disabled', true);
         update_gps_info_box(0, 0, 0, 0, 0, new Date());
     }
 }

@@ -14,7 +14,12 @@
             title: 'Theme Toggle',
             description: 'Switch between light and dark themes. Your preference is saved automatically.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Ensure GPS panel is closed at the start of the tour
+                $('#collapseGPS').removeClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+            }
         },
         {
             id: 'gps-button',
@@ -22,7 +27,59 @@
             title: 'GPS & Beaconing',
             description: 'View your GPS coordinates and configure beaconing settings. Click to expand the GPS panel.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Expand the GPS panel when entering GPS section
+                if (!$('#collapseGPS').hasClass('show')) {
+                    $('#collapseGPS').addClass('show');
+                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                }
+            }
+        },
+        {
+            id: 'gps-info',
+            selector: '#gps_info_box',
+            title: 'GPS Information',
+            description: 'Shows your current GPS coordinates, altitude, speed, and course. This information is used when sending beacons.',
+            position: 'right',
+            offset: { x: 10, y: 0 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 8
+        },
+        {
+            id: 'beaconing-mode',
+            selector: '#beaconing_setting',
+            title: 'Beaconing Mode',
+            description: 'Drag the slider to control how beacons are sent: Disabled, Manual (send on demand), Interval (automatic every N seconds), or Smart (based on movement).',
+            position: 'bottom',
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle'
+        },
+        {
+            id: 'send-beacon',
+            selector: '#send_beacon_quick',
+            title: 'Send Beacon',
+            description: 'Click either button to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
+            position: 'bottom',
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6,
+            additionalSelectors: ['#send_beacon']
+        },
+        {
+            id: 'save-beacon-settings',
+            selector: '#save_beacon_settings',
+            title: 'Save Beacon Settings',
+            description: 'Save your beaconing mode and interval settings to the server.',
+            position: 'bottom',
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6,
+            beforeShow: function() {
+                // Ensure GPS panel is open (for when navigating backwards from step 7)
+                $('#collapseGPS').addClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+            }
         },
         {
             id: 'add-tab',
@@ -30,7 +87,12 @@
             title: 'Add New Conversation',
             description: 'Click the + tab to start a new conversation. Enter a valid ham radio callsign (e.g., K1ABC) and press Enter.',
             position: 'bottom',
-            offset: { x: 0, y: 10 }
+            offset: { x: 0, y: 10 },
+            beforeShow: function() {
+                // Close the GPS panel when moving to conversation steps
+                $('#collapseGPS').removeClass('show');
+                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+            }
         },
         {
             id: 'callsign-tabs',
@@ -64,7 +126,9 @@
             title: 'Message Input',
             description: 'Type your message here. Messages are limited to 67 characters. The send button enables when you have text and a callsign selected.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'path-selector',
@@ -72,7 +136,9 @@
             title: 'Message Path',
             description: 'Select the APRS path for your message. Common paths include WIDE1-1, WIDE2-1, ARISS, and GATE. Your choice is remembered per callsign.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         },
         {
             id: 'send-button',
@@ -80,7 +146,9 @@
             title: 'Send Message',
             description: 'Click to send your message. The button is disabled until you have entered text and selected a callsign tab.',
             position: 'top',
-            offset: { x: 0, y: -10 }
+            offset: { x: 0, y: -10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
         }
     ];
 
@@ -88,6 +156,7 @@
     let tooltipClickHandler = null; // Store handler reference for proper removal
     let overlay = null;
     let spotlight = null;
+    let additionalSpotlights = []; // Array to hold additional spotlight elements
     let tooltip = null;
     let skipButton = null;
 
@@ -174,7 +243,7 @@
     /**
      * Update spotlight to highlight current element
      */
-    function updateSpotlight(element) {
+    function updateSpotlight(element, step) {
         if (!element || !spotlight) {
             return;
         }
@@ -184,41 +253,70 @@
         const rect = element.getBoundingClientRect();
         const padding = 8;
 
-        // Calculate dimensions for a circle that encompasses the element
-        // Use the larger dimension (width or height) plus extra padding for visibility
-        // For very large elements (like input boxes), cap the circle size
-        const elementSize = Math.max(rect.width, rect.height);
-        const minCircleSize = 60; // Minimum circle size for visibility
-        const maxCircleSize = 120; // Maximum circle size to avoid covering entire large elements
-        const calculatedSize = elementSize + (padding * 4);
-        const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
-        const centerX = rect.left + (rect.width / 2);
-        const centerY = rect.top + (rect.height / 2);
+        // Check if this step should use rectangular spotlight
+        const useRectangle = step && step.spotlightShape === 'rectangle';
 
-        // Position spotlight to create a red circle around the element
-        // Overlay is fixed, so use viewport coordinates directly
-        // Use maximum z-index to ensure it's above everything, including headers
-        // Set z-index to be just below tooltip (2147483647) but above all page content
-        spotlight.style.cssText = `
-            position: fixed !important;
-            top: ${centerY - (circleSize / 2)}px !important;
-            left: ${centerX - (circleSize / 2)}px !important;
-            width: ${circleSize}px !important;
-            height: ${circleSize}px !important;
-            border-radius: 50% !important;
-            border: 4px solid #ef4444 !important;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 2147483646 !important;
-            background: transparent !important;
-            box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
-            pointer-events: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            transform: translateZ(0) !important;
-            will-change: transform !important;
-        `;
+        if (useRectangle) {
+            // Rectangular spotlight that fits the element
+            const borderRadius = step.spotlightBorderRadius || 8;
+            spotlight.style.cssText = `
+                position: fixed !important;
+                top: ${rect.top - padding}px !important;
+                left: ${rect.left - padding}px !important;
+                width: ${rect.width + (padding * 2)}px !important;
+                height: ${rect.height + (padding * 2)}px !important;
+                border-radius: ${borderRadius}px !important;
+                border: 4px solid #ef4444 !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 2147483646 !important;
+                background: transparent !important;
+                box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                pointer-events: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: translateZ(0) !important;
+                will-change: transform !important;
+            `;
+        } else {
+            // Circular spotlight (default behavior)
+            // Calculate dimensions for a circle that encompasses the element
+            // Use the larger dimension (width or height) plus extra padding for visibility
+            // For very large elements (like input boxes), cap the circle size
+            const elementSize = Math.max(rect.width, rect.height);
+            const minCircleSize = 60; // Minimum circle size for visibility
+            const maxCircleSize = step && step.spotlightSize ? step.spotlightSize : 120; // Allow override per step
+            const calculatedSize = elementSize + (padding * 4);
+            const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
+            const centerX = rect.left + (rect.width / 2);
+            const centerY = rect.top + (rect.height / 2);
+
+            // Position spotlight to create a red circle around the element
+            // Overlay is fixed, so use viewport coordinates directly
+            // Use maximum z-index to ensure it's above everything, including headers
+            // Set z-index to be just below tooltip (2147483647) but above all page content
+            spotlight.style.cssText = `
+                position: fixed !important;
+                top: ${centerY - (circleSize / 2)}px !important;
+                left: ${centerX - (circleSize / 2)}px !important;
+                width: ${circleSize}px !important;
+                height: ${circleSize}px !important;
+                border-radius: 50% !important;
+                border: 4px solid #ef4444 !important;
+                display: block !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                z-index: 2147483646 !important;
+                background: transparent !important;
+                box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                pointer-events: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                transform: translateZ(0) !important;
+                will-change: transform !important;
+            `;
+        }
 
         // Also ensure overlay has high z-index
         if (overlay) {
@@ -254,6 +352,110 @@
             parent = parent.parentElement;
             depth++;
         }
+    }
+
+    /**
+     * Clear all additional spotlights
+     */
+    function clearAdditionalSpotlights() {
+        additionalSpotlights.forEach(s => {
+            if (s && s.parentNode) {
+                s.parentNode.removeChild(s);
+            }
+        });
+        additionalSpotlights = [];
+    }
+
+    /**
+     * Create and update additional spotlights for a step
+     */
+    function updateAdditionalSpotlights(step) {
+        // Clear any existing additional spotlights
+        clearAdditionalSpotlights();
+
+        if (!step.additionalSelectors || !Array.isArray(step.additionalSelectors)) {
+            return;
+        }
+
+        step.additionalSelectors.forEach((selector, index) => {
+            const element = document.querySelector(selector);
+            if (!element || !overlay) return;
+
+            // Create a new spotlight element
+            const additionalSpotlight = document.createElement('div');
+            additionalSpotlight.className = 'tour-spotlight tour-spotlight-additional';
+            additionalSpotlight.id = `tour-spotlight-additional-${index}`;
+
+            // Get element position
+            const rect = element.getBoundingClientRect();
+            const padding = 8;
+
+            // Use step settings for shape
+            const useRectangle = step.spotlightShape === 'rectangle';
+            const borderRadius = step.spotlightBorderRadius || 8;
+
+            if (useRectangle) {
+                additionalSpotlight.style.cssText = `
+                    position: fixed !important;
+                    top: ${rect.top - padding}px !important;
+                    left: ${rect.left - padding}px !important;
+                    width: ${rect.width + (padding * 2)}px !important;
+                    height: ${rect.height + (padding * 2)}px !important;
+                    border-radius: ${borderRadius}px !important;
+                    border: 4px solid #ef4444 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    z-index: 2147483646 !important;
+                    background: transparent !important;
+                    box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                    pointer-events: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    transform: translateZ(0) !important;
+                    will-change: transform !important;
+                `;
+            } else {
+                const elementSize = Math.max(rect.width, rect.height);
+                const minCircleSize = 60;
+                const maxCircleSize = step.spotlightSize || 120;
+                const calculatedSize = elementSize + (padding * 4);
+                const circleSize = Math.min(maxCircleSize, Math.max(minCircleSize, calculatedSize));
+                const centerX = rect.left + (rect.width / 2);
+                const centerY = rect.top + (rect.height / 2);
+
+                additionalSpotlight.style.cssText = `
+                    position: fixed !important;
+                    top: ${centerY - (circleSize / 2)}px !important;
+                    left: ${centerX - (circleSize / 2)}px !important;
+                    width: ${circleSize}px !important;
+                    height: ${circleSize}px !important;
+                    border-radius: 50% !important;
+                    border: 4px solid #ef4444 !important;
+                    display: block !important;
+                    visibility: visible !important;
+                    opacity: 1 !important;
+                    z-index: 2147483646 !important;
+                    background: transparent !important;
+                    box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5) !important;
+                    pointer-events: none !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    transform: translateZ(0) !important;
+                    will-change: transform !important;
+                `;
+            }
+
+            overlay.appendChild(additionalSpotlight);
+            additionalSpotlights.push(additionalSpotlight);
+
+            // Set z-index for additional element
+            element.style.zIndex = '2147483645';
+            const originalPosition = window.getComputedStyle(element).position;
+            if (originalPosition === 'static') {
+                element.style.position = 'relative';
+            }
+        });
     }
 
     /**
@@ -593,6 +795,11 @@
             return;
         }
 
+        // Call beforeShow hook if defined
+        if (step.beforeShow && typeof step.beforeShow === 'function') {
+            step.beforeShow();
+        }
+
         // Show overlay first (before scrolling)
         if (overlay) {
             overlay.classList.add('active');
@@ -613,7 +820,10 @@
         }
 
         // Update spotlight IMMEDIATELY (before scrolling) so it's visible right away
-        updateSpotlight(element);
+        updateSpotlight(element, step);
+
+        // Update additional spotlights if defined
+        updateAdditionalSpotlights(step);
 
         // Explicitly ensure spotlight is visible immediately with multiple attempts
         if (spotlight) {
@@ -641,7 +851,10 @@
         // Wait for scroll to complete, then update positions and show tooltip
         setTimeout(() => {
             // Update spotlight position again after scroll (element may have moved)
-            updateSpotlight(element);
+            updateSpotlight(element, step);
+
+            // Update additional spotlights after scroll
+            updateAdditionalSpotlights(step);
 
             // Force a reflow to ensure spotlight is rendered
             void spotlight.offsetWidth;
@@ -799,6 +1012,15 @@
             if (element) {
                 resetElementZIndex(element);
             }
+            // Also reset additional selector elements
+            if (step.additionalSelectors) {
+                step.additionalSelectors.forEach(selector => {
+                    const additionalElement = document.querySelector(selector);
+                    if (additionalElement) {
+                        resetElementZIndex(additionalElement);
+                    }
+                });
+            }
         });
 
         // Hide spotlight immediately
@@ -807,6 +1029,9 @@
             spotlight.style.visibility = 'hidden';
             spotlight.style.opacity = '0';
         }
+
+        // Clear additional spotlights
+        clearAdditionalSpotlights();
 
         if (overlay) {
             overlay.classList.remove('active');

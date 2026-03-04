@@ -228,6 +228,19 @@ function raise_error(msg) {
    });
 }
 
+function raise_warning(msg) {
+   $.toast({
+       heading: 'Warning',
+       text: msg,
+       loader: false,
+       loaderBg: '#FFA500',
+       position: 'top-center',
+       allowToastClose: true,
+       hideAfter: false,
+       icon: 'warning',
+   });
+}
+
 function raise_info(msg) {
    $.toast({
        heading: 'Information',
@@ -338,6 +351,7 @@ function init_chat() {
        to_call = selected_tab_callsign;
        message = $('#message').val();
        path = $('#pkt_path option:selected').val();
+       console.log("sendform submit - beacon_sent:", beacon_sent, "to_call:", to_call, "message:", message);
        if (socketio_connected == false) {
            raise_error("The connection to the APRSD server has been lost.  Please check your APRSD server connection and try again.");
            return false;
@@ -349,6 +363,12 @@ function init_chat() {
            if (message == "") {
                raise_error("You must enter a message to send")
                return false;
+           }
+           // Warn user if they haven't sent a beacon yet
+           console.log("Checking beacon_sent:", beacon_sent);
+           if (!beacon_sent) {
+               console.log("Showing beacon warning toast");
+               raise_warning("You should send a GPS beacon before messaging so other stations can route packets to you. Click the GPS button and send a beacon.");
            }
            // Save the path for this callsign
            if (path) {
