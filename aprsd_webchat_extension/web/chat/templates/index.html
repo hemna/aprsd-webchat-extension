@@ -65,11 +65,8 @@
             // Have to call it in init_chat() because the socketio connection is not established yet.
             //init_gps();
 
-            // Show GPS panel and beacon warning on first visit
+            // Mark GPS as seen on first visit (tour will open the panel)
             if (!localStorage.getItem('aprsd-webchat-gps-seen')) {
-                $('#collapseGPS').addClass('show');
-                // Update the button's aria-expanded attribute
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
                 localStorage.setItem('aprsd-webchat-gps-seen', 'true');
             }
 
