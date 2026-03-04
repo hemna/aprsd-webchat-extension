@@ -680,8 +680,39 @@ body {
 .radio-indicator {
     display: flex;
     align-items: center;
+    gap: 8px;
     color: var(--text-muted);
     transition: color var(--transition-base);
+}
+
+.btn-beacon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.btn-beacon:hover {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.btn-beacon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-beacon .material-symbols-rounded {
+    font-size: 18px;
 }
 
 #radio_icon_svg {

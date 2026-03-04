@@ -50,7 +50,7 @@
         },
         {
             id: 'send-beacon',
-            selector: '#send_beacon',
+            selector: '#send_beacon_quick',
             title: 'Send Beacon',
             description: 'Click to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
             position: 'bottom',
