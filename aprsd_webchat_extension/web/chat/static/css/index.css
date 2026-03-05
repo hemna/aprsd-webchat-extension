@@ -644,6 +644,94 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+/* Slider tick marks and labels */
+.slider-ticks {
+    position: relative;
+    height: 24px;
+    margin-top: 2px;
+    padding: 4px 10px 0 10px;  /* 10px horizontal padding matches half the 20px thumb width */
+}
+
+.slider-tick {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    position: absolute;
+    top: 4px;
+    transition: color var(--transition-base), font-weight var(--transition-base);
+}
+
+/* Position each tick at the correct slider stop: 0%, 33.3%, 66.6%, 100% */
+.slider-tick:nth-child(1) {
+    left: 10px;  /* Aligned with thumb at position 0 */
+}
+
+.slider-tick:nth-child(2) {
+    left: calc(10px + (100% - 20px) * 0.333);
+    transform: translateX(-50%);
+}
+
+.slider-tick:nth-child(3) {
+    left: calc(10px + (100% - 20px) * 0.667);
+    transform: translateX(-50%);
+}
+
+.slider-tick:nth-child(4) {
+    right: 10px;  /* Aligned with thumb at position 3 */
+}
+
+/* Active/selected tick label */
+.slider-tick.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.slider-tick.active::before {
+    background-color: var(--primary-color);
+}
+
+/* Add small tick mark above each label */
+.slider-tick::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 4px;
+    background-color: var(--text-muted);
+    transition: background-color var(--transition-base);
+}
+
+/* First tick mark aligns to left edge */
+.slider-tick:nth-child(1)::before {
+    left: 0;
+    transform: none;
+}
+
+/* Last tick mark aligns to right edge */
+.slider-tick:nth-child(4)::before {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
+/* When only 3 options (Smart hidden), reposition ticks for 0%, 50%, 100% */
+.slider-ticks.three-options .slider-tick:nth-child(2) {
+    left: calc(10px + (100% - 20px) * 0.5);
+}
+
+.slider-ticks.three-options .slider-tick:nth-child(3) {
+    left: auto;
+    right: 10px;
+    transform: none;
+}
+
+.slider-ticks.three-options .slider-tick:nth-child(3)::before {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
 .beaconing-options {
     display: flex;
     flex-direction: column;

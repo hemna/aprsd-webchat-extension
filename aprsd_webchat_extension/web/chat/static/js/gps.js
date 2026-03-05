@@ -135,38 +135,20 @@ function set_beaconing_setting(value, description='') {
         $('#smart_beacon_distance_threshold_group').hide();
     }
 
-    // Check if GPS extension is installed and enabled for smart beaconing
-    var gps_extension_available = current_stats &&
-                                   current_stats.stats &&
-                                   current_stats.stats.gps &&
-                                   current_stats.stats.gps.gps_extension &&
-                                   current_stats.stats.gps.gps_extension.is_installed == true &&
-                                   current_stats.stats.gps.gps_extension.enabled == true;
-
     // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
+    // Note: Smart option is only visible when GPS extension is installed, so no fallback needed
     if (value == 3) {
-        if (gps_extension_available) {
-            $('#smart_beacon_time_window_group').show();
-            $('#smart_beacon_distance_threshold_group').show();
-            description = 'Smart Beaconing';
-            $('#beaconing_setting_description').text(description);
-            // Hide interval UI elements
-            $('#beacon_interval_group').hide();
-        } else {
-            // GPS extension not available, can't use smart beaconing
-            // Reset to manual mode
-            console.warn("Smart beaconing requires GPS extension to be installed and enabled");
-            $('#beaconing_setting').val(1);
-            // Call set_beaconing_setting with a flag to prevent recursion
-            description = 'Manual (Smart requires GPS extension)';
-            $('#beaconing_setting_description').text(description);
-            // Hide all optional UI elements
-            $('#beacon_interval_group').hide();
-            $('#smart_beacon_time_window_group').hide();
-            $('#smart_beacon_distance_threshold_group').hide();
-        }
+        $('#smart_beacon_time_window_group').show();
+        $('#smart_beacon_distance_threshold_group').show();
+        description = 'Smart Beaconing';
+        $('#beaconing_setting_description').text(description);
+        // Hide interval UI elements
+        $('#beacon_interval_group').hide();
     }
 
+    // Update active slider tick label
+    $('.slider-tick').removeClass('active');
+    $('.slider-tick').eq(value).addClass('active');
 }
 
 function init_gps() {
@@ -188,9 +170,15 @@ function init_gps() {
         }
     });
 
-    if (current_stats.stats.gps.gps_extension.is_installed != true) {
+    // Hide Smart beaconing option if GPS extension is not installed or not enabled
+    var gps_ext = current_stats.stats.gps.gps_extension;
+    if (gps_ext.is_installed != true || gps_ext.enabled != true) {
         // Set the max value for the beaconing type to 2 (Interval Beaconing).
         $('#beaconing_setting').prop('max', 2);
+        // Hide the Smart tick label since it's not available
+        $('.slider-tick:nth-child(4)').hide();
+        // Reposition tick marks for 3 options (0%, 50%, 100%) instead of 4
+        $('.slider-ticks').addClass('three-options');
     }
 
     // When the GPS stats are received, update the GPS fix.

@@ -374,6 +374,12 @@
                                     Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
                                 </label>
                                 <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
+                                <div class="slider-ticks">
+                                    <span class="slider-tick">Disabled</span>
+                                    <span class="slider-tick">Manual</span>
+                                    <span class="slider-tick">Interval</span>
+                                    <span class="slider-tick">Smart</span>
+                                </div>
                                 <script>
                                     $('#beaconing_setting').on('input', function() {
                                         var value = $(this).val();
