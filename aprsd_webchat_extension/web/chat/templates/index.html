@@ -34,6 +34,7 @@
     <script src="/static/js/theme.js"></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/gps.js"></script>
+    <script src="/static/js/symbol-picker.js"></script>
     <script src="/static/js/send-message.js"></script>
     <script src="/static/js/tour.js"></script>
 
@@ -61,6 +62,10 @@
             //console.log(initial_stats);
             start_update();
             init_chat();
+            // Initialize symbol picker
+            if (typeof init_symbol_picker === 'function') {
+                init_symbol_picker();
+            }
             //reset_Tabs();
             // Have to call it in init_chat() because the socketio connection is not established yet.
             //init_gps();
@@ -468,6 +473,7 @@
                     </div>
                     <div class="radio-indicator">
                         <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" data-tooltip="Send Beacon" aria-label="Send beacon">
+                            <span id="beacon-symbol-icon" class="beacon-symbol-icon" title="Click to change symbol" tabindex="0" role="button" aria-label="Change beacon symbol" aria-haspopup="dialog"></span>
                             <span class="material-symbols-rounded">location_on</span>
                         </button>
                         <span class="radio-icon-wrapper" data-tooltip="TX/RX Activity" data-tooltip-position="bottom">
@@ -548,6 +554,28 @@
                 </div>
             </div>
         </footer>
+    </div>
+
+    <!-- APRS Symbol Picker Modal -->
+    <div class="modal fade symbol-picker-modal" id="symbolPickerModal" tabindex="-1" aria-labelledby="symbolPickerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="symbolPickerModalLabel">Select Beacon Symbol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="symbol-tabs">
+                        <button type="button" class="symbol-tab active" id="symbol-tab-primary">Primary Table (/)</button>
+                        <button type="button" class="symbol-tab" id="symbol-tab-alternate">Alternate Table (\)</button>
+                    </div>
+                    <div class="symbol-picker-info" id="symbol-picker-info">Hover over a symbol to see details</div>
+                    <div class="symbol-grid" id="symbol-picker-grid">
+                        <!-- Symbols will be rendered here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>

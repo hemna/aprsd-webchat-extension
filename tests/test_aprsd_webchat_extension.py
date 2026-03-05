@@ -99,3 +99,111 @@ class TestSendMessageCommand(unittest.TestCase):
         assert call_args[0][0] == "new"
         assert call_args[0][1] == packet.__dict__
         assert call_args[1]["namespace"] == "/sendmsg"
+
+
+class TestSendMessageNamespace(unittest.TestCase):
+    """Tests for WebSocket GPS beacon handling with symbol parameter."""
+
+    def config_and_init(self):
+        CONF.callsign = fake.FAKE_TO_CALLSIGN
+        CONF.trace_enabled = False
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.tx")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.socketio")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.packets")
+    def test_on_gps_with_symbol(self, mock_packets, mock_socketio, mock_tx):
+        """Test on_gps handler with symbol parameter."""
+        self.config_and_init()
+
+        # Create instance of SendMessageNamespace
+        namespace = webchat.SendMessageNamespace("/sendmsg")
+
+        # Call on_gps with symbol parameter
+        data = {
+            "latitude": 37.7749,
+            "longitude": -122.4194,
+            "path": "WIDE1-1",
+            "symbol": "/-",  # House symbol
+        }
+        namespace.on_gps(data)
+
+        # Verify BeaconPacket was created with correct symbol
+        mock_packets.BeaconPacket.assert_called_once()
+        call_kwargs = mock_packets.BeaconPacket.call_args[1]
+        assert call_kwargs["symbol"] == "-"
+        assert call_kwargs["symbol_table"] == "/"
+        assert call_kwargs["latitude"] == 37.7749
+        assert call_kwargs["longitude"] == -122.4194
+
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
+
+        # Verify socketio.emit was called with symbol in response
+        mock_socketio.emit.assert_called_once()
+        emit_args = mock_socketio.emit.call_args
+        assert emit_args[0][0] == "gps_beacon_sent"
+        assert emit_args[0][1]["symbol"] == "/-"
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.tx")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.socketio")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.packets")
+    def test_on_gps_without_symbol_backward_compatible(
+        self, mock_packets, mock_socketio, mock_tx
+    ):
+        """Test on_gps handler backward compatibility without symbol parameter."""
+        self.config_and_init()
+
+        # Create instance of SendMessageNamespace
+        namespace = webchat.SendMessageNamespace("/sendmsg")
+
+        # Call on_gps without symbol parameter (old client behavior)
+        data = {"latitude": 40.7128, "longitude": -74.0060, "path": "WIDE1-1,WIDE2-1"}
+        namespace.on_gps(data)
+
+        # Verify BeaconPacket was created with default car symbol
+        mock_packets.BeaconPacket.assert_called_once()
+        call_kwargs = mock_packets.BeaconPacket.call_args[1]
+        assert call_kwargs["symbol"] == ">"  # Default car symbol code
+        assert call_kwargs["symbol_table"] == "/"  # Default primary table
+
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
+
+        # Verify socketio.emit was called with default symbol in response
+        mock_socketio.emit.assert_called_once()
+        emit_args = mock_socketio.emit.call_args
+        assert emit_args[0][0] == "gps_beacon_sent"
+        assert emit_args[0][1]["symbol"] == "/>"  # Default car symbol
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.tx")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.socketio")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.packets")
+    def test_on_gps_with_alternate_table_symbol(
+        self, mock_packets, mock_socketio, mock_tx
+    ):
+        """Test on_gps handler with alternate table symbol."""
+        self.config_and_init()
+
+        # Create instance of SendMessageNamespace
+        namespace = webchat.SendMessageNamespace("/sendmsg")
+
+        # Call on_gps with alternate table symbol
+        data = {
+            "latitude": 51.5074,
+            "longitude": -0.1278,
+            "symbol": "\\>",  # Car with overlay (alternate table)
+        }
+        namespace.on_gps(data)
+
+        # Verify BeaconPacket was created with alternate table
+        mock_packets.BeaconPacket.assert_called_once()
+        call_kwargs = mock_packets.BeaconPacket.call_args[1]
+        assert call_kwargs["symbol"] == ">"
+        assert call_kwargs["symbol_table"] == "\\"
+
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
+
+        # Verify response includes correct symbol
+        emit_args = mock_socketio.emit.call_args
+        assert emit_args[0][1]["symbol"] == "\\>"

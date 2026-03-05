@@ -592,10 +592,16 @@ function start_beacon_highlight_timer() {
 
 function sendPosition(position) {
   path = $('#pkt_path option:selected').val();
+  // Get the selected symbol from the symbol picker
+  var symbol = '/>';  // Default to car
+  if (typeof getSelectedSymbolString === 'function') {
+      symbol = getSelectedSymbolString();
+  }
   msg = {
       'latitude': position.coords.latitude,
       'longitude': position.coords.longitude,
       'path': path,
+      'symbol': symbol
   }
   socket.emit("gps", msg);
 }

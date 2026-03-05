@@ -56,10 +56,20 @@
             spotlightShape: 'rectangle'
         },
         {
+            id: 'beacon-symbol',
+            selector: '#beacon-symbol-icon',
+            title: 'Beacon Symbol',
+            description: 'Click this icon to change your APRS beacon symbol. Choose from cars, houses, bikes, and many more. Your selection is saved for future sessions.',
+            position: 'bottom',
+            offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6
+        },
+        {
             id: 'send-beacon',
             selector: '#send_beacon_quick',
-            title: 'Send Beacon',
-            description: 'Click either button to manually send a GPS beacon with your current position. This helps other stations know where you are so they can route packets to you.',
+            title: 'Quick Beacon Button',
+            description: 'Click this button to manually send a GPS beacon with your current position and selected symbol. This helps other stations know where you are.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
             spotlightShape: 'rectangle',
@@ -1091,7 +1101,7 @@
      */
     function waitForElements(callback, maxAttempts = 30) {
         let attempts = 0;
-        const requiredSelectors = ['#theme-toggle', '.btn-gps', '#message', '#pkt_path', '#send_msg'];
+        const requiredSelectors = ['#theme-toggle', '.btn-gps', '#beacon-symbol-icon', '#message', '#pkt_path', '#send_msg'];
         const optionalSelectors = ['#add-tab-button']; // These are nice to have but not required
 
         function checkElements() {

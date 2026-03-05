@@ -807,7 +807,12 @@ class SendMessageNamespace(Namespace):
             namespace="/sendmsg",
         )
 
-    def on_gps(self, data):
+    def on_gps(self, data: dict) -> None:
+        """Handle GPS beacon request from WebSocket client.
+
+        Args:
+            data: Dictionary containing latitude, longitude, optional path and symbol
+        """
         LOG.debug(f"WS on_GPS: {data}")
         lat = float(data["latitude"])
         long = float(data["longitude"])
@@ -822,12 +827,32 @@ class SendMessageNamespace(Namespace):
         else:
             path = [path]
 
+        # Parse symbol (default to car '/>')
+        # Validate that symbol is a string and has valid format
+        symbol_raw = data.get("symbol", "/>")
+        symbol_str = symbol_raw if isinstance(symbol_raw, str) else "/>"
+        if (
+            len(symbol_str) >= 2
+            and symbol_str[0] in ("/", "\\")
+            and 33 <= ord(symbol_str[1]) <= 126
+        ):
+            symbol_table = symbol_str[0]
+            symbol_code = symbol_str[1]
+        else:
+            symbol_table = "/"
+            symbol_code = ">"
+        # Normalize symbol_str for emit response
+        symbol_str = f"{symbol_table}{symbol_code}"
+        LOG.debug(f"Symbol: {symbol_str}")
+
         tx.send(
             packets.BeaconPacket(
                 from_call=CONF.callsign,
                 to_call="APDW16",
                 latitude=lat,
                 longitude=long,
+                symbol=symbol_code,
+                symbol_table=symbol_table,
                 comment="APRSD WebChat Beacon",
                 path=path,
             ),
@@ -840,6 +865,7 @@ class SendMessageNamespace(Namespace):
                 "message": "beacon sent",
                 "latitude": lat,
                 "longitude": long,
+                "symbol": symbol_str,
             },
             namespace="/sendmsg",
         )
