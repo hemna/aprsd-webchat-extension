@@ -7,6 +7,13 @@ var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
 // Track the last beacon sent time
 var last_beacon_time = localStorage.getItem('aprsd-webchat-last-beacon-time') || null;
 
+// Threshold in milliseconds for beacon highlight (5 minutes for testing)
+// TODO: Change to 1 hour for production: var BEACON_STALE_THRESHOLD_MS = 60 * 60 * 1000;
+var BEACON_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for testing
+
+// Timer for periodic beacon highlight check
+var beacon_highlight_timer = null;
+
 /**
  * Escape HTML special characters to prevent XSS attacks
  * @param {string} text - The text to escape
@@ -304,6 +311,9 @@ function init_gps() {
 
     // Initialize the last beacon display from localStorage
     update_last_beacon_display();
+    // Beacon highlight for stale beacons - disabled for now to avoid confusing users
+    // TODO: Re-enable when ready: update_beacon_highlight();
+    // TODO: Re-enable when ready: start_beacon_highlight_timer();
 }
 
 function update_gps_info_box(latitude, longitude, altitude, speed, course, time) {
@@ -484,11 +494,63 @@ function update_last_beacon_display() {
         $('#last_beacon_timeago').timeago('update', last_beacon_time);
     }
     // Update the quick beacon button tooltip (using data-tooltip for instant display)
-    var tooltipText = 'Send Beacon';
+    var beaconTooltipText = 'Send Beacon';
     if (last_beacon_time) {
-        tooltipText = 'Send Beacon\nLast: ' + timeStr;
+        beaconTooltipText = 'Send Beacon\nLast: ' + timeStr;
     }
-    $('#send_beacon_quick').attr('data-tooltip', tooltipText);
+    $('#send_beacon_quick').attr('data-tooltip', beaconTooltipText);
+    // Update the GPS panel button tooltip with last beacon time
+    var gpsTooltipText = 'GPS & Beaconing';
+    if (last_beacon_time) {
+        gpsTooltipText = 'GPS & Beaconing\nLast beacon: ' + timeStr;
+    } else {
+        gpsTooltipText = 'GPS & Beaconing\nNo beacon sent';
+    }
+    $('.btn-gps').attr('data-tooltip', gpsTooltipText);
+    // Beacon highlight for stale beacons - disabled for now to avoid confusing users
+    // TODO: Re-enable when ready: update_beacon_highlight();
+}
+
+/**
+ * Check if beacon is stale (never sent or older than threshold)
+ * and update the highlight on beacon buttons and GPS icon
+ */
+function update_beacon_highlight() {
+    var shouldHighlight = false;
+
+    if (!last_beacon_time) {
+        // Never sent a beacon
+        shouldHighlight = true;
+    } else {
+        // Check if beacon is older than threshold
+        var beaconDate = new Date(last_beacon_time);
+        var now = new Date();
+        var diffMs = now - beaconDate;
+        shouldHighlight = diffMs > BEACON_STALE_THRESHOLD_MS;
+    }
+
+    if (shouldHighlight) {
+        $('#send_beacon, #send_beacon_quick, .btn-gps').addClass('beacon-highlight');
+    } else {
+        $('#send_beacon, #send_beacon_quick, .btn-gps').removeClass('beacon-highlight');
+    }
+}
+
+/**
+ * Start the periodic timer to check beacon staleness
+ * Runs every 30 seconds to update the highlight state
+ */
+function start_beacon_highlight_timer() {
+    // Clear any existing timer
+    if (beacon_highlight_timer) {
+        clearInterval(beacon_highlight_timer);
+    }
+    // Check every 30 seconds
+    beacon_highlight_timer = setInterval(function() {
+        update_beacon_highlight();
+        // Also update the time display (e.g., "5 mins ago" → "6 mins ago")
+        update_last_beacon_display();
+    }, 30 * 1000);
 }
 
 function sendPosition(position) {
