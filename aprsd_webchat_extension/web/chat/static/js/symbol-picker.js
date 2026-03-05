@@ -378,10 +378,10 @@ function updateBeaconButtonSymbol() {
         console.log('Updated beacon symbol icon:', selected.symbol, 'pos:', x, y);
     }
 
-    // Update tooltip - keep it short, position left to avoid screen edge cutoff
+    // Update tooltip on the symbol icon itself (not the button, which gps.js manages)
     var tooltipText = selected.description + ' (' + selected.table + selected.symbol + ')';
-    $('#send_beacon_quick').attr('data-tooltip', tooltipText);
-    $('#send_beacon_quick').attr('data-tooltip-position', 'left');
+    $('#beacon-symbol-icon').attr('title', tooltipText);
+    $('#beacon-symbol-icon').attr('aria-label', tooltipText);
 
     // Update state
     symbolPickerState.selectedSymbol = selected;
@@ -414,12 +414,15 @@ function renderSymbolGrid(table) {
         var isSelected = (table === selected.table && char === selected.symbol);
         var selectedClass = isSelected ? ' symbol-cell-selected' : '';
 
-        var $cell = $('<div>', {
+        var $cell = $('<button>', {
+            'type': 'button',
             'class': 'symbol-cell' + selectedClass,
             'data-table': table,
             'data-symbol': char,
             'data-description': entry.description,
-            'title': table + char + ' - ' + entry.description
+            'title': table + char + ' - ' + entry.description,
+            'aria-label': entry.description + ' (' + table + char + ')',
+            'aria-pressed': isSelected ? 'true' : 'false'
         });
 
         var $icon = $('<div>', {
@@ -514,11 +517,20 @@ function switchSymbolTable(table) {
 // Initialization
 // ============================================================================
 
+/** Flag to prevent duplicate initialization */
+var symbolPickerInitialized = false;
+
 /**
  * Initialize the symbol picker
  * Should be called after DOM is ready
  */
 function init_symbol_picker() {
+    // Prevent duplicate initialization
+    if (symbolPickerInitialized) {
+        console.log('Symbol picker already initialized, skipping');
+        return;
+    }
+
     console.log('Initializing symbol picker...');
 
     // Load saved symbol and update button
@@ -536,6 +548,15 @@ function init_symbol_picker() {
     $(document).on('click', '#beacon-symbol-icon', function(e) {
         e.stopPropagation();
         openSymbolPicker();
+    });
+
+    // Keyboard handler for beacon symbol icon (Enter/Space to open picker)
+    $(document).on('keydown', '#beacon-symbol-icon', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            openSymbolPicker();
+        }
     });
 
     // Tab switching
@@ -566,6 +587,7 @@ function init_symbol_picker() {
         $('#symbol-picker-info').text('Hover over a symbol to see details');
     });
 
+    symbolPickerInitialized = true;
     console.log('Symbol picker initialized');
 }
 

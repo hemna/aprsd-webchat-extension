@@ -828,14 +828,22 @@ class SendMessageNamespace(Namespace):
             path = [path]
 
         # Parse symbol (default to car '/>')
-        symbol_str: str = data.get("symbol", "/>")
-        if len(symbol_str) >= 2:
-            symbol_table: str = symbol_str[0]
-            symbol_code: str = symbol_str[1]
+        # Validate that symbol is a string and has valid format
+        symbol_raw = data.get("symbol", "/>")
+        symbol_str = symbol_raw if isinstance(symbol_raw, str) else "/>"
+        if (
+            len(symbol_str) >= 2
+            and symbol_str[0] in ("/", "\\")
+            and 33 <= ord(symbol_str[1]) <= 126
+        ):
+            symbol_table = symbol_str[0]
+            symbol_code = symbol_str[1]
         else:
             symbol_table = "/"
             symbol_code = ">"
-        LOG.debug(f"Symbol: {symbol_table}{symbol_code}")
+        # Normalize symbol_str for emit response
+        symbol_str = f"{symbol_table}{symbol_code}"
+        LOG.debug(f"Symbol: {symbol_str}")
 
         tx.send(
             packets.BeaconPacket(

@@ -1321,7 +1321,7 @@ body {
     border-radius: var(--radius-md);
 }
 
-/* Symbol cell */
+/* Symbol cell - using button for keyboard accessibility */
 .symbol-cell {
     width: 44px;
     height: 44px;
@@ -1333,9 +1333,14 @@ body {
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    outline: none;
 }
 
-.symbol-cell:hover {
+.symbol-cell:hover,
+.symbol-cell:focus {
     background: var(--bg-tertiary);
     border-color: var(--primary-color);
     transform: scale(1.1);
