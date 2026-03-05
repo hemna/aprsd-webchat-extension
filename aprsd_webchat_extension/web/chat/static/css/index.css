@@ -801,9 +801,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
+    gap: 2px;
+    min-width: 32px;
+    width: auto;
+    padding: 0 6px;
     height: 32px;
-    padding: 0;
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background: var(--bg-primary);
@@ -1207,4 +1209,173 @@ body {
     direction: ltr;
     -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================================
+   APRS Symbol Picker Styles
+   ============================================================================ */
+
+/* Symbol icon on beacon button - uses 48px sprites scaled to 24px */
+#beacon-symbol-icon {
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    background-repeat: no-repeat;
+    background-size: 384px 144px; /* 768 * 0.5, 288 * 0.5 - scale 48px sprites to 24px */
+    /* Default to car symbol /> at position row=11 ('>'), col=0 -> -264px 0px */
+    background-image: url('/static/images/aprs-symbols-48-0.png');
+    background-position: -264px 0px;
+    cursor: pointer;
+    vertical-align: middle;
+    margin-right: 4px;
+    border-radius: 2px;
+    transition: transform var(--transition-base);
+}
+
+#beacon-symbol-icon:hover {
+    transform: scale(1.2);
+}
+
+/* Symbol picker modal */
+.symbol-picker-modal .modal-dialog {
+    max-width: 600px;
+}
+
+.symbol-picker-modal .modal-content {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.symbol-picker-modal .modal-header {
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.symbol-picker-modal .modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.symbol-picker-modal .modal-body {
+    padding: var(--spacing-md);
+}
+
+/* Symbol table tabs */
+.symbol-tabs {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--spacing-sm);
+}
+
+.symbol-tab {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all var(--transition-base);
+}
+
+.symbol-tab:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.symbol-tab.active {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
+}
+
+/* Symbol info display */
+.symbol-picker-info {
+    text-align: center;
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-md);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    min-height: 36px;
+}
+
+/* Symbol grid */
+.symbol-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 44px);
+    justify-content: center;
+    gap: 4px;
+    max-height: 450px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--spacing-sm);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+}
+
+/* Symbol cell */
+.symbol-cell {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-primary);
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.symbol-cell:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+    z-index: 1;
+}
+
+.symbol-cell-selected {
+    border-color: var(--success-color);
+    background: var(--bg-tertiary);
+    box-shadow: 0 0 0 2px var(--success-color);
+}
+
+/* Symbol icon inside cell - uses 48x48 sprites scaled to 36px for crisp display */
+.symbol-icon {
+    width: 36px;
+    height: 36px;
+    background-repeat: no-repeat;
+    background-size: 576px 216px; /* 768 * 0.75, 288 * 0.75 - scale 48px sprites to 36px */
+}
+
+/* Mobile responsive */
+@media (max-width: 576px) {
+    .symbol-picker-modal .modal-dialog {
+        margin: var(--spacing-sm);
+    }
+
+    .symbol-grid {
+        grid-template-columns: repeat(8, 36px);
+        gap: 2px;
+        max-height: 300px;
+    }
+
+    .symbol-cell {
+        width: 36px;
+        height: 36px;
+    }
+
+    .symbol-icon {
+        width: 28px;
+        height: 28px;
+        background-size: 448px 168px; /* 768 * 0.583, 288 * 0.583 - scale 48px to 28px */
+    }
 }
