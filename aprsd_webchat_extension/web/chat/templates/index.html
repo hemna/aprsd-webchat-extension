@@ -260,6 +260,14 @@
                 }
                 console.log("Sending beaconing settings to server", gps_settings);
                 socket.emit('set_beaconing_setting', gps_settings);
+
+                // Update original values to match saved values and remove highlight
+                original_gps_settings.beaconing_setting = beacon_type;
+                original_gps_settings.beacon_interval = gps_settings.beacon_interval;
+                original_gps_settings.smart_beacon_distance_threshold = gps_settings.smart_beacon_distance_threshold;
+                original_gps_settings.smart_beacon_time_window = gps_settings.smart_beacon_time_window;
+                $('#save_beacon_settings').removeClass('btn-highlight');
+
                 $.toast({heading: 'Beaconing Settings Saved',
                         text: "Beaconing settings saved",
                         loader: true,
@@ -384,6 +392,11 @@
                                     $('#beaconing_setting').on('input', function() {
                                         var value = $(this).val();
                                         set_beaconing_setting(value);
+                                        check_gps_settings_changed();
+                                    });
+                                    // Track changes on all GPS settings inputs
+                                    $('#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window').on('change input', function() {
+                                        check_gps_settings_changed();
                                     });
                                 </script>
 
