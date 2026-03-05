@@ -1368,19 +1368,20 @@ body {
     }
 
     .symbol-grid {
-        grid-template-columns: repeat(8, 36px);
+        grid-template-columns: repeat(auto-fill, 44px);
         gap: 2px;
         max-height: 300px;
     }
 
     .symbol-cell {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
     }
 
+    /* Keep same sprite scale as desktop to avoid JS position mismatch */
     .symbol-icon {
-        width: 28px;
-        height: 28px;
-        background-size: 448px 168px; /* 768 * 0.583, 288 * 0.583 - scale 48px to 28px */
+        width: 36px;
+        height: 36px;
+        background-size: 576px 216px;
     }
 }

@@ -135,6 +135,9 @@ class TestSendMessageNamespace(unittest.TestCase):
         assert call_kwargs["latitude"] == 37.7749
         assert call_kwargs["longitude"] == -122.4194
 
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
+
         # Verify socketio.emit was called with symbol in response
         mock_socketio.emit.assert_called_once()
         emit_args = mock_socketio.emit.call_args
@@ -162,6 +165,9 @@ class TestSendMessageNamespace(unittest.TestCase):
         call_kwargs = mock_packets.BeaconPacket.call_args[1]
         assert call_kwargs["symbol"] == ">"  # Default car symbol code
         assert call_kwargs["symbol_table"] == "/"  # Default primary table
+
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
 
         # Verify socketio.emit was called with default symbol in response
         mock_socketio.emit.assert_called_once()
@@ -194,6 +200,9 @@ class TestSendMessageNamespace(unittest.TestCase):
         call_kwargs = mock_packets.BeaconPacket.call_args[1]
         assert call_kwargs["symbol"] == ">"
         assert call_kwargs["symbol_table"] == "\\"
+
+        # Verify tx.send was called to transmit the beacon
+        mock_tx.send.assert_called_once()
 
         # Verify response includes correct symbol
         emit_args = mock_socketio.emit.call_args
