@@ -1135,7 +1135,7 @@ function ensure_add_tab() {
     if ($(addTabId).length === 0) {
         var callsignTabs = $("#msgsTabList");
         var addTabHtml = '<li class="nav-item" role="presentation" id="add-tab-li">';
-        addTabHtml += '<button class="nav-link add-tab-button" id="add-tab-button" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#add-tab-content" callsign="ADD_TAB">';
+        addTabHtml += '<button class="nav-link add-tab-button" id="add-tab-button" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#add-tab-content" callsign="ADD_TAB" data-tooltip="Add new conversation" data-tooltip-position="bottom">';
         addTabHtml += '<span class="add-tab-icon">+</span>';
         addTabHtml += '</button></li>';
         callsignTabs.append(addTabHtml);
