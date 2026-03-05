@@ -394,6 +394,9 @@ function init_chat() {
    // Try and load any existing chat threads from last time
    init_messages();
 
+   // Initialize mobile dropdown for small screens
+   init_mobile_dropdown();
+
    // Consolidated tab shown handler - handles all tabs (callsign tabs and add tab)
    // Listen on msgsTabList because Bootstrap fires shown.bs.tab on the tab button, which bubbles to the list (not to msgsTabContent)
    $('#msgsTabList').on('shown.bs.tab', function(e) {
@@ -450,6 +453,9 @@ function init_chat() {
                }, 100);
            }
        }
+
+       // Update mobile dropdown to reflect current selection
+       update_mobile_dropdown();
    });
 }
 
@@ -601,6 +607,9 @@ function init_messages() {
     // Always ensure the "+" tab exists
     ensure_add_tab();
 
+    // Sync mobile dropdown with loaded tabs
+    update_mobile_dropdown();
+
     if (first_callsign !== null) {
       callsign_select(first_callsign);
     }
@@ -657,6 +666,9 @@ function create_callsign_tab(callsign, active=false) {
 
   // Always ensure the "+" tab exists after creating a callsign tab
   ensure_add_tab();
+
+  // Update mobile dropdown to include the new tab
+  update_mobile_dropdown();
 }
 
 function create_callsign_tab_content(callsign, active=false) {
@@ -741,6 +753,9 @@ function delete_tab(callsign) {
         $("#get_location_button").prop('disabled', true);
         update_info_bar(false);
     }
+
+    // Update mobile dropdown to remove the deleted tab
+    update_mobile_dropdown();
 }
 
 function add_callsign(callsign, msg) {
@@ -786,6 +801,8 @@ function append_message(callsign, msg, msg_html) {
       count += 1;
       $(tab_notify_id).text(count);
       $(tab_notify_id).removeClass('visually-hidden');
+      // Update mobile dropdown to show unread count
+      update_mobile_dropdown();
   }
 
   // Find the right div to place the html
@@ -1112,7 +1129,7 @@ function update_info_bar(show_button=false) {
     // Once we have a callsign tab created, we can update
     // the info bar's html to include the get location buttton
     if (show_button) {
-        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:1px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Locate</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
+        html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:2px 8px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Locate</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
         //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
     } else {
         // show the welcome message instead.
@@ -1135,7 +1152,7 @@ function ensure_add_tab() {
     if ($(addTabId).length === 0) {
         var callsignTabs = $("#msgsTabList");
         var addTabHtml = '<li class="nav-item" role="presentation" id="add-tab-li">';
-        addTabHtml += '<button class="nav-link add-tab-button" id="add-tab-button" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#add-tab-content" callsign="ADD_TAB">';
+        addTabHtml += '<button class="nav-link add-tab-button" id="add-tab-button" type="button" role="tab" data-bs-toggle="tab" data-bs-target="#add-tab-content" callsign="ADD_TAB" data-tooltip="Add new conversation" data-tooltip-position="bottom">';
         addTabHtml += '<span class="add-tab-icon">+</span>';
         addTabHtml += '</button></li>';
         callsignTabs.append(addTabHtml);
@@ -1261,4 +1278,122 @@ function handle_new_callsign_input() {
     }, 100);
 
     save_data();
+}
+
+/**
+ * Update the mobile dropdown to sync with current tabs
+ * Called when tabs are created, deleted, or switched
+ */
+function update_mobile_dropdown() {
+    var dropdown = $('#mobileChatDropdown');
+    if (dropdown.length === 0) return;
+
+    var currentValue = dropdown.val();
+    var totalUnread = 0;
+
+    // Clear existing options
+    dropdown.empty();
+
+    // Add options for each callsign tab
+    $('#msgsTabList .nav-link[callsign]').each(function() {
+        var callsign = $(this).attr('callsign');
+        if (callsign && callsign !== 'ADD_TAB') {
+            var isActive = $(this).hasClass('active');
+            var displayText = callsign;
+
+            // Add unread count if present
+            var badge = $(this).find('.badge:not(.visually-hidden)');
+            if (badge.length > 0) {
+                var count = parseInt(badge.text()) || 0;
+                if (count > 0) {
+                    displayText = callsign + ' (' + count + ')';
+                    totalUnread += count;
+                }
+            }
+
+            var option = $('<option></option>')
+                .val(callsign)
+                .text(displayText);
+
+            if (isActive) {
+                option.prop('selected', true);
+            }
+
+            dropdown.append(option);
+        }
+    });
+
+    // Add the "+" option at the end
+    dropdown.append($('<option></option>')
+        .val('ADD_TAB')
+        .text('+ Add conversation...'));
+
+    // If the add tab is currently active, select it in dropdown
+    if ($('#add-tab-button').hasClass('active')) {
+        dropdown.val('ADD_TAB');
+    }
+
+    // Update the mobile unread badge
+    var unreadBadge = $('#mobileUnreadBadge');
+    if (totalUnread > 0) {
+        unreadBadge.text(totalUnread);
+        unreadBadge.removeClass('visually-hidden');
+    } else {
+        unreadBadge.addClass('visually-hidden');
+        unreadBadge.text('0');
+    }
+
+    // Update delete button state
+    update_mobile_delete_button();
+}
+
+/**
+ * Initialize the mobile dropdown change handler
+ */
+function init_mobile_dropdown() {
+    $('#mobileChatDropdown').on('change', function() {
+        var selectedValue = $(this).val();
+        if (selectedValue === 'ADD_TAB') {
+            // Trigger the add tab flow
+            handle_add_tab_click();
+        } else {
+            // Activate the corresponding tab
+            var tabButton = $('#msgsTabList .nav-link[callsign="' + selectedValue + '"]');
+            if (tabButton.length > 0) {
+                var tab = new bootstrap.Tab(tabButton[0]);
+                tab.show();
+            }
+        }
+        // Update delete button state
+        update_mobile_delete_button();
+    });
+
+    // Handle mobile delete button click
+    $('#mobileDeleteChat').on('click', function() {
+        var selectedValue = $('#mobileChatDropdown').val();
+        if (selectedValue && selectedValue !== 'ADD_TAB') {
+            // Confirm deletion
+            if (confirm('Delete conversation with ' + selectedValue + '?')) {
+                delete_tab(selectedValue);
+            }
+        }
+    });
+
+    // Initial state of delete button
+    update_mobile_delete_button();
+}
+
+/**
+ * Update the mobile delete button state based on current selection
+ * Disable if "Add conversation" is selected or no conversations exist
+ */
+function update_mobile_delete_button() {
+    var selectedValue = $('#mobileChatDropdown').val();
+    var deleteBtn = $('#mobileDeleteChat');
+
+    if (selectedValue && selectedValue !== 'ADD_TAB') {
+        deleteBtn.prop('disabled', false);
+    } else {
+        deleteBtn.prop('disabled', true);
+    }
 }

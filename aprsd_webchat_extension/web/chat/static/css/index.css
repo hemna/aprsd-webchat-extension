@@ -644,6 +644,94 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+/* Slider tick marks and labels */
+.slider-ticks {
+    position: relative;
+    height: 24px;
+    margin-top: 2px;
+    padding: 4px 10px 0 10px;  /* 10px horizontal padding matches half the 20px thumb width */
+}
+
+.slider-tick {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    position: absolute;
+    top: 4px;
+    transition: color var(--transition-base), font-weight var(--transition-base);
+}
+
+/* Position each tick at the correct slider stop: 0%, 33.3%, 66.6%, 100% */
+.slider-tick:nth-child(1) {
+    left: 10px;  /* Aligned with thumb at position 0 */
+}
+
+.slider-tick:nth-child(2) {
+    left: calc(10px + (100% - 20px) * 0.333);
+    transform: translateX(-50%);
+}
+
+.slider-tick:nth-child(3) {
+    left: calc(10px + (100% - 20px) * 0.667);
+    transform: translateX(-50%);
+}
+
+.slider-tick:nth-child(4) {
+    right: 10px;  /* Aligned with thumb at position 3 */
+}
+
+/* Active/selected tick label */
+.slider-tick.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.slider-tick.active::before {
+    background-color: var(--primary-color);
+}
+
+/* Add small tick mark above each label */
+.slider-tick::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 4px;
+    background-color: var(--text-muted);
+    transition: background-color var(--transition-base);
+}
+
+/* First tick mark aligns to left edge */
+.slider-tick:nth-child(1)::before {
+    left: 0;
+    transform: none;
+}
+
+/* Last tick mark aligns to right edge */
+.slider-tick:nth-child(4)::before {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
+/* When only 3 options (Smart hidden), reposition ticks for 0%, 50%, 100% */
+.slider-ticks.three-options .slider-tick:nth-child(2) {
+    left: calc(10px + (100% - 20px) * 0.5);
+}
+
+.slider-ticks.three-options .slider-tick:nth-child(3) {
+    left: auto;
+    right: 10px;
+    transform: none;
+}
+
+.slider-ticks.three-options .slider-tick:nth-child(3)::before {
+    left: auto;
+    right: 0;
+    transform: none;
+}
+
 .beaconing-options {
     display: flex;
     flex-direction: column;
@@ -654,6 +742,23 @@ body {
     display: flex;
     gap: var(--spacing-sm);
     flex-wrap: wrap;
+}
+
+/* Highlight button when settings have unsaved changes */
+.btn-highlight {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: white !important;
+    animation: pulse-highlight 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-highlight {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(var(--primary-rgb, 59, 130, 246), 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(var(--primary-rgb, 59, 130, 246), 0);
+    }
 }
 
 /* Info Bar Styles */
@@ -683,6 +788,13 @@ body {
     gap: 8px;
     color: var(--text-muted);
     transition: color var(--transition-base);
+}
+
+.radio-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
 }
 
 .btn-beacon {
@@ -727,6 +839,92 @@ body {
     50% {
         box-shadow: 0 0 0 6px #ef4444, 0 0 30px rgba(239, 68, 68, 1), 0 0 60px rgba(239, 68, 68, 0.7);
     }
+}
+
+/* Subtle beacon highlight for stale/missing beacon - softer glow */
+@keyframes beacon-pulse-subtle {
+    0%, 100% {
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 0 8px rgba(239, 68, 68, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.6), 0 0 12px rgba(239, 68, 68, 0.5);
+    }
+}
+
+/* Generic beacon highlight - subtle version for stale/missing beacon warning */
+.beacon-highlight {
+    animation: beacon-pulse-subtle 2s ease-in-out infinite !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 0 8px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .beacon-highlight,
+    .btn-highlight,
+    .btn-beacon.beacon-highlight {
+        animation: none !important;
+    }
+}
+
+/* Instant tooltip - can be applied to any element with data-tooltip attribute */
+[data-tooltip] {
+    position: relative;
+}
+
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: pre-line;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0s, visibility 0s;
+    pointer-events: none;
+    z-index: 1000;
+    margin-bottom: 4px;
+    min-width: max-content;
+}
+
+[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Tooltip position variants */
+[data-tooltip-position="bottom"]::after {
+    bottom: auto;
+    top: 100%;
+    margin-bottom: 0;
+    margin-top: 4px;
+}
+
+[data-tooltip-position="left"]::after {
+    bottom: auto;
+    top: 50%;
+    left: auto;
+    right: 100%;
+    transform: translateY(-50%);
+    margin-bottom: 0;
+    margin-right: 4px;
+}
+
+[data-tooltip-position="right"]::after {
+    bottom: auto;
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    margin-bottom: 0;
+    margin-left: 4px;
 }
 
 #radio_icon_svg {
@@ -813,6 +1011,96 @@ body {
     overflow: visible;
 }
 
+/* Mobile Chat Selector - dropdown for small screens */
+.mobile-chat-selector {
+    display: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobile-chat-selector-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mobile-chat-selector .form-select {
+    width: 100%;
+    font-weight: 500;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.mobile-chat-selector .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb, 59, 130, 246), 0.25);
+}
+
+/* Mobile unread badge */
+.mobile-unread-badge {
+    position: absolute;
+    top: -8px;
+    right: 32px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: center;
+    color: white;
+    background-color: #dc3545;
+    border: 2px solid var(--bg-header);
+    border-radius: 10px;
+    z-index: 10;
+}
+
+/* Mobile delete button */
+.btn-mobile-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    margin-left: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+
+.btn-mobile-delete:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.btn-mobile-delete:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-mobile-delete .material-symbols-rounded {
+    font-size: 20px;
+}
+
+/* Responsive: Show dropdown on mobile, hide tabs */
+@media (max-width: 768px) {
+    .tabs-container {
+        display: none !important;
+    }
+
+    .mobile-chat-selector {
+        display: block;
+    }
+}
+
 /* Theme Toggle Button */
 .theme-toggle {
     display: inline-flex;
@@ -828,7 +1116,6 @@ body {
     cursor: pointer;
     transition: all var(--transition-base);
     position: relative;
-    overflow: hidden;
 }
 
 .theme-toggle:hover {

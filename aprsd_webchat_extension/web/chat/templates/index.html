@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
-    <title>{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat - {{ callsign }}</title>
+    <title>{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat</title>
     <script src="/static/js/upstream/jquery-3.7.1.min.js"></script>
     <script src="/static/js/upstream/jquery.toast.js"></script>
     <script src="/static/js/upstream/jquery.timeago.min.js"></script>
@@ -260,6 +260,14 @@
                 }
                 console.log("Sending beaconing settings to server", gps_settings);
                 socket.emit('set_beaconing_setting', gps_settings);
+
+                // Update original values to match saved values and remove highlight
+                original_gps_settings.beaconing_setting = beacon_type;
+                original_gps_settings.beacon_interval = gps_settings.beacon_interval;
+                original_gps_settings.smart_beacon_distance_threshold = gps_settings.smart_beacon_distance_threshold;
+                original_gps_settings.smart_beacon_time_window = gps_settings.smart_beacon_time_window;
+                $('#save_beacon_settings').removeClass('btn-highlight');
+
                 $.toast({heading: 'Beaconing Settings Saved',
                         text: "Beaconing settings saved",
                         loader: true,
@@ -309,16 +317,16 @@
             <div class="container-fluid">
                 <div class="header-top">
                     <div class="header-title-row">
-                        <h1 class="app-title">{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat {{ callsign }}</h1>
+                        <h1 class="app-title">{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat</h1>
                         <div class="theme-toggle-container">
-                            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+                            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" data-tooltip="Toggle theme" data-tooltip-position="bottom">
                                 <span class="material-symbols-rounded light-icon">light_mode</span>
                                 <span class="material-symbols-rounded dark-icon">dark_mode</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS">
+                            <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS" data-tooltip="GPS & Beaconing" data-tooltip-position="bottom">
                                 <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
                             </button>
-                            <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" title="Start tour">
+                            <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" data-tooltip="Start tour" data-tooltip-position="bottom">
                                 <span class="material-symbols-rounded">help</span>
                             </button>
                         </div>
@@ -363,6 +371,10 @@
                                     <span class="gps-label">Updated:</span>
                                     <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
                                 </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Last Beacon:</span>
+                                    <span class="gps-value" id="last_beacon_time">Never</span>
+                                </div>
                             </div>
 
                             <div class="beaconing-controls">
@@ -370,17 +382,38 @@
                                     Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
                                 </label>
                                 <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
+                                <div class="slider-ticks">
+                                    <span class="slider-tick">Disabled</span>
+                                    <span class="slider-tick">Manual</span>
+                                    <span class="slider-tick">Interval</span>
+                                    <span class="slider-tick">Smart</span>
+                                </div>
                                 <script>
                                     $('#beaconing_setting').on('input', function() {
                                         var value = $(this).val();
                                         set_beaconing_setting(value);
+                                        check_gps_settings_changed();
+                                    });
+                                    // Track changes on all GPS settings inputs (delegated so DOM order doesn't matter)
+                                    $(document).on('change input', '#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window', function() {
+                                        check_gps_settings_changed();
                                     });
                                 </script>
 
                                 <div class="beaconing-options">
                                     <div class="form-group" id="beacon_interval_group" style="display: none;">
-                                        <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval (seconds)</label>
-                                        <input type="number" class="form-control" id="beacon_interval" placeholder="1800" value="{{ initial_stats.stats.gps.gps_extension.beacon_interval|default(1800) }}">
+                                        <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval</label>
+                                        <select class="form-select" id="beacon_interval">
+                                            <option value="60">1 minute</option>
+                                            <option value="120">2 minutes</option>
+                                            <option value="300">5 minutes</option>
+                                            <option value="600">10 minutes</option>
+                                            <option value="900">15 minutes</option>
+                                            <option value="1200">20 minutes</option>
+                                            <option value="1800" selected>30 minutes</option>
+                                            <option value="2700">45 minutes</option>
+                                            <option value="3600">1 hour</option>
+                                        </select>
                                     </div>
                                     <div class="form-group" id="smart_beacon_time_window_group" style="display: none;">
                                         <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label">Time Window (seconds)</label>
@@ -407,6 +440,20 @@
                     </div>
                 </div>
 
+                <!-- Mobile conversation selector (shown on small screens only) -->
+                <div class="mobile-chat-selector" id="mobileChatSelector">
+                    <div class="mobile-chat-selector-wrapper">
+                        <select id="mobileChatDropdown" class="form-select" aria-label="Select conversation">
+                            <option value="ADD_TAB">+ Add conversation...</option>
+                        </select>
+                        <span id="mobileUnreadBadge" class="mobile-unread-badge visually-hidden">0</span>
+                        <button type="button" class="btn btn-sm btn-mobile-delete" id="mobileDeleteChat" data-tooltip="Delete conversation" data-tooltip-position="bottom" aria-label="Delete conversation">
+                            <span class="material-symbols-rounded">delete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Desktop tabs (hidden on small screens) -->
                 <div class="tabs-container">
                     <ul class="nav nav-tabs modern-tabs" id="msgsTabList" role="tablist"></ul>
                 </div>
@@ -420,14 +467,15 @@
                         <span id="welcome_message">Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>
                     </div>
                     <div class="radio-indicator">
-                        <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" title="Send Beacon now">
+                        <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" data-tooltip="Send Beacon" aria-label="Send beacon">
                             <span class="material-symbols-rounded">location_on</span>
                         </button>
-                        <svg id="radio_icon_svg" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor" title="TX/RX Activity Indicator">
-                            <title>TX/RX Activity Indicator</title>
-                            <path fill-rule="evenodd" clip-rule="evenodd"
-                                d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
-                        </svg>
+                        <span class="radio-icon-wrapper" data-tooltip="TX/RX Activity" data-tooltip-position="bottom">
+                            <svg id="radio_icon_svg" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="TX/RX Activity Indicator">
+                                <path fill-rule="evenodd" clip-rule="evenodd"
+                                    d="M2.998 5.58a5.55 5.55 0 0 1 1.62-3.88l-.71-.7a6.45 6.45 0 0 0 0 9.16l.71-.7a5.55 5.55 0 0 1-1.62-3.88zm1.06 0a4.42 4.42 0 0 0 1.32 3.17l.71-.71a3.27 3.27 0 0 1-.76-1.12 3.45 3.45 0 0 1 0-2.67 3.22 3.22 0 0 1 .76-1.13l-.71-.71a4.46 4.46 0 0 0-1.32 3.17zm7.65 3.21l-.71-.71c.33-.32.59-.704.76-1.13a3.449 3.449 0 0 0 0-2.67 3.22 3.22 0 0 0-.76-1.13l.71-.7a4.468 4.468 0 0 1 0 6.34zM13.068 1l-.71.71a5.43 5.43 0 0 1 0 7.74l.71.71a6.45 6.45 0 0 0 0-9.16zM9.993 5.43a1.5 1.5 0 0 1-.245.98 2 2 0 0 1-.27.23l3.44 7.73-.92.4-.77-1.73h-5.54l-.77 1.73-.92-.4 3.44-7.73a1.52 1.52 0 0 1-.33-1.63 1.55 1.55 0 0 1 .56-.68 1.5 1.5 0 0 1 2.325 1.1zm-1.595-.34a.52.52 0 0 0-.25.14.52.52 0 0 0-.11.22.48.48 0 0 0 0 .29c.04.09.102.17.18.23a.54.54 0 0 0 .28.08.51.51 0 0 0 .5-.5.54.54 0 0 0-.08-.28.58.58 0 0 0-.23-.18.48.48 0 0 0-.29 0zm.23 2.05h-.27l-.87 1.94h2l-.86-1.94zm2.2 4.94l-.89-2h-2.88l-.89 2h4.66z" />
+                            </svg>
+                        </span>
                     </div>
                 </div>
             </div>

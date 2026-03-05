@@ -4,6 +4,23 @@ var current_stats = null;
 var gps_settings = null;
 // Track if a beacon has been sent (for warning users to beacon before messaging)
 var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
+// Track the last beacon sent time
+var last_beacon_time = localStorage.getItem('aprsd-webchat-last-beacon-time') || null;
+
+// Threshold in milliseconds for beacon highlight (5 minutes for testing)
+// TODO: Change to 1 hour for production: var BEACON_STALE_THRESHOLD_MS = 60 * 60 * 1000;
+var BEACON_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for testing
+
+// Timer for periodic beacon highlight check
+var beacon_highlight_timer = null;
+
+// Track original GPS settings values for change detection
+var original_gps_settings = {
+    beaconing_setting: null,
+    beacon_interval: null,
+    smart_beacon_distance_threshold: null,
+    smart_beacon_time_window: null
+};
 
 /**
  * Escape HTML special characters to prevent XSS attacks
@@ -52,18 +69,54 @@ function get_beacon_type_from_value(value) {
     return return_value;
 }
 
+/**
+ * Check if any GPS settings have changed from their original values
+ * and update the Save Settings button highlight accordingly
+ */
+function check_gps_settings_changed() {
+    // Convert all values to strings for consistent comparison
+    var current_beaconing = String($('#beaconing_setting').val());
+    var current_interval = String($('#beacon_interval').val());
+    var current_distance = String($('#smart_beacon_distance_threshold').val());
+    var current_time_window = String($('#smart_beacon_time_window').val());
+
+    var has_changes = (
+        current_beaconing !== String(original_gps_settings.beaconing_setting) ||
+        current_interval !== String(original_gps_settings.beacon_interval) ||
+        current_distance !== String(original_gps_settings.smart_beacon_distance_threshold) ||
+        current_time_window !== String(original_gps_settings.smart_beacon_time_window)
+    );
+
+    if (has_changes) {
+        $('#save_beacon_settings').addClass('btn-highlight');
+    } else {
+        $('#save_beacon_settings').removeClass('btn-highlight');
+    }
+}
+
 function update_gps_settings(data) {
     // We got the settings from the gps extension,
     // so we need to update the saved settings.
     // and update the UI with the new settings.
     gps_settings = data.settings;
     get_beacon_type_from_value(gps_settings.beacon_type);
-    $('#beaconing_setting').val(get_beacon_type_from_value(gps_settings.beacon_type));
+    var beaconing_value = get_beacon_type_from_value(gps_settings.beacon_type);
+    $('#beaconing_setting').val(beaconing_value);
     $('#beacon_interval').val(gps_settings.beacon_interval);
     $('#smart_beacon_distance_threshold').val(gps_settings.smart_beacon_distance_threshold);
     $('#smart_beacon_time_window').val(gps_settings.smart_beacon_time_window);
+
+    // Store original values for change detection (as strings for consistent comparison)
+    original_gps_settings.beaconing_setting = String(beaconing_value);
+    original_gps_settings.beacon_interval = String(gps_settings.beacon_interval);
+    original_gps_settings.smart_beacon_distance_threshold = String(gps_settings.smart_beacon_distance_threshold);
+    original_gps_settings.smart_beacon_time_window = String(gps_settings.smart_beacon_time_window);
+
+    // Remove any highlight since we just loaded fresh settings
+    $('#save_beacon_settings').removeClass('btn-highlight');
+
     //Now enable the correct ui elements based on the beaconing type.
-    set_beaconing_setting(get_beacon_type_from_value(gps_settings.beacon_type));
+    set_beaconing_setting(beaconing_value);
 }
 
 function set_beaconing_setting(value, description='') {
@@ -126,38 +179,20 @@ function set_beaconing_setting(value, description='') {
         $('#smart_beacon_distance_threshold_group').hide();
     }
 
-    // Check if GPS extension is installed and enabled for smart beaconing
-    var gps_extension_available = current_stats &&
-                                   current_stats.stats &&
-                                   current_stats.stats.gps &&
-                                   current_stats.stats.gps.gps_extension &&
-                                   current_stats.stats.gps.gps_extension.is_installed == true &&
-                                   current_stats.stats.gps.gps_extension.enabled == true;
-
     // if the beaconing setting is set to smart, enable the smart beaconing distance threshold.
+    // Note: Smart option is only visible when GPS extension is installed, so no fallback needed
     if (value == 3) {
-        if (gps_extension_available) {
-            $('#smart_beacon_time_window_group').show();
-            $('#smart_beacon_distance_threshold_group').show();
-            description = 'Smart Beaconing';
-            $('#beaconing_setting_description').text(description);
-            // Hide interval UI elements
-            $('#beacon_interval_group').hide();
-        } else {
-            // GPS extension not available, can't use smart beaconing
-            // Reset to manual mode
-            console.warn("Smart beaconing requires GPS extension to be installed and enabled");
-            $('#beaconing_setting').val(1);
-            // Call set_beaconing_setting with a flag to prevent recursion
-            description = 'Manual (Smart requires GPS extension)';
-            $('#beaconing_setting_description').text(description);
-            // Hide all optional UI elements
-            $('#beacon_interval_group').hide();
-            $('#smart_beacon_time_window_group').hide();
-            $('#smart_beacon_distance_threshold_group').hide();
-        }
+        $('#smart_beacon_time_window_group').show();
+        $('#smart_beacon_distance_threshold_group').show();
+        description = 'Smart Beaconing';
+        $('#beaconing_setting_description').text(description);
+        // Hide interval UI elements
+        $('#beacon_interval_group').hide();
     }
 
+    // Update active slider tick label
+    $('.slider-tick').removeClass('active');
+    $('.slider-tick').eq(value).addClass('active');
 }
 
 function init_gps() {
@@ -179,9 +214,15 @@ function init_gps() {
         }
     });
 
-    if (current_stats.stats.gps.gps_extension.is_installed != true) {
+    // Hide Smart beaconing option if GPS extension is not installed or not enabled
+    var gps_ext = current_stats.stats.gps.gps_extension;
+    if (gps_ext.is_installed != true || gps_ext.enabled != true) {
         // Set the max value for the beaconing type to 2 (Interval Beaconing).
         $('#beaconing_setting').prop('max', 2);
+        // Hide the Smart tick label since it's not available
+        $('.slider-tick:nth-child(4)').hide();
+        // Reposition tick marks for 3 options (0%, 50%, 100%) instead of 4
+        $('.slider-ticks').addClass('three-options');
     }
 
     // When the GPS stats are received, update the GPS fix.
@@ -196,6 +237,11 @@ function init_gps() {
         // Mark that a beacon has been sent
         beacon_sent = true;
         localStorage.setItem('aprsd-webchat-beacon-sent', 'true');
+        // Store the beacon sent time
+        last_beacon_time = new Date().toISOString();
+        localStorage.setItem('aprsd-webchat-last-beacon-time', last_beacon_time);
+        // Update the UI with the last beacon time
+        update_last_beacon_display();
         // Close the beacon warning toast if it's open
         if (typeof window.closeBeaconWarningToast === 'function') {
             window.closeBeaconWarningToast();
@@ -275,12 +321,21 @@ function init_gps() {
 
     set_beaconing_setting(beaconing_setting, beaconing_description);
 
+    // Store original values for change detection
+    // Read from the actual input values to capture defaults from HTML
+    original_gps_settings.beaconing_setting = String($('#beaconing_setting').val());
+    original_gps_settings.beacon_interval = String($('#beacon_interval').val());
+    original_gps_settings.smart_beacon_distance_threshold = String($('#smart_beacon_distance_threshold').val());
+    original_gps_settings.smart_beacon_time_window = String($('#smart_beacon_time_window').val());
+
     if (gps.gps_extension.smart_beacon_distance_threshold) {
         $('#smart_beacon_distance_threshold').val(gps.gps_extension.smart_beacon_distance_threshold);
+        original_gps_settings.smart_beacon_distance_threshold = String(gps.gps_extension.smart_beacon_distance_threshold);
     }
 
     if (gps.gps_extension.smart_beacon_time_window) {
         $('#smart_beacon_time_window').val(gps.gps_extension.smart_beacon_time_window);
+        original_gps_settings.smart_beacon_time_window = String(gps.gps_extension.smart_beacon_time_window);
     }
 
     if (gps.gps_extension.gpsd_host) {
@@ -293,7 +348,14 @@ function init_gps() {
 
     if (gps.gps_extension.beacon_interval) {
         $('#beacon_interval').val(gps.gps_extension.beacon_interval);
+        original_gps_settings.beacon_interval = String(gps.gps_extension.beacon_interval);
     }
+
+    // Initialize the last beacon display from localStorage
+    update_last_beacon_display();
+    // Beacon highlight for stale beacons - disabled for now to avoid confusing users
+    // TODO: Re-enable when ready: update_beacon_highlight();
+    // TODO: Re-enable when ready: start_beacon_highlight_timer();
 }
 
 function update_gps_info_box(latitude, longitude, altitude, speed, course, time) {
@@ -429,6 +491,103 @@ function beacon_toast(msg) {
       position: 'top-left',
       hideAfter: 1500,
   });
+}
+
+/**
+ * Format a date/time for display
+ * Returns a human-readable string like "2 minutes ago" or the formatted date
+ */
+function format_beacon_time(isoString) {
+    if (!isoString) {
+        return 'Never';
+    }
+    var date = new Date(isoString);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffSecs = Math.floor(diffMs / 1000);
+    var diffMins = Math.floor(diffSecs / 60);
+    var diffHours = Math.floor(diffMins / 60);
+    var diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) {
+        return 'Just now';
+    } else if (diffMins < 60) {
+        return diffMins + ' min' + (diffMins > 1 ? 's' : '') + ' ago';
+    } else if (diffHours < 24) {
+        return diffHours + ' hour' + (diffHours > 1 ? 's' : '') + ' ago';
+    } else if (diffDays < 7) {
+        return diffDays + ' day' + (diffDays > 1 ? 's' : '') + ' ago';
+    } else {
+        // Format as date
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+}
+
+/**
+ * Update the last beacon display in the GPS panel and tooltip
+ */
+function update_last_beacon_display() {
+    var timeStr = format_beacon_time(last_beacon_time);
+    // Update the GPS panel
+    $('#last_beacon_time').text(timeStr);
+    // Update the quick beacon button tooltip (using data-tooltip for instant display)
+    var beaconTooltipText = 'Send Beacon';
+    if (last_beacon_time) {
+        beaconTooltipText = 'Send Beacon\nLast: ' + timeStr;
+    }
+    $('#send_beacon_quick').attr('data-tooltip', beaconTooltipText);
+    // Update the GPS panel button tooltip with last beacon time
+    var gpsTooltipText = 'GPS & Beaconing';
+    if (last_beacon_time) {
+        gpsTooltipText = 'GPS & Beaconing\nLast beacon: ' + timeStr;
+    } else {
+        gpsTooltipText = 'GPS & Beaconing\nNo beacon sent';
+    }
+    $('.btn-gps').attr('data-tooltip', gpsTooltipText);
+    // Beacon highlight for stale beacons - disabled for now to avoid confusing users
+    // TODO: Re-enable when ready: update_beacon_highlight();
+}
+
+/**
+ * Check if beacon is stale (never sent or older than threshold)
+ * and update the highlight on beacon buttons and GPS icon
+ */
+function update_beacon_highlight() {
+    var shouldHighlight = false;
+
+    if (!last_beacon_time) {
+        // Never sent a beacon
+        shouldHighlight = true;
+    } else {
+        // Check if beacon is older than threshold
+        var beaconDate = new Date(last_beacon_time);
+        var now = new Date();
+        var diffMs = now - beaconDate;
+        shouldHighlight = diffMs > BEACON_STALE_THRESHOLD_MS;
+    }
+
+    if (shouldHighlight) {
+        $('#send_beacon, #send_beacon_quick, .btn-gps').addClass('beacon-highlight');
+    } else {
+        $('#send_beacon, #send_beacon_quick, .btn-gps').removeClass('beacon-highlight');
+    }
+}
+
+/**
+ * Start the periodic timer to check beacon staleness
+ * Runs every 30 seconds to update the highlight state
+ */
+function start_beacon_highlight_timer() {
+    // Clear any existing timer
+    if (beacon_highlight_timer) {
+        clearInterval(beacon_highlight_timer);
+    }
+    // Check every 30 seconds
+    beacon_highlight_timer = setInterval(function() {
+        update_beacon_highlight();
+        // Also update the time display (e.g., "5 mins ago" → "6 mins ago")
+        update_last_beacon_display();
+    }, 30 * 1000);
 }
 
 function sendPosition(position) {
