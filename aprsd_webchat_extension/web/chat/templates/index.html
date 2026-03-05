@@ -411,6 +411,20 @@
                     </div>
                 </div>
 
+                <!-- Mobile conversation selector (shown on small screens only) -->
+                <div class="mobile-chat-selector" id="mobileChatSelector">
+                    <div class="mobile-chat-selector-wrapper">
+                        <select id="mobileChatDropdown" class="form-select" aria-label="Select conversation">
+                            <option value="ADD_TAB">+ Add conversation...</option>
+                        </select>
+                        <span id="mobileUnreadBadge" class="mobile-unread-badge visually-hidden">0</span>
+                        <button type="button" class="btn btn-sm btn-mobile-delete" id="mobileDeleteChat" data-tooltip="Delete conversation" data-tooltip-position="bottom" aria-label="Delete conversation">
+                            <span class="material-symbols-rounded">delete</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Desktop tabs (hidden on small screens) -->
                 <div class="tabs-container">
                     <ul class="nav nav-tabs modern-tabs" id="msgsTabList" role="tablist"></ul>
                 </div>
