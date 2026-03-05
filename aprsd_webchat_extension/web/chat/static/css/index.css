@@ -715,6 +715,40 @@ body {
     font-size: 18px;
 }
 
+/* Custom tooltip for beacon button - instant display */
+.btn-beacon {
+    position: relative;
+}
+
+.btn-beacon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    white-space: pre-line;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0s, visibility 0s;
+    pointer-events: none;
+    z-index: 1000;
+    margin-bottom: 4px;
+    min-width: 100px;
+}
+
+.btn-beacon:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
 .btn-beacon.beacon-highlight {
     animation: beacon-pulse 1.5s ease-in-out infinite;
     box-shadow: 0 0 0 4px #ef4444, 0 0 20px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.5);

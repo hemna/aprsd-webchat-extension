@@ -4,6 +4,8 @@ var current_stats = null;
 var gps_settings = null;
 // Track if a beacon has been sent (for warning users to beacon before messaging)
 var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
+// Track the last beacon sent time
+var last_beacon_time = localStorage.getItem('aprsd-webchat-last-beacon-time') || null;
 
 /**
  * Escape HTML special characters to prevent XSS attacks
@@ -196,6 +198,11 @@ function init_gps() {
         // Mark that a beacon has been sent
         beacon_sent = true;
         localStorage.setItem('aprsd-webchat-beacon-sent', 'true');
+        // Store the beacon sent time
+        last_beacon_time = new Date().toISOString();
+        localStorage.setItem('aprsd-webchat-last-beacon-time', last_beacon_time);
+        // Update the UI with the last beacon time
+        update_last_beacon_display();
         // Close the beacon warning toast if it's open
         if (typeof window.closeBeaconWarningToast === 'function') {
             window.closeBeaconWarningToast();
@@ -294,6 +301,9 @@ function init_gps() {
     if (gps.gps_extension.beacon_interval) {
         $('#beacon_interval').val(gps.gps_extension.beacon_interval);
     }
+
+    // Initialize the last beacon display from localStorage
+    update_last_beacon_display();
 }
 
 function update_gps_info_box(latitude, longitude, altitude, speed, course, time) {
@@ -429,6 +439,56 @@ function beacon_toast(msg) {
       position: 'top-left',
       hideAfter: 1500,
   });
+}
+
+/**
+ * Format a date/time for display
+ * Returns a human-readable string like "2 minutes ago" or the formatted date
+ */
+function format_beacon_time(isoString) {
+    if (!isoString) {
+        return 'Never';
+    }
+    var date = new Date(isoString);
+    var now = new Date();
+    var diffMs = now - date;
+    var diffSecs = Math.floor(diffMs / 1000);
+    var diffMins = Math.floor(diffSecs / 60);
+    var diffHours = Math.floor(diffMins / 60);
+    var diffDays = Math.floor(diffHours / 24);
+
+    if (diffSecs < 60) {
+        return 'Just now';
+    } else if (diffMins < 60) {
+        return diffMins + ' min' + (diffMins > 1 ? 's' : '') + ' ago';
+    } else if (diffHours < 24) {
+        return diffHours + ' hour' + (diffHours > 1 ? 's' : '') + ' ago';
+    } else if (diffDays < 7) {
+        return diffDays + ' day' + (diffDays > 1 ? 's' : '') + ' ago';
+    } else {
+        // Format as date
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+}
+
+/**
+ * Update the last beacon display in the GPS panel and tooltip
+ */
+function update_last_beacon_display() {
+    var timeStr = format_beacon_time(last_beacon_time);
+    // Update the GPS panel
+    $('#last_beacon_time').text(timeStr);
+    // Update the timeago element if it exists
+    if (last_beacon_time) {
+        $('#last_beacon_timeago').attr('datetime', last_beacon_time);
+        $('#last_beacon_timeago').timeago('update', last_beacon_time);
+    }
+    // Update the quick beacon button tooltip (using data-tooltip for instant display)
+    var tooltipText = 'Send Beacon';
+    if (last_beacon_time) {
+        tooltipText = 'Send Beacon\nLast: ' + timeStr;
+    }
+    $('#send_beacon_quick').attr('data-tooltip', tooltipText);
 }
 
 function sendPosition(position) {

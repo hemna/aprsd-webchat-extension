@@ -363,6 +363,10 @@
                                     <span class="gps-label">Updated:</span>
                                     <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
                                 </div>
+                                <div class="gps-info-item">
+                                    <span class="gps-label">Last Beacon:</span>
+                                    <span class="gps-value" id="last_beacon_time">Never</span>
+                                </div>
                             </div>
 
                             <div class="beaconing-controls">
@@ -420,7 +424,7 @@
                         <span id="welcome_message">Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>
                     </div>
                     <div class="radio-indicator">
-                        <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" title="Send Beacon now">
+                        <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" data-tooltip="Send Beacon" aria-label="Send beacon">
                             <span class="material-symbols-rounded">location_on</span>
                         </button>
                         <svg id="radio_icon_svg" width="24" height="24" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor" title="TX/RX Activity Indicator">
