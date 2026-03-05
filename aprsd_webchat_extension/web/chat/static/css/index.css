@@ -857,6 +857,15 @@ body {
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5), 0 0 8px rgba(239, 68, 68, 0.4) !important;
 }
 
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .beacon-highlight,
+    .btn-highlight,
+    .btn-beacon.beacon-highlight {
+        animation: none !important;
+    }
+}
+
 /* Instant tooltip - can be applied to any element with data-tooltip attribute */
 [data-tooltip] {
     position: relative;
@@ -1026,7 +1035,7 @@ body {
 
 .mobile-chat-selector .form-select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb), 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(var(--primary-rgb, 59, 130, 246), 0.25);
 }
 
 /* Mobile unread badge */

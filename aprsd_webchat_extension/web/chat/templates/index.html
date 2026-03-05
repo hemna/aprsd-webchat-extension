@@ -394,8 +394,8 @@
                                         set_beaconing_setting(value);
                                         check_gps_settings_changed();
                                     });
-                                    // Track changes on all GPS settings inputs
-                                    $('#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window').on('change input', function() {
+                                    // Track changes on all GPS settings inputs (delegated so DOM order doesn't matter)
+                                    $(document).on('change input', '#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window', function() {
                                         check_gps_settings_changed();
                                     });
                                 </script>

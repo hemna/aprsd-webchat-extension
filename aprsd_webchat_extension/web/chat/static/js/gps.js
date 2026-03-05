@@ -530,11 +530,6 @@ function update_last_beacon_display() {
     var timeStr = format_beacon_time(last_beacon_time);
     // Update the GPS panel
     $('#last_beacon_time').text(timeStr);
-    // Update the timeago element if it exists
-    if (last_beacon_time) {
-        $('#last_beacon_timeago').attr('datetime', last_beacon_time);
-        $('#last_beacon_timeago').timeago('update', last_beacon_time);
-    }
     // Update the quick beacon button tooltip (using data-tooltip for instant display)
     var beaconTooltipText = 'Send Beacon';
     if (last_beacon_time) {
