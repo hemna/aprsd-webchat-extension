@@ -310,9 +310,13 @@ input[type=search]::-webkit-search-cancel-button {
     color: var(--text-primary);
 }
 
-.btn-raw-toggle:focus,
-.btn-raw-toggle:focus-visible {
+.btn-raw-toggle:focus {
     outline: none;
+}
+
+.btn-raw-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
 }
 
 .btn-raw-toggle .material-symbols-rounded {
@@ -341,7 +345,7 @@ input[type=search]::-webkit-search-cancel-button {
 /* Raw packet text element (hidden by default) */
 .bubble-raw-packet {
     display: none;
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Courier New', monospace;
+    font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Courier New', monospace;
     font-size: 0.8125rem;
     line-height: 1.4;
     word-break: break-all;
