@@ -8,6 +8,7 @@ const socket = io("/sendmsg");
 var myModalAlternative = null;
 var socketio_connected = false;
 var socketio_reconnecting = false;
+var showRawPackets = false;  // Toggle state for raw APRS packet view
 
 MSG_TYPE_TX = "tx";
 MSG_TYPE_RX = "rx";
@@ -28,6 +29,26 @@ function reload_popovers() {
     $('[data-bs-toggle="popover"]').popover(
         {html: true, animation: true}
     );
+}
+
+/**
+ * Toggle the raw APRS packet view display
+ * When enabled, shows raw TNC2 packet strings instead of parsed messages
+ */
+function toggle_raw_packets() {
+    showRawPackets = !showRawPackets;
+    
+    // Update button visual state
+    var toggleBtn = $('#raw_packet_toggle');
+    toggleBtn.toggleClass('active', showRawPackets);
+    toggleBtn.attr('aria-pressed', showRawPackets ? 'true' : 'false');
+    
+    // Update body class to trigger CSS visibility changes
+    if (showRawPackets) {
+        $('body').addClass('show-raw-packets');
+    } else {
+        $('body').removeClass('show-raw-packets');
+    }
 }
 
 /**
@@ -396,6 +417,12 @@ function init_chat() {
 
    // Initialize mobile dropdown for small screens
    init_mobile_dropdown();
+
+   // Initialize raw packet toggle button
+   $('#raw_packet_toggle').on('click', function(e) {
+       e.preventDefault();
+       toggle_raw_packets();
+   });
 
    // Consolidated tab shown handler - handles all tabs (callsign tabs and add tab)
    // Listen on msgsTabList because Bootstrap fires shown.bs.tab on the tab button, which bubbles to the list (not to msgsTabContent)
@@ -918,6 +945,10 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
     var escaped_raw = escapeHtmlAttribute(msg['raw'] || '');
     var escaped_bubble_msgid = escapeHtmlAttribute(bubble_msgid);
     var escaped_ack_id = ack_id ? escapeHtmlAttribute(ack_id) : '';
+    
+    // Prepare raw packet display text
+    var raw_packet_text = msg['raw'] ? escapeHtml(msg['raw']) : '(raw packet not available)';
+    var raw_packet_class = msg['raw'] ? 'bubble-raw-packet' : 'bubble-raw-packet no-data';
 
     msg_html = '<div class="bubble-row'+alt+'">';
     msg_html += '<div id="'+escaped_bubble_msgid+'" class="'+ bubble_class + '" ';
@@ -935,7 +966,10 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
         }
     }
     msg_html += "</p>";
+    // Normal message view
     msg_html += '<p class="' +bubble_msg_class+ '">'+escaped_message+'</p>';
+    // Raw packet view (hidden by default, shown when toggle is active)
+    msg_html += '<p class="' + raw_packet_class + '">' + raw_packet_text + '</p>';
     msg_html += '<div class="'+ bubble_arrow_class + '"></div>';
     msg_html += "</div></div></div>";
 

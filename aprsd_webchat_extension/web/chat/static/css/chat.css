@@ -284,3 +284,95 @@ input[type=search]::-webkit-search-cancel-button {
 .speech-wrapper::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
+
+/* =====================================================
+   Raw APRS Packet View Toggle (002-raw-aprs-toggle)
+   ===================================================== */
+
+/* Toggle button styling - matches .btn-beacon style */
+.btn-raw-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.btn-raw-toggle:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.btn-raw-toggle:focus {
+    outline: none;
+}
+
+.btn-raw-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.btn-raw-toggle .material-symbols-rounded {
+    font-size: 18px;
+}
+
+/* Radio icon wrapper - matches .btn-beacon style */
+.radio-icon-wrapper {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+}
+
+/* Active/toggled state */
+.btn-raw-toggle.active {
+    color: var(--primary-color);
+}
+
+.btn-raw-toggle.active .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1;
+}
+
+/* Raw packet text element (hidden by default) */
+.bubble-raw-packet {
+    display: none;
+    font-family: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Courier New', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    word-break: break-all;
+    margin: 0;
+    padding: 0;
+    color: var(--text-primary);
+}
+
+.bubble.alt .bubble-raw-packet {
+    color: var(--text-inverse);
+}
+
+/* Placeholder for missing raw packet data */
+.bubble-raw-packet.no-data {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.bubble.alt .bubble-raw-packet.no-data {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* When raw packets mode is active */
+.show-raw-packets .bubble-message {
+    display: none;
+}
+
+.show-raw-packets .bubble-raw-packet {
+    display: block;
+}
