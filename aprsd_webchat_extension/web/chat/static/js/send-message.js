@@ -37,12 +37,12 @@ function reload_popovers() {
  */
 function toggle_raw_packets() {
     showRawPackets = !showRawPackets;
-    
+
     // Update button visual state
     var toggleBtn = $('#raw_packet_toggle');
     toggleBtn.toggleClass('active', showRawPackets);
     toggleBtn.attr('aria-pressed', showRawPackets ? 'true' : 'false');
-    
+
     // Update body class to trigger CSS visibility changes
     if (showRawPackets) {
         $('body').addClass('show-raw-packets');
@@ -377,6 +377,12 @@ function init_chat() {
            raise_error("The connection to the APRSD server has been lost.  Please check your APRSD server connection and try again.");
            return false;
        }
+       // Intercept APRSThursday messages
+       if (to_call === 'APRSTHURSDAY' && typeof handle_aprsthursday_send === 'function') {
+           if (handle_aprsthursday_send()) {
+               return false;
+           }
+       }
        if (!to_call || to_call == "") {
            raise_error("You must select a callsign tab to send a message")
            return false;
@@ -412,6 +418,10 @@ function init_chat() {
    });
 
    init_gps();
+   // Initialize APRSThursday support
+   if (typeof init_aprs_thursday === 'function') {
+       init_aprs_thursday();
+   }
    // Try and load any existing chat threads from last time
    init_messages();
 
@@ -440,6 +450,26 @@ function init_chat() {
            setTimeout(function() {
                $('#new-callsign-input').focus();
            }, 100);
+           return;
+       }
+
+       // Handle APRSThursday tab
+       if (callsign === 'APRSTHURSDAY') {
+           selected_tab_callsign = 'APRSTHURSDAY';
+           $("#location_str").html("");
+           if (typeof updateSendButton === 'function') {
+               updateSendButton();
+           }
+           setTimeout(function() {
+               $('#message').focus();
+           }, 100);
+           // Clear notification badge
+           var thu_badge = $('#msgsAPRSTHURSDAYnotify');
+           if (thu_badge.length) {
+               thu_badge.addClass('visually-hidden');
+               thu_badge.text(0);
+           }
+           update_mobile_dropdown();
            return;
        }
 
@@ -733,6 +763,11 @@ function create_callsign_tab_content(callsign, active=false) {
 }
 
 function delete_tab(callsign) {
+    // Prevent deleting APRSThursday tab (must toggle off instead)
+    if (callsign === 'APRSTHURSDAY') {
+        raise_warning("Use the APRSThursday toggle button to disable this feature.");
+        return;
+    }
     // User asked to delete the tab and the conversation
     tab_id = tab_string(callsign, true);
     tab_id_li = tab_li_string(callsign, true);
@@ -945,7 +980,7 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
     var escaped_raw = escapeHtmlAttribute(msg['raw'] || '');
     var escaped_bubble_msgid = escapeHtmlAttribute(bubble_msgid);
     var escaped_ack_id = ack_id ? escapeHtmlAttribute(ack_id) : '';
-    
+
     // Prepare raw packet display text
     var raw_packet_text = msg['raw'] ? escapeHtml(msg['raw']) : '(raw packet not available)';
     var raw_packet_class = msg['raw'] ? 'bubble-raw-packet' : 'bubble-raw-packet no-data';

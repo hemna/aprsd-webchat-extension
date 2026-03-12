@@ -36,6 +36,7 @@
     <script src="/static/js/gps.js"></script>
     <script src="/static/js/symbol-picker.js"></script>
     <script src="/static/js/send-message.js"></script>
+    <script src="/static/js/aprs-thursday.js"></script>
     <script src="/static/js/tour.js"></script>
 
     <script type="text/javascript">
@@ -472,7 +473,12 @@
                         <span id="welcome_message">Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>
                     </div>
                     <div class="radio-indicator">
-                        <button type="button" class="btn-raw-toggle" id="raw_packet_toggle" 
+                        <button type="button" class="btn-aprsthursday-toggle" id="aprsthursday_toggle"
+                                data-tooltip="Toggle APRSThursday mode" data-tooltip-position="bottom"
+                                aria-label="Toggle APRSThursday mode" aria-pressed="false">
+                            <span class="material-symbols-rounded">event</span>
+                        </button>
+                        <button type="button" class="btn-raw-toggle" id="raw_packet_toggle"
                                 data-tooltip="Toggle raw packet view" data-tooltip-position="bottom"
                                 aria-label="Toggle raw packet view" aria-pressed="false">
                             <span class="material-symbols-rounded">info</span>

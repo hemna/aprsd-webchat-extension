@@ -376,3 +376,338 @@ input[type=search]::-webkit-search-cancel-button {
 .show-raw-packets .bubble-raw-packet {
     display: block;
 }
+
+/* =====================================================
+   APRSThursday Net Support (003-aprs-thursday)
+   ===================================================== */
+
+/* Toggle button - reuses .btn-raw-toggle pattern */
+.btn-aprsthursday-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.btn-aprsthursday-toggle:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.btn-aprsthursday-toggle:focus {
+    outline: none;
+}
+
+.btn-aprsthursday-toggle:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.btn-aprsthursday-toggle .material-symbols-rounded {
+    font-size: 18px;
+}
+
+.btn-aprsthursday-toggle.active {
+    color: #e65100;
+    border-color: #e65100;
+    background: rgba(230, 81, 0, 0.1);
+}
+
+.btn-aprsthursday-toggle.active .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1;
+}
+
+/* APRSThursday tab accent color */
+.aprsthursday-tab {
+    background: rgba(230, 81, 0, 0.1) !important;
+    border-color: #e65100 !important;
+    color: #e65100 !important;
+    font-weight: 600;
+}
+
+.aprsthursday-tab.active {
+    background: #e65100 !important;
+    color: #fff !important;
+}
+
+.aprsthursday-tab-icon {
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+[data-theme="dark"] .aprsthursday-tab {
+    background: rgba(255, 152, 0, 0.15) !important;
+    border-color: #ff9800 !important;
+    color: #ff9800 !important;
+}
+
+[data-theme="dark"] .aprsthursday-tab.active {
+    background: #e65100 !important;
+    color: #fff !important;
+}
+
+[data-theme="dark"] .btn-aprsthursday-toggle.active {
+    color: #ff9800;
+    border-color: #ff9800;
+    background: rgba(255, 152, 0, 0.15);
+}
+
+/* Collapsible control panel */
+.aprsthursday-panel {
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.aprsthursday-panel-toggle {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    gap: 6px;
+    transition: background var(--transition-base);
+}
+
+.aprsthursday-panel-toggle:hover {
+    background: var(--bg-tertiary, var(--bg-primary));
+}
+
+.aprsthursday-panel-chevron {
+    margin-left: auto;
+    font-size: 18px;
+    transition: transform 0.2s ease;
+}
+
+.aprsthursday-panel-chevron.rotated {
+    transform: rotate(180deg);
+}
+
+.aprsthursday-panel-body {
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Thursday banner */
+.thursday-banner {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.thursday-banner-active {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.thursday-banner-warning {
+    background: rgba(255, 152, 0, 0.1);
+    color: #e65100;
+    border: 1px solid rgba(255, 152, 0, 0.2);
+}
+
+[data-theme="dark"] .thursday-banner-active {
+    background: rgba(76, 175, 80, 0.2);
+    color: #81c784;
+}
+
+[data-theme="dark"] .thursday-banner-warning {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ffb74d;
+}
+
+/* Subscription status */
+.aprsthursday-status {
+    font-size: 0.8125rem;
+}
+
+.aprsthursday-status-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.aprsthursday-status-value.sub-active {
+    color: #2e7d32;
+    font-weight: 500;
+}
+
+.aprsthursday-status-value.sub-inactive {
+    color: var(--text-muted);
+}
+
+[data-theme="dark"] .aprsthursday-status-value.sub-active {
+    color: #81c784;
+}
+
+/* Mode selector */
+.aprsthursday-mode {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.8125rem;
+}
+
+.aprsthursday-mode-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.aprsthursday-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: var(--text-primary);
+}
+
+.aprsthursday-radio input[type="radio"] {
+    margin: 0;
+    accent-color: #e65100;
+}
+
+/* Action buttons */
+.aprsthursday-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.btn-aprsthursday-join {
+    background: #e65100;
+    color: #fff;
+    border: none;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.btn-aprsthursday-join:hover {
+    background: #bf360c;
+    color: #fff;
+}
+
+.btn-aprsthursday-silent {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.btn-aprsthursday-silent:hover {
+    background: var(--bg-secondary);
+}
+
+.btn-aprsthursday-leave {
+    background: transparent;
+    color: #c62828;
+    border: 1px solid #c62828;
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.btn-aprsthursday-leave:hover {
+    background: #c62828;
+    color: #fff;
+}
+
+/* Quick message templates */
+.aprsthursday-templates {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.aprsthursday-templates-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.aprsthursday-template-buttons {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.aprsthursday-tpl {
+    font-size: 0.6875rem !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+}
+
+/* Group message display */
+.aprsthursday-msg-row {
+    margin-bottom: 2px;
+}
+
+.aprsthursday-sender-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 8px 0;
+    margin-bottom: -2px;
+}
+
+.aprsthursday-sender-callsign {
+    font-weight: 700;
+    font-size: 0.8125rem;
+    color: #e65100;
+}
+
+[data-theme="dark"] .aprsthursday-sender-callsign {
+    color: #ff9800;
+}
+
+.aprsthursday-sender-location {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+
+.aprsthursday-fetch-location {
+    font-size: 0.6875rem;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.aprsthursday-fetch-location:hover {
+    text-decoration: underline;
+}
+
+.aprsthursday-bearing-arrow {
+    font-size: 0.75rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.aprsthursday-bubble {
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.aprsthursday-timestamp {
+    display: block;
+    text-align: right;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
