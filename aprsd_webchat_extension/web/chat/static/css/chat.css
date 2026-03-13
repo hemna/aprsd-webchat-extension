@@ -626,9 +626,9 @@ input[type=search]::-webkit-search-cancel-button {
 }
 
 .btn-aprsthursday-silent {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
+    background: #f0f0f0;
+    color: #1a1a1a;
+    border: 1px solid #6c757d;
     font-size: 0.75rem;
     padding: 4px 10px;
     border-radius: 4px;
@@ -639,7 +639,7 @@ input[type=search]::-webkit-search-cancel-button {
 }
 
 .btn-aprsthursday-leave {
-    background: transparent;
+    background: #f0f0f0;
     color: #c62828;
     border: 1px solid #c62828;
     font-size: 0.75rem;
@@ -675,6 +675,9 @@ input[type=search]::-webkit-search-cancel-button {
     font-size: 0.6875rem !important;
     padding: 2px 8px !important;
     border-radius: 12px !important;
+    background: #f0f0f0 !important;
+    border-color: #6c757d !important;
+    color: #1a1a1a !important;
 }
 
 /* Group message display */
@@ -766,7 +769,9 @@ input[type=search]::-webkit-search-cancel-button {
 }
 
 .aprsthursday-modal-content .aprsthursday-join-tpl {
-    border-color: #999 !important;
+    border-color: #6c757d !important;
+    background: #f0f0f0 !important;
+    color: #1a1a1a !important;
 }
 
 .aprsthursday-modal-header {

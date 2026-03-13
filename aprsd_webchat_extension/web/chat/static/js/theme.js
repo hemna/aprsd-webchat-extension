@@ -56,17 +56,6 @@
         const currentTheme = document.documentElement.getAttribute(THEME_ATTRIBUTE) === 'dark' ? 'dark' : 'light';
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         setTheme(newTheme);
-
-        // Optional: Show a brief notification
-        if (typeof $.toast !== 'undefined') {
-            $.toast({
-                heading: 'Theme Changed',
-                text: `Switched to ${newTheme === 'dark' ? 'dark' : 'light'} mode`,
-                loader: false,
-                position: 'top-right',
-                hideAfter: 2000,
-            });
-        }
     }
 
     /**
