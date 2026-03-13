@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="/static/css/chat.css">
     <link rel="stylesheet" href="/static/css/index.css">
     <link rel="stylesheet" href="/static/css/tabs.css">
+    <link rel="stylesheet" href="/static/css/tour.css">
 
     <!-- Set theme immediately to prevent flash -->
     <script>
@@ -274,6 +275,13 @@
                 original_gps_settings.smart_beacon_time_window = gps_settings.smart_beacon_time_window;
                 $('#save_beacon_settings').removeClass('btn-highlight');
 
+                // Close the GPS modal
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getInstance(gpsModalEl);
+                    if (gpsModal) gpsModal.hide();
+                }
+
                 $.toast({heading: 'Beaconing Settings Saved',
                         text: "Beaconing settings saved",
                         loader: true,
@@ -325,12 +333,15 @@
                     <div class="header-title-row">
                         <h1 class="app-title">{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat</h1>
                         <div class="theme-toggle-container">
+                            <button type="button" class="btn btn-sm btn-secondary btn-symbol" id="btn_symbol_picker" data-tooltip="Beacon Symbol" data-tooltip-position="bottom" aria-label="Change beacon symbol">
+                                <span id="beacon-symbol-icon" class="beacon-symbol-icon" tabindex="-1" role="img" aria-label="Beacon symbol" aria-haspopup="dialog"></span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary btn-gps" id="btn_gps_modal" data-tooltip="GPS & Beaconing" data-tooltip-position="bottom" aria-label="GPS & Beaconing">
+                                <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
+                            </button>
                             <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" data-tooltip="Toggle theme" data-tooltip-position="bottom">
                                 <span class="material-symbols-rounded light-icon">light_mode</span>
                                 <span class="material-symbols-rounded dark-icon">dark_mode</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-secondary btn-gps" data-bs-toggle="collapse" href="#collapseGPS" role="button" aria-expanded="false" aria-controls="collapseGPS" data-tooltip="GPS & Beaconing" data-tooltip-position="bottom">
-                                <img src="/static/images/satellite-solid.svg" id="gps_icon" class="gps-satellite-icon" alt="GPS" width="20" height="20">
                             </button>
                             <button type="button" class="btn btn-sm btn-secondary btn-tour" id="tour-restart-button" aria-label="Start tour" data-tooltip="Start tour" data-tooltip-position="bottom">
                                 <span class="material-symbols-rounded">help</span>
@@ -346,106 +357,6 @@
                     {% endif %}
                 </div>
 
-                <div class="collapse gps-panel" id="collapseGPS">
-                    <div class="gps-card">
-                        <div class="gps-header">
-                            <h3>GPS & Beaconing</h3>
-                        </div>
-                        <div class="gps-body">
-                            <div id="gps_info_box" class="gps-info">
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Latitude:</span>
-                                    <span class="gps-value" id="gps_lat">-</span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Longitude:</span>
-                                    <span class="gps-value" id="gps_lon">-</span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Altitude:</span>
-                                    <span class="gps-value" id="gps_alt">-</span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Speed:</span>
-                                    <span class="gps-value" id="gps_speed">-</span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Course:</span>
-                                    <span class="gps-value" id="gps_course">-</span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Updated:</span>
-                                    <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
-                                </div>
-                                <div class="gps-info-item">
-                                    <span class="gps-label">Last Beacon:</span>
-                                    <span class="gps-value" id="last_beacon_time">Never</span>
-                                </div>
-                            </div>
-
-                            <div class="beaconing-controls">
-                                <label for="beaconing_setting" class="form-label">
-                                    Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
-                                </label>
-                                <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
-                                <div class="slider-ticks">
-                                    <span class="slider-tick">Disabled</span>
-                                    <span class="slider-tick">Manual</span>
-                                    <span class="slider-tick">Interval</span>
-                                    <span class="slider-tick">Smart</span>
-                                </div>
-                                <script>
-                                    $('#beaconing_setting').on('input', function() {
-                                        var value = $(this).val();
-                                        set_beaconing_setting(value);
-                                        check_gps_settings_changed();
-                                    });
-                                    // Track changes on all GPS settings inputs (delegated so DOM order doesn't matter)
-                                    $(document).on('change input', '#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window', function() {
-                                        check_gps_settings_changed();
-                                    });
-                                </script>
-
-                                <div class="beaconing-options">
-                                    <div class="form-group" id="beacon_interval_group" style="display: none;">
-                                        <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval</label>
-                                        <select class="form-select" id="beacon_interval">
-                                            <option value="60">1 minute</option>
-                                            <option value="120">2 minutes</option>
-                                            <option value="300">5 minutes</option>
-                                            <option value="600">10 minutes</option>
-                                            <option value="900">15 minutes</option>
-                                            <option value="1200">20 minutes</option>
-                                            <option value="1800" selected>30 minutes</option>
-                                            <option value="2700">45 minutes</option>
-                                            <option value="3600">1 hour</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group" id="smart_beacon_time_window_group" style="display: none;">
-                                        <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label">Time Window (seconds)</label>
-                                        <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="600">
-                                    </div>
-                                    <div class="form-group" id="smart_beacon_distance_threshold_group" style="display: none;">
-                                        <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label">Distance Threshold (meters)</label>
-                                        <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="100">
-                                    </div>
-                                </div>
-
-                                <div class="beaconing-actions">
-                                    <button type="button" class="btn btn-primary" id="send_beacon">
-                                        <span class="material-symbols-rounded">location_on</span>
-                                        Send Beacon
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary" id="save_beacon_settings">
-                                        <span class="material-symbols-rounded">save</span>
-                                        Save Settings
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Mobile conversation selector (shown on small screens only) -->
                 <div class="mobile-chat-selector" id="mobileChatSelector">
                     <div class="mobile-chat-selector-wrapper">
@@ -453,6 +364,9 @@
                             <option value="ADD_TAB">+ Add conversation...</option>
                         </select>
                         <span id="mobileUnreadBadge" class="mobile-unread-badge visually-hidden">0</span>
+                        <button type="button" class="btn btn-sm btn-mobile-add" id="mobileAddChat" data-tooltip="Add conversation" data-tooltip-position="bottom" aria-label="Add conversation">
+                            <span class="material-symbols-rounded">add</span>
+                        </button>
                         <button type="button" class="btn btn-sm btn-mobile-delete" id="mobileDeleteChat" data-tooltip="Delete conversation" data-tooltip-position="bottom" aria-label="Delete conversation">
                             <span class="material-symbols-rounded">delete</span>
                         </button>
@@ -469,14 +383,12 @@
         <div class="wc-info-bar">
             <div class="container-fluid">
                 <div class="info-bar-content">
-                    <div id="info_bar_container" class="info-message">
-                        <span id="welcome_message">Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>
-                    </div>
+                    <div id="info_bar_container" class="info-message"></div>
                     <div class="radio-indicator">
                         <button type="button" class="btn-aprsthursday-toggle" id="aprsthursday_toggle"
                                 data-tooltip="Toggle APRSThursday mode" data-tooltip-position="bottom"
                                 aria-label="Toggle APRSThursday mode" aria-pressed="false">
-                            <span class="material-symbols-rounded">event</span>
+                            <span class="material-symbols-rounded">groups</span>
                         </button>
                         <button type="button" class="btn-raw-toggle" id="raw_packet_toggle"
                                 data-tooltip="Toggle raw packet view" data-tooltip-position="bottom"
@@ -484,7 +396,6 @@
                             <span class="material-symbols-rounded">info</span>
                         </button>
                         <button type="button" class="btn btn-sm btn-beacon" id="send_beacon_quick" data-tooltip="Send Beacon" aria-label="Send beacon">
-                            <span id="beacon-symbol-icon" class="beacon-symbol-icon" title="Click to change symbol" tabindex="0" role="button" aria-label="Change beacon symbol" aria-haspopup="dialog"></span>
                             <span class="material-symbols-rounded">location_on</span>
                         </button>
                         <span class="radio-icon-wrapper" data-tooltip="TX/RX Activity" data-tooltip-position="bottom">
@@ -500,6 +411,13 @@
 
         <main class="wc-content" id="wc-content">
             <div class="container-fluid">
+                <div class="welcome-pane" id="welcome_pane">
+                    <div class="welcome-content">
+                        <span class="material-symbols-rounded welcome-icon">chat</span>
+                        <h2 class="welcome-title">Welcome to {% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat</h2>
+                        <p class="welcome-text">Click the <strong>+</strong> button to add a callsign and start chatting.</p>
+                    </div>
+                </div>
                 <div class="tab-content" id="msgsTabContent"></div>
             </div>
             <!-- iPhone-style message input at bottom -->
@@ -583,6 +501,181 @@
                     <div class="symbol-picker-info" id="symbol-picker-info">Hover over a symbol to see details</div>
                     <div class="symbol-grid" id="symbol-picker-grid">
                         <!-- Symbols will be rendered here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APRSThursday Join Modal -->
+    <div class="modal fade" id="aprsthursdayJoinModal" tabindex="-1" aria-labelledby="aprsthursdayJoinModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content aprsthursday-modal-content">
+                <div class="modal-header aprsthursday-modal-header">
+                    <h5 class="modal-title" id="aprsthursdayJoinModalLabel">
+                        <span class="material-symbols-rounded" style="font-size:20px;vertical-align:middle;">groups</span>
+                        Join APRSThursday
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body aprsthursday-modal-body">
+                    <!-- Thursday status banner -->
+                    <div id="join_thursday_banner" class="thursday-banner"></div>
+
+                    <!-- Mode selector -->
+                    <div class="aprsthursday-mode" style="margin-top:10px;">
+                        <span class="aprsthursday-mode-label">Mode:</span>
+                        <label class="aprsthursday-radio"><input type="radio" name="join_aprsthursday_mode" value="broadcast" checked> Broadcast</label>
+                        <label class="aprsthursday-radio"><input type="radio" name="join_aprsthursday_mode" value="logonly"> Log-only</label>
+                    </div>
+
+                    <!-- Message input -->
+                    <div class="aprsthursday-join-message" style="margin-top:10px;">
+                        <label for="aprsthursday_join_msg" class="form-label" style="font-size:0.8125rem;font-weight:600;">Check-in message:</label>
+                        <input type="text" class="form-control" id="aprsthursday_join_msg" placeholder="e.g. Checking in from California" maxlength="50" autocomplete="off">
+                    </div>
+
+                    <!-- Quick message template buttons -->
+                    <div class="aprsthursday-templates" style="margin-top:8px;">
+                        <span class="aprsthursday-templates-label">Quick:</span>
+                        <div class="aprsthursday-template-buttons">
+                            <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-join-tpl" data-template="location">Checking in from...</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-join-tpl" data-template="greeting">73 de {{ callsign }}</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-join-tpl" data-template="happy">Happy APRSThursday!</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer aprsthursday-modal-footer">
+                    <button type="button" class="btn btn-sm btn-aprsthursday-silent" id="modal_silent_subscribe">Silent Subscribe</button>
+                    <button type="button" class="btn btn-sm btn-aprsthursday-join" id="modal_join_net">Join Net</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APRSThursday Leave Confirmation Modal -->
+    <div class="modal fade" id="aprsthursdayLeaveModal" tabindex="-1" aria-labelledby="aprsthursdayLeaveModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content aprsthursday-modal-content">
+                <div class="modal-header aprsthursday-modal-header">
+                    <h5 class="modal-title" id="aprsthursdayLeaveModalLabel">
+                        <span class="material-symbols-rounded" style="font-size:20px;vertical-align:middle;">groups</span>
+                        Leave APRSThursday?
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body aprsthursday-modal-body">
+                    <p style="margin:0;font-size:0.875rem;">This will unsubscribe you from the HOTG group. You can still view messages already received.</p>
+                </div>
+                <div class="modal-footer aprsthursday-modal-footer">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-aprsthursday-leave" id="modal_confirm_leave">Leave Net</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GPS & Beaconing Modal -->
+    <div class="modal fade" id="gpsModal" tabindex="-1" aria-labelledby="gpsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content gps-modal-content">
+                <div class="modal-header gps-modal-header">
+                    <h5 class="modal-title" id="gpsModalLabel">
+                        <img src="/static/images/satellite-solid.svg" class="gps-satellite-icon" alt="GPS" width="20" height="20" style="opacity:1;">
+                        GPS & Beaconing
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body gps-modal-body" id="gpsModalBody">
+                    <div id="gps_info_box" class="gps-info">
+                        <div class="gps-info-item">
+                            <span class="gps-label">Latitude:</span>
+                            <span class="gps-value" id="gps_lat">-</span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Longitude:</span>
+                            <span class="gps-value" id="gps_lon">-</span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Altitude:</span>
+                            <span class="gps-value" id="gps_alt">-</span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Speed:</span>
+                            <span class="gps-value" id="gps_speed">-</span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Course:</span>
+                            <span class="gps-value" id="gps_course">-</span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Updated:</span>
+                            <span class="gps-value"><time id="gps_timeago" class="timeago" datetime="0"></time></span>
+                        </div>
+                        <div class="gps-info-item">
+                            <span class="gps-label">Last Beacon:</span>
+                            <span class="gps-value" id="last_beacon_time">Never</span>
+                        </div>
+                    </div>
+
+                    <div class="beaconing-controls">
+                        <label for="beaconing_setting" class="form-label">
+                            Beaconing Mode: <span id="beaconing_setting_description" class="beaconing-desc">-</span>
+                        </label>
+                        <input type="range" class="form-range beaconing-slider" min="0" max="3" step="1" id="beaconing_setting">
+                        <div class="slider-ticks">
+                            <span class="slider-tick">Disabled</span>
+                            <span class="slider-tick">Manual</span>
+                            <span class="slider-tick">Interval</span>
+                            <span class="slider-tick">Smart</span>
+                        </div>
+                        <script>
+                            $('#beaconing_setting').on('input', function() {
+                                var value = $(this).val();
+                                set_beaconing_setting(value);
+                                check_gps_settings_changed();
+                            });
+                            // Track changes on all GPS settings inputs (delegated so DOM order doesn't matter)
+                            $(document).on('change input', '#beacon_interval, #smart_beacon_distance_threshold, #smart_beacon_time_window', function() {
+                                check_gps_settings_changed();
+                            });
+                        </script>
+
+                        <div class="beaconing-options">
+                            <div class="form-group" id="beacon_interval_group" style="display: none;">
+                                <label for="beacon_interval" id="beacon_interval_label" class="form-label">Beacon Interval</label>
+                                <select class="form-select" id="beacon_interval">
+                                    <option value="60">1 minute</option>
+                                    <option value="120">2 minutes</option>
+                                    <option value="300">5 minutes</option>
+                                    <option value="600">10 minutes</option>
+                                    <option value="900">15 minutes</option>
+                                    <option value="1200">20 minutes</option>
+                                    <option value="1800" selected>30 minutes</option>
+                                    <option value="2700">45 minutes</option>
+                                    <option value="3600">1 hour</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="smart_beacon_time_window_group" style="display: none;">
+                                <label for="smart_beacon_time_window" id="smart_beacon_time_window_label" class="form-label">Time Window (seconds)</label>
+                                <input type="number" class="form-control" id="smart_beacon_time_window" placeholder="600">
+                            </div>
+                            <div class="form-group" id="smart_beacon_distance_threshold_group" style="display: none;">
+                                <label for="smart_beacon_distance_threshold" id="smart_beacon_distance_threshold_label" class="form-label">Distance Threshold (meters)</label>
+                                <input type="number" class="form-control" id="smart_beacon_distance_threshold" placeholder="100">
+                            </div>
+                        </div>
+
+                        <div class="beaconing-actions">
+                            <button type="button" class="btn btn-primary" id="send_beacon">
+                                <span class="material-symbols-rounded">location_on</span>
+                                Send Beacon
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="save_beacon_settings">
+                                <span class="material-symbols-rounded">save</span>
+                                Save Settings
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

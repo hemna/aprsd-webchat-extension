@@ -256,18 +256,12 @@ body {
     transform: scale(1.1);
 }
 
-.btn-gps[aria-expanded="true"] .gps-satellite-icon {
-    opacity: 1;
-    filter: brightness(1.2);
-}
-
 /* Dark theme adjustments for GPS icon */
 [data-theme="dark"] .gps-satellite-icon {
     filter: brightness(1.5);
 }
 
-[data-theme="dark"] .btn-gps:hover .gps-satellite-icon,
-[data-theme="dark"] .btn-gps[aria-expanded="true"] .gps-satellite-icon {
+[data-theme="dark"] .btn-gps:hover .gps-satellite-icon {
     filter: brightness(2);
 }
 
@@ -437,17 +431,13 @@ body {
 /* Responsive adjustments for message input */
 @media (max-width: 768px) {
     .message-input-container {
-        padding: var(--spacing-sm);
+        padding: var(--spacing-xs) var(--spacing-sm);
     }
 
     .message-path-select {
         font-size: 0.75rem;
         padding-right: calc(var(--spacing-sm) + 8px);
         min-width: 70px;
-    }
-
-    .theme-toggle-container {
-        gap: var(--spacing-xs);
     }
 }
 
@@ -542,37 +532,7 @@ body {
     font-size: 1.125rem;
 }
 
-/* GPS Panel Styles */
-.gps-panel {
-    margin-top: var(--spacing-md);
-    padding: 0 var(--spacing-lg);
-}
-
-.gps-card {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-}
-
-.gps-header {
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--bg-tertiary);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.gps-header h3 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.gps-body {
-    padding: var(--spacing-lg);
-}
-
+/* GPS Info & Beaconing Styles */
 .gps-info {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -945,6 +905,41 @@ body {
     min-height: 0; /* Important for flexbox scrolling */
 }
 
+/* Welcome Pane — shown when no conversations are open */
+.welcome-pane {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    padding: var(--spacing-lg);
+}
+
+.welcome-content {
+    text-align: center;
+    max-width: 320px;
+}
+
+.welcome-icon {
+    font-size: 3rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+    margin-bottom: var(--spacing-sm);
+}
+
+.welcome-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-sm) 0;
+}
+
+.welcome-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
 /* Footer Styles */
 .wc-footer {
     flex: 0 0 auto;
@@ -1059,6 +1054,34 @@ body {
     z-index: 10;
 }
 
+/* Mobile add button */
+.btn-mobile-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    margin-left: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    flex-shrink: 0;
+}
+
+.btn-mobile-add:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-mobile-add .material-symbols-rounded {
+    font-size: 20px;
+}
+
 /* Mobile delete button */
 .btn-mobile-delete {
     display: flex;
@@ -1167,30 +1190,85 @@ body {
         grid-template-columns: 1fr;
     }
 
+    /* Compact header on small screens */
+    .wc-header {
+        padding: var(--spacing-xs) 0;
+    }
+
+    .wc-header .container-fluid,
+    .wc-info-bar .container-fluid {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+    }
+
     .header-top {
-        gap: var(--spacing-xs);
+        gap: 2px;
         margin-bottom: var(--spacing-xs);
+        padding: 0;
     }
 
     .header-title-row {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: var(--spacing-sm);
     }
 
-    .theme-toggle-container {
-        gap: var(--spacing-xs);
+    .app-title {
+        font-size: 1.25rem;
     }
 
-    .app-title {
-        font-size: 1.5rem;
+    .connection-info {
+        gap: var(--spacing-xs);
+        font-size: 0.8125rem;
+    }
+
+    .callsign-badge {
+        padding: 0.125rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+
+    .theme-toggle-container {
+        gap: 4px;
+    }
+
+    .theme-toggle-container .btn-gps,
+    .theme-toggle-container .btn-tour,
+    .theme-toggle-container .btn-symbol,
+    .theme-toggle {
+        min-width: 34px;
+        width: 34px;
+        height: 34px;
+        padding: 0.25rem;
     }
 
     .tabs-container {
         padding: var(--spacing-xs) var(--spacing-md);
     }
 
-    .wc-header {
-        padding: var(--spacing-sm) 0;
+    /* Compact mobile dropdown */
+    .mobile-chat-selector {
+        padding: var(--spacing-xs) 0;
+    }
+
+    /* Compact info bar */
+    .wc-info-bar {
+        padding: 4px 0;
+    }
+
+    .info-bar-content {
+        padding: 0;
+    }
+
+    .info-message {
+        font-size: 0.8125rem;
+    }
+
+    .radio-indicator {
+        gap: 4px;
+    }
+
+    /* Reduce content top padding */
+    .wc-content {
+        padding-top: var(--spacing-xs);
     }
 }
 
@@ -1215,7 +1293,7 @@ body {
    APRS Symbol Picker Styles
    ============================================================================ */
 
-/* Symbol icon on beacon button - uses 48px sprites scaled to 24px */
+/* Symbol icon in toolbar button - uses 48px sprites scaled to 24px */
 #beacon-symbol-icon {
     width: 24px;
     height: 24px;
@@ -1227,9 +1305,18 @@ body {
     background-position: -264px 0px;
     cursor: pointer;
     vertical-align: middle;
-    margin-right: 4px;
     border-radius: 2px;
     transition: transform var(--transition-base);
+    pointer-events: none; /* Let the parent button handle clicks */
+}
+
+.btn-symbol {
+    padding: 0.5rem;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #beacon-symbol-icon:hover {

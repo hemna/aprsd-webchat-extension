@@ -311,6 +311,16 @@ function init_chat() {
            msgsdiv.html('');
            cleared = true;
        }
+       // Skip APRSThursday messages — they're handled by aprs-thursday.js
+       var to = msg['to_call'] ? msg['to_call'].toUpperCase() : '';
+       if (to === 'ANSRVR' || to === 'APRSPH') {
+           var msgText = msg['message_text'] || '';
+           var upper = msgText.toUpperCase();
+           if (upper.indexOf('HOTG') !== -1) {
+               radio_icon_blink(true);
+               return;
+           }
+       }
        msg["type"] = MSG_TYPE_TX;
        sent_msg(msg);
        radio_icon_blink(true);
@@ -327,6 +337,12 @@ function init_chat() {
            var msgsdiv = $("#msgsTabsDiv");
            msgsdiv.html('')
            cleared = true;
+       }
+       // Skip ANSRVR/APRSPH messages — handled by aprs-thursday.js
+       var fromCall = msg['from_call'] ? msg['from_call'].toUpperCase() : '';
+       if (fromCall === 'ANSRVR' || fromCall === 'APRSPH') {
+           radio_icon_blink(false);
+           return;
        }
        msg["type"] = MSG_TYPE_RX;
        from_msg(msg);
@@ -447,6 +463,9 @@ function init_chat() {
        // Handle add tab
        if (callsign === 'ADD_TAB') {
            $("#location_str").html("");
+           if (typeof stop_aprsthursday_info_bar === 'function') {
+               stop_aprsthursday_info_bar();
+           }
            setTimeout(function() {
                $('#new-callsign-input').focus();
            }, 100);
@@ -456,7 +475,10 @@ function init_chat() {
        // Handle APRSThursday tab
        if (callsign === 'APRSTHURSDAY') {
            selected_tab_callsign = 'APRSTHURSDAY';
-           $("#location_str").html("");
+           // Show alternating subscription/contest status in the info bar
+           if (typeof start_aprsthursday_info_bar === 'function') {
+               start_aprsthursday_info_bar();
+           }
            if (typeof updateSendButton === 'function') {
                updateSendButton();
            }
@@ -475,8 +497,12 @@ function init_chat() {
 
        // Handle callsign tabs - use callsign_list so location updates for every tab (including new tabs with no messages yet)
        if (callsign && callsign !== 'ADD_TAB') {
-           // Only process if this is a valid callsign tab
-           if (callsign_list.hasOwnProperty(callsign)) {
+            // Stop APRSThursday info bar timer when switching away
+            if (typeof stop_aprsthursday_info_bar === 'function') {
+                stop_aprsthursday_info_bar();
+            }
+            // Only process if this is a valid callsign tab
+            if (callsign_list.hasOwnProperty(callsign)) {
                // Set selected_tab_callsign
                selected_tab_callsign = callsign;
 
@@ -627,6 +653,16 @@ function init_messages() {
     console.log(callsign_list);
     console.log(message_list);
     console.log(callsign_location);
+
+    // Clean up ANSRVR/APRSPH/APRSTHURSDAY from persisted callsign_list
+    // These are handled by aprs-thursday.js and should not have regular tabs
+    delete callsign_list['ANSRVR'];
+    delete callsign_list['APRSPH'];
+    delete callsign_list['APRSTHURSDAY'];
+    // Also clean up messages for these callsigns
+    delete message_list['ANSRVR'];
+    delete message_list['APRSPH'];
+    delete message_list['APRSTHURSDAY'];
 
     // Now loop through each callsign and add the tabs
     first_callsign = null;
@@ -822,6 +858,12 @@ function delete_tab(callsign) {
 
 function add_callsign(callsign, msg) {
    /* Ensure a callsign exists in the left hand nav */
+  // Never create regular tabs for ANSRVR/APRSPH (APRSThursday handles these)
+  // or APRSTHURSDAY (has its own special tab)
+  var upper = callsign ? callsign.toUpperCase() : '';
+  if (upper === 'ANSRVR' || upper === 'APRSPH' || upper === 'APRSTHURSDAY') {
+      return false;
+  }
   if (callsign in callsign_list) {
       return false
   }
@@ -1199,17 +1241,17 @@ function update_info_bar(show_button=false) {
     // the info bar's html to include the get location buttton
     if (show_button) {
         html = "<button onclick='call_callsign_location();' id='get_location_button' style='margin-left:2px;padding:2px 8px;font-size: .8em;' type='button' class='btn btn-primary' disabled><span id='location_spinner' class='d-none spinner-border spinner-border-sm' role='status' aria-hidden='true' style='font-size: .8em'></span>Locate</button>&nbsp;<span id='location_str' style='font-size: .8rem'></span>"
-        //html = "<span style='border: 1px solid reload_popovers;font-size: .8em;'>ass</span>";
+        // Hide welcome pane, show tab content
+        $("#welcome_pane").hide();
     } else {
-        // show the welcome message instead.
-        html = "<span id='welcome_message' style='padding-left: 5px;font-size: .9rem'>Welcome to APRSD WebChat. Click the <strong>+</strong> tab above to add a callsign and start chatting.</span>"
+        // No tabs — clear info bar, show welcome pane
+        html = "";
+        $("#welcome_pane").show();
     }
 
     $("#info_bar_container").html(html);
     if (show_button) {
         $("#get_location_button").prop('disabled', !is_get_location_available());
-    } else {
-        $("#get_location_button").prop('disabled', true);
     }
 }
 
@@ -1370,12 +1412,17 @@ function update_mobile_dropdown() {
             var isActive = $(this).hasClass('active');
             var displayText = callsign;
 
+            // Use group icon prefix for APRSThursday
+            if (callsign === 'APRSTHURSDAY') {
+                displayText = '\uD83D\uDC65 #APRSThursday';
+            }
+
             // Add unread count if present
             var badge = $(this).find('.badge:not(.visually-hidden)');
             if (badge.length > 0) {
                 var count = parseInt(badge.text()) || 0;
                 if (count > 0) {
-                    displayText = callsign + ' (' + count + ')';
+                    displayText += ' (' + count + ')';
                     totalUnread += count;
                 }
             }
@@ -1435,6 +1482,11 @@ function init_mobile_dropdown() {
         }
         // Update delete button state
         update_mobile_delete_button();
+    });
+
+    // Handle mobile add button click
+    $('#mobileAddChat').on('click', function() {
+        handle_add_tab_click();
     });
 
     // Handle mobile delete button click

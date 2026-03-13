@@ -25,6 +25,8 @@ var aprsThursdaySubscribedAt = null;  // Date object or null
 var aprsThursdayExpiresAt = null;     // Date object or null
 var aprsThursdayLocationCache = {};   // callsign -> location data
 var aprsThursdayMessages = [];        // Array of received HOTG messages
+var aprsThursdayInfoBarPhase = 0;     // 0 = subscription, 1 = contest time
+var aprsThursdayInfoBarTimer = null;  // interval handle for alternation
 
 // =====================================================
 // Initialization
@@ -67,18 +69,86 @@ function init_aprs_thursday() {
 // =====================================================
 
 function toggle_aprs_thursday() {
-    aprsThursdayEnabled = !aprsThursdayEnabled;
-
-    update_toggle_button(aprsThursdayEnabled);
-
-    if (aprsThursdayEnabled) {
-        create_aprsthursday_tab(true);
-    } else {
+    if (aprsThursdayEnabled && aprsThursdaySubscribed) {
+        // Subscribed — show the Leave confirmation modal
+        show_aprsthursday_leave_modal();
+    } else if (aprsThursdayEnabled && !aprsThursdaySubscribed) {
+        // Enabled but not subscribed — disable and remove tab
+        aprsThursdayEnabled = false;
+        update_toggle_button(false);
         remove_aprsthursday_tab();
-        // Clear subscription state when disabling
-        aprsThursdaySubscribed = false;
-        aprsThursdaySubscribedAt = null;
-        aprsThursdayExpiresAt = null;
+        save_aprsthursday_state();
+    } else {
+        // Not enabled — show the Join modal
+        show_aprsthursday_join_modal();
+    }
+}
+
+/**
+ * Show the Leave APRSThursday confirmation modal.
+ */
+function show_aprsthursday_leave_modal() {
+    var modal = new bootstrap.Modal(document.getElementById('aprsthursdayLeaveModal'));
+    modal.show();
+}
+
+/**
+ * Show the Join APRSThursday modal dialog.
+ * Updates the Thursday banner and resets the form.
+ */
+function show_aprsthursday_join_modal() {
+    // Update Thursday banner inside modal
+    var banner = $('#join_thursday_banner');
+    if (is_aprs_thursday_utc()) {
+        banner.html('<span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">celebration</span> It\'s APRSThursday!');
+        banner.removeClass('thursday-banner-warning').addClass('thursday-banner-active');
+    } else {
+        banner.html('<span class="material-symbols-rounded" style="font-size:16px;vertical-align:middle;">info</span> APRSThursday runs Thursdays 00:00&ndash;23:59 UTC');
+        banner.removeClass('thursday-banner-active').addClass('thursday-banner-warning');
+    }
+
+    // Reset form
+    $('#aprsthursday_join_msg').val('');
+    $('input[name="join_aprsthursday_mode"][value="' + aprsThursdayMode + '"]').prop('checked', true);
+
+    // Show modal
+    var modal = new bootstrap.Modal(document.getElementById('aprsthursdayJoinModal'));
+    modal.show();
+
+    // Focus the message input after modal is shown
+    $('#aprsthursdayJoinModal').one('shown.bs.modal', function() {
+        $('#aprsthursday_join_msg').focus();
+    });
+}
+
+/**
+ * Called after user joins via modal. Enables APRSThursday, creates
+ * the tab, and shows the user's join message in it.
+ */
+function complete_aprsthursday_join(message, mode) {
+    // Close the modal
+    var modalEl = document.getElementById('aprsthursdayJoinModal');
+    var modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    // Enable APRSThursday
+    aprsThursdayEnabled = true;
+    aprsThursdayMode = mode;
+    update_toggle_button(true);
+
+    // Create and activate the tab
+    create_aprsthursday_tab(true);
+
+    // Show the user's own join message in the tab
+    if (message) {
+        var myCallsign = get_my_callsign();
+        var outgoing = {
+            sender: myCallsign,
+            message: message,
+            timestamp: new Date().toISOString(),
+            raw_packet: ''
+        };
+        handle_aprsthursday_message(outgoing);
     }
 
     save_aprsthursday_state();
@@ -110,21 +180,20 @@ function create_aprsthursday_tab(activate) {
     var tab_id = "msgsAPRSTHURSDAY";
     var tab_li_id = "msgsAPRSTHURSDAYLi";
     var tab_content_id = "msgsAPRSTHURSDAYContent";
-    var active_str = activate ? "active" : "";
 
-    // Create tab button with accent color class
+    // Always create inactive — Bootstrap Tab API will activate properly
     var item_html = '<li class="nav-item" role="presentation" id="' + tab_li_id + '">';
-    item_html += '<button callsign="APRSTHURSDAY" class="nav-link aprsthursday-tab ' + active_str + '" id="' + tab_id + '" ';
+    item_html += '<button callsign="APRSTHURSDAY" class="nav-link aprsthursday-tab" id="' + tab_id + '" ';
     item_html += 'data-bs-toggle="tab" data-bs-target="#' + tab_content_id + '" type="button" role="tab" ';
-    item_html += 'aria-controls="APRSTHURSDAY" aria-selected="' + (activate ? 'true' : 'false') + '">';
-    item_html += '<span class="aprsthursday-tab-icon material-symbols-rounded" style="font-size:14px;">event</span> ';
+    item_html += 'aria-controls="APRSTHURSDAY" aria-selected="false">';
+    item_html += '<span class="aprsthursday-tab-icon material-symbols-rounded" style="font-size:14px;">groups</span> ';
     item_html += '#APRSThu';
     item_html += '</button></li>';
 
     callsignTabs.append(item_html);
 
-    // Create tab content with control panel
-    create_aprsthursday_tab_content(activate);
+    // Create tab content (always inactive — activation handled below)
+    create_aprsthursday_tab_content();
 
     // Re-add the "+" tab
     ensure_add_tab();
@@ -142,13 +211,12 @@ function create_aprsthursday_tab(activate) {
     }
 }
 
-function create_aprsthursday_tab_content(active) {
+function create_aprsthursday_tab_content() {
     var callsignTabsContent = $("#msgsTabContent");
     var tab_content_id = "msgsAPRSTHURSDAYContent";
     var wrapper_id = "msgsAPRSTHURSDAYSpeechWrapper";
-    var active_str = active ? "show active" : "";
 
-    var html = '<div class="tab-pane fade ' + active_str + '" id="' + tab_content_id + '" role="tabpanel" aria-labelledby="msgsAPRSTHURSDAY">';
+    var html = '<div class="tab-pane fade" id="' + tab_content_id + '" role="tabpanel" aria-labelledby="msgsAPRSTHURSDAY">';
 
     // Collapsible control panel
     html += '<div class="aprsthursday-panel">';
@@ -175,10 +243,8 @@ function create_aprsthursday_tab_content(active) {
     html += '        <label class="aprsthursday-radio"><input type="radio" name="aprsthursday_mode" value="logonly"> Log-only</label>';
     html += '      </div>';
 
-    // Action buttons
+    // Action buttons (Leave only - Join is done via modal)
     html += '      <div class="aprsthursday-actions">';
-    html += '        <button type="button" class="btn btn-sm btn-aprsthursday-join" id="btn_join_net">Join Net</button>';
-    html += '        <button type="button" class="btn btn-sm btn-aprsthursday-silent" id="btn_silent_subscribe">Silent Subscribe</button>';
     html += '        <button type="button" class="btn btn-sm btn-aprsthursday-leave" id="btn_leave_net">Leave Net</button>';
     html += '      </div>';
 
@@ -253,56 +319,112 @@ function activate_aprsthursday_tab() {
 // =====================================================
 
 function init_aprsthursday_controls() {
-    // Mode selector
+    // Mode selector (in tab control panel)
     $(document).on('change', 'input[name="aprsthursday_mode"]', function() {
         aprsThursdayMode = $(this).val();
         save_aprsthursday_state();
     });
 
-    // Join Net button
-    $(document).on('click', '#btn_join_net', function() {
-        var message = $('#message').val().trim();
+    // --- Modal controls ---
+
+    // Join Net button (in modal)
+    $(document).on('click', '#modal_join_net', function() {
+        var message = $('#aprsthursday_join_msg').val().trim();
         if (!message) {
-            // Prompt for a message
-            raise_warning("Enter a check-in message in the message box below, then click Join Net.");
-            $('#message').focus();
+            $('#aprsthursday_join_msg').addClass('is-invalid');
+            $('#aprsthursday_join_msg').focus();
             return;
         }
-        send_aprsthursday_action('join', message, aprsThursdayMode);
-        $('#message').val('');
-        $('#send_msg').prop('disabled', true);
+        $('#aprsthursday_join_msg').removeClass('is-invalid');
+
+        var mode = $('input[name="join_aprsthursday_mode"]:checked').val() || 'broadcast';
+
+        // Send the join action
+        send_aprsthursday_action('join', message, mode);
 
         // Update subscription state for broadcast mode
-        if (aprsThursdayMode === 'broadcast') {
+        if (mode === 'broadcast') {
             aprsThursdaySubscribed = true;
             aprsThursdaySubscribedAt = new Date();
             aprsThursdayExpiresAt = new Date(Date.now() + SUBSCRIPTION_DURATION_MS);
-            update_subscription_status();
-            save_aprsthursday_state();
         }
+
+        // Complete the join — creates tab with message
+        complete_aprsthursday_join(message, mode);
     });
 
-    // Silent Subscribe button
-    $(document).on('click', '#btn_silent_subscribe', function() {
+    // Silent Subscribe button (in modal)
+    $(document).on('click', '#modal_silent_subscribe', function() {
+        var mode = $('input[name="join_aprsthursday_mode"]:checked').val() || 'broadcast';
+
         send_aprsthursday_action('silent_subscribe', '', 'broadcast');
         aprsThursdaySubscribed = true;
         aprsThursdaySubscribedAt = new Date();
         aprsThursdayExpiresAt = new Date(Date.now() + SUBSCRIPTION_DURATION_MS);
-        update_subscription_status();
-        save_aprsthursday_state();
+
+        // Complete the join — creates tab without a message
+        complete_aprsthursday_join('', mode);
     });
 
-    // Leave Net button
+    // Quick message templates in the modal
+    $(document).on('click', '.aprsthursday-join-tpl', function() {
+        var template = $(this).data('template');
+        var message = '';
+        var myCallsign = get_my_callsign();
+
+        switch (template) {
+            case 'location':
+                var location = prompt("Enter your location (city, state, grid, etc.):");
+                if (location) {
+                    message = "Checking in from " + location;
+                }
+                break;
+            case 'greeting':
+                message = "73 de " + myCallsign;
+                break;
+            case 'happy':
+                message = "Happy APRSThursday!";
+                break;
+        }
+
+        if (message) {
+            $('#aprsthursday_join_msg').val(message);
+            $('#aprsthursday_join_msg').removeClass('is-invalid');
+            $('#aprsthursday_join_msg').focus();
+        }
+    });
+
+    // Allow Enter key in modal message input to submit
+    $(document).on('keydown', '#aprsthursday_join_msg', function(e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            $('#modal_join_net').click();
+        }
+    });
+
+    // --- Tab controls ---
+
+    // Leave Net button (in tab control panel)
     $(document).on('click', '#btn_leave_net', function() {
+        show_aprsthursday_leave_modal();
+    });
+
+    // Confirm Leave button (in leave modal)
+    $(document).on('click', '#modal_confirm_leave', function() {
         send_aprsthursday_action('unsubscribe', '', 'broadcast');
         aprsThursdaySubscribed = false;
         aprsThursdaySubscribedAt = null;
         aprsThursdayExpiresAt = null;
         update_subscription_status();
         save_aprsthursday_state();
+
+        // Close the modal but keep the tab open
+        var modalEl = document.getElementById('aprsthursdayLeaveModal');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
     });
 
-    // Quick message templates
+    // Quick message templates (in tab control panel)
     $(document).on('click', '.aprsthursday-tpl', function() {
         var template = $(this).data('template');
         insert_quick_template(template);
@@ -675,6 +797,105 @@ function update_subscription_status() {
 function periodic_aprsthursday_check() {
     update_thursday_banner();
     update_subscription_status();
+    // Info bar updates are handled by its own timer — no need to call here
+}
+
+/**
+ * Start the info bar alternation timer when the APRSThursday tab is active.
+ */
+function start_aprsthursday_info_bar() {
+    // Render immediately
+    update_aprsthursday_info_bar();
+    // Stop any existing timer
+    stop_aprsthursday_info_bar();
+    // Alternate every 5 seconds
+    aprsThursdayInfoBarTimer = setInterval(function() {
+        aprsThursdayInfoBarPhase = (aprsThursdayInfoBarPhase + 1) % 2;
+        update_aprsthursday_info_bar();
+    }, 5000);
+}
+
+/**
+ * Stop the info bar alternation timer.
+ */
+function stop_aprsthursday_info_bar() {
+    if (aprsThursdayInfoBarTimer) {
+        clearInterval(aprsThursdayInfoBarTimer);
+        aprsThursdayInfoBarTimer = null;
+    }
+}
+
+/**
+ * Calculate time remaining in the current APRSThursday event (Thursday UTC).
+ * Returns {hours, mins} or null if it's not Thursday UTC.
+ */
+function get_contest_time_remaining() {
+    var now = new Date();
+    if (now.getUTCDay() !== 4) {
+        // Not Thursday — calculate time until next Thursday
+        return null;
+    }
+    // End of Thursday UTC is midnight Friday UTC
+    var endOfThursday = new Date(Date.UTC(
+        now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),
+        23, 59, 59, 999
+    ));
+    var remaining = endOfThursday.getTime() - now.getTime();
+    if (remaining <= 0) return null;
+    var hours = Math.floor(remaining / (60 * 60 * 1000));
+    var mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+    return { hours: hours, mins: mins };
+}
+
+/**
+ * Update the info bar with APRSThursday status.
+ * Alternates between subscription status and contest time remaining.
+ */
+function update_aprsthursday_info_bar() {
+    var html = '<span style="padding-left:5px;font-size:.85rem;">';
+    html += '<strong style="color:#e65100;">APRSThursday</strong> &mdash; ';
+
+    if (aprsThursdayInfoBarPhase === 0) {
+        // Phase 0: Subscription status
+        if (aprsThursdaySubscribed) {
+            html += '<span style="color:#4caf50;">Subscribed</span>';
+            if (aprsThursdayExpiresAt) {
+                var remaining = aprsThursdayExpiresAt.getTime() - Date.now();
+                if (remaining > 0) {
+                    var hours = Math.floor(remaining / (60 * 60 * 1000));
+                    var mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+                    if (hours > 0) {
+                        html += ' <span style="opacity:0.7;">(sub expires in ~' + hours + 'h ' + mins + 'm)</span>';
+                    } else {
+                        html += ' <span style="opacity:0.7;">(sub expires in ~' + mins + 'm)</span>';
+                    }
+                }
+            }
+            html += ' &bull; Mode: <strong>' + escapeHtml(aprsThursdayMode === 'logonly' ? 'Log-only' : 'Broadcast') + '</strong>';
+        } else {
+            html += '<span style="opacity:0.6;">Not subscribed</span>';
+        }
+    } else {
+        // Phase 1: Contest time remaining
+        var contestTime = get_contest_time_remaining();
+        if (contestTime) {
+            html += '<span style="color:#4caf50;">Event active</span> ';
+            if (contestTime.hours > 0) {
+                html += '<span style="opacity:0.7;">(ends in ' + contestTime.hours + 'h ' + contestTime.mins + 'm)</span>';
+            } else {
+                html += '<span style="opacity:0.7;">(ends in ' + contestTime.mins + 'm)</span>';
+            }
+        } else {
+            // Not Thursday — show time until next Thursday
+            var now = new Date();
+            var daysUntil = (4 - now.getUTCDay() + 7) % 7;
+            if (daysUntil === 0) daysUntil = 7; // shouldn't happen since we checked above
+            html += '<span style="opacity:0.6;">Next event in ' + daysUntil + ' day' + (daysUntil !== 1 ? 's' : '') + ' (Thursday UTC)</span>';
+        }
+    }
+
+    html += '</span>';
+    $("#info_bar_container").html(html);
 }
 
 // =====================================================

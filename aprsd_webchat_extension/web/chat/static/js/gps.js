@@ -356,6 +356,9 @@ function init_gps() {
     // Beacon highlight for stale beacons - disabled for now to avoid confusing users
     // TODO: Re-enable when ready: update_beacon_highlight();
     // TODO: Re-enable when ready: start_beacon_highlight_timer();
+
+    // Initialize GPS modal
+    init_gps_modal();
 }
 
 function update_gps_info_box(latitude, longitude, altitude, speed, course, time) {
@@ -604,4 +607,27 @@ function sendPosition(position) {
       'symbol': symbol
   }
   socket.emit("gps", msg);
+}
+
+// ============================================================================
+// GPS Modal — GPS panel is always shown in a modal dialog
+// ============================================================================
+
+var gps_modal_instance = null;
+
+/**
+ * Initialize the GPS modal behavior.
+ * GPS button click opens the modal. Called once from init_gps().
+ */
+function init_gps_modal() {
+    var gpsBtn = document.getElementById('btn_gps_modal');
+    var gpsModalEl = document.getElementById('gpsModal');
+    if (!gpsBtn || !gpsModalEl) return;
+
+    gps_modal_instance = new bootstrap.Modal(gpsModalEl);
+
+    gpsBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        gps_modal_instance.show();
+    });
 }

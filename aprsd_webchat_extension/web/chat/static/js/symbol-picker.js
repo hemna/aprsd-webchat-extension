@@ -544,14 +544,20 @@ function init_symbol_picker() {
         onSymbolSelect(table, symbol, description);
     });
 
-    // Click handler to open picker from beacon button symbol
+    // Click handler to open picker from toolbar symbol button
+    $(document).on('click', '#btn_symbol_picker', function(e) {
+        e.stopPropagation();
+        openSymbolPicker();
+    });
+
+    // Also handle direct clicks on the icon (in case pointer-events changes)
     $(document).on('click', '#beacon-symbol-icon', function(e) {
         e.stopPropagation();
         openSymbolPicker();
     });
 
-    // Keyboard handler for beacon symbol icon (Enter/Space to open picker)
-    $(document).on('keydown', '#beacon-symbol-icon', function(e) {
+    // Keyboard handler for symbol button (Enter/Space to open picker)
+    $(document).on('keydown', '#btn_symbol_picker', function(e) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             e.stopPropagation();
