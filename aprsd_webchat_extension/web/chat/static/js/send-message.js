@@ -1150,10 +1150,10 @@ function ack_msg(msg) {
    message_list[callsign][id]['ack'] = true;
    ack_id = "ack_" + id
 
-   if (msg['ack'] == true) {
-       var ack_div = $('#' + ack_id);
-       ack_div.replaceWith('<span class="material-symbols-rounded md-10" id="' + ack_id + '">thumb_up</span>');
-   }
+    if (msg['ack'] == true) {
+        var ack_div = $('#' + ack_id);
+        ack_div.replaceWith('<span class="material-symbols-rounded md-10" id="' + escapeHtmlAttribute(ack_id) + '">thumb_up</span>');
+    }
 
    //$('.ui.accordion').accordion('refresh');
    save_data();

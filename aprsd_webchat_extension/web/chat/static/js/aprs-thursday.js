@@ -253,7 +253,7 @@ function create_aprsthursday_tab_content() {
     html += '        <span class="aprsthursday-templates-label">Quick Messages:</span>';
     html += '        <div class="aprsthursday-template-buttons">';
     html += '          <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-tpl" data-template="location">Checking in from...</button>';
-    html += '          <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-tpl" data-template="greeting">73 de ' + get_my_callsign() + '</button>';
+    html += '          <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-tpl" data-template="greeting">73 de ' + escapeHtml(get_my_callsign()) + '</button>';
     html += '          <button type="button" class="btn btn-sm btn-outline-secondary aprsthursday-tpl" data-template="happy">Happy APRSThursday!</button>';
     html += '        </div>';
     html += '      </div>';
@@ -590,7 +590,8 @@ $(document).on('click', '.aprsthursday-fetch-location', function(e) {
 
             // Update ALL location displays for this callsign
             var locHtml = build_sender_location_html(callsign.toUpperCase(), msg);
-            $('[id="aprsthursday-loc-' + callsign.toUpperCase() + '"]').html(locHtml);
+            var safeCallsign = callsign.toUpperCase().replace(/[^A-Z0-9\-]/g, '');
+            $('[id="aprsthursday-loc-' + safeCallsign + '"]').html(locHtml);
 
             // Remove this handler
             socket.off("callsign_location", handler);
@@ -916,6 +917,10 @@ function load_aprsthursday_state() {
     aprsThursdayEnabled = localStorage.getItem('aprsd-webchat-aprsthursday-enabled') === 'true';
     aprsThursdaySubscribed = localStorage.getItem('aprsd-webchat-aprsthursday-subscribed') === 'true';
     aprsThursdayMode = localStorage.getItem('aprsd-webchat-aprsthursday-mode') || 'broadcast';
+    // Validate mode value to prevent selector injection from tampered localStorage
+    if (aprsThursdayMode !== 'broadcast' && aprsThursdayMode !== 'logonly') {
+        aprsThursdayMode = 'broadcast';
+    }
 
     var subAt = localStorage.getItem('aprsd-webchat-aprsthursday-subscribed-at');
     aprsThursdaySubscribedAt = subAt ? new Date(subAt) : null;
