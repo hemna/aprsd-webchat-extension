@@ -455,45 +455,46 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
                 callsign_locations[callsign] = location_data
                 send_location_data_to_browser(location_data)
                 return
-        # Check for APRSThursday HOTG messages
+        # Check for APRSThursday HOTG messages (only when feature is enabled)
         message_text = packet.get("message_text", "")
-        if is_hotg_message(from_call, message_text):
-            parsed = parse_hotg_message(from_call, message_text)
-            if parsed:
-                LOG.info(
-                    f"APRSThursday HOTG message from {parsed['sender']}: {parsed['message']}"
-                )
+        if CONF.aprsd_webchat_extension.enable_aprsthursday:
+            if is_hotg_message(from_call, message_text):
+                parsed = parse_hotg_message(from_call, message_text)
+                if parsed:
+                    LOG.info(
+                        f"APRSThursday HOTG message from {parsed['sender']}: {parsed['message']}"
+                    )
+                    self.socketio.emit(
+                        "aprsthursday_message",
+                        {
+                            "sender": parsed["sender"],
+                            "message": parsed["message"],
+                            "timestamp": str(
+                                datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            ),
+                            "raw_packet": packet.get("raw", ""),
+                        },
+                        namespace="/sendmsg",
+                    )
+                return
+            # Check for ANSRVR/APRSPH confirmation messages
+            if is_ansrvr_confirmation(from_call, message_text):
+                lower = message_text.lower()
+                if "unsubscribed" in lower or "left" in lower:
+                    conf_type = "unsubscribed"
+                elif "subscribed" in lower or "joined" in lower:
+                    conf_type = "subscribed"
+                else:
+                    conf_type = "logged"
                 self.socketio.emit(
-                    "aprsthursday_message",
+                    "aprsthursday_confirmation",
                     {
-                        "sender": parsed["sender"],
-                        "message": parsed["message"],
-                        "timestamp": str(
-                            datetime.datetime.now(datetime.timezone.utc).isoformat()
-                        ),
-                        "raw_packet": packet.get("raw", ""),
+                        "type": conf_type,
+                        "message": message_text,
                     },
                     namespace="/sendmsg",
                 )
-            return
-        # Check for ANSRVR/APRSPH confirmation messages
-        if is_ansrvr_confirmation(from_call, message_text):
-            lower = message_text.lower()
-            if "unsubscribed" in lower or "left" in lower:
-                conf_type = "unsubscribed"
-            elif "subscribed" in lower or "joined" in lower:
-                conf_type = "subscribed"
-            else:
-                conf_type = "logged"
-            self.socketio.emit(
-                "aprsthursday_confirmation",
-                {
-                    "type": conf_type,
-                    "message": message_text,
-                },
-                namespace="/sendmsg",
-            )
-            return
+                return
         elif (
             from_call not in callsign_locations
             and from_call not in callsign_no_track
@@ -768,6 +769,7 @@ def index():
         is_digipi=CONF.is_digipi,
         beaconing_enabled=CONF.enable_beacon,
         default_path=default_path,
+        aprsthursday_enabled=CONF.aprsd_webchat_extension.enable_aprsthursday,
     )
 
 
@@ -936,6 +938,10 @@ class SendMessageNamespace(Namespace):
                 - message: Optional message text
                 - mode: 'broadcast' or 'logonly'
         """
+        if not CONF.aprsd_webchat_extension.enable_aprsthursday:
+            LOG.warning("APRSThursday feature is disabled, ignoring request")
+            return
+
         global socketio
         LOG.debug(f"WS: on_aprsthursday_send {data}")
         action = data.get("action", "")

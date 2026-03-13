@@ -37,7 +37,9 @@
     <script src="/static/js/gps.js"></script>
     <script src="/static/js/symbol-picker.js"></script>
     <script src="/static/js/send-message.js"></script>
+    {% if aprsthursday_enabled %}
     <script src="/static/js/aprs-thursday.js"></script>
+    {% endif %}
     <script src="/static/js/tour.js"></script>
 
     <script type="text/javascript">
@@ -385,11 +387,13 @@
                 <div class="info-bar-content">
                     <div id="info_bar_container" class="info-message"></div>
                     <div class="radio-indicator">
+                        {% if aprsthursday_enabled %}
                         <button type="button" class="btn-aprsthursday-toggle" id="aprsthursday_toggle"
                                 data-tooltip="Toggle APRSThursday mode" data-tooltip-position="bottom"
                                 aria-label="Toggle APRSThursday mode" aria-pressed="false">
                             <span class="material-symbols-rounded">groups</span>
                         </button>
+                        {% endif %}
                         <button type="button" class="btn-raw-toggle" id="raw_packet_toggle"
                                 data-tooltip="Toggle raw packet view" data-tooltip-position="bottom"
                                 aria-label="Toggle raw packet view" aria-pressed="false">
@@ -507,6 +511,7 @@
         </div>
     </div>
 
+    {% if aprsthursday_enabled %}
     <!-- APRSThursday Join Modal -->
     <div class="modal fade" id="aprsthursdayJoinModal" tabindex="-1" aria-labelledby="aprsthursdayJoinModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -574,6 +579,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- GPS & Beaconing Modal -->
     <div class="modal fade" id="gpsModal" tabindex="-1" aria-labelledby="gpsModalLabel" aria-hidden="true">

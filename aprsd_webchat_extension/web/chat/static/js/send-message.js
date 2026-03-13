@@ -311,9 +311,9 @@ function init_chat() {
            msgsdiv.html('');
            cleared = true;
        }
-       // Skip APRSThursday messages — they're handled by aprs-thursday.js
+       // Skip APRSThursday HOTG messages when feature is enabled — handled by aprs-thursday.js
        var to = msg['to_call'] ? msg['to_call'].toUpperCase() : '';
-       if (to === 'ANSRVR' || to === 'APRSPH') {
+       if (typeof init_aprs_thursday === 'function' && (to === 'ANSRVR' || to === 'APRSPH')) {
            var msgText = msg['message_text'] || '';
            var upper = msgText.toUpperCase();
            if (upper.indexOf('HOTG') !== -1) {
@@ -338,9 +338,9 @@ function init_chat() {
            msgsdiv.html('')
            cleared = true;
        }
-       // Skip ANSRVR/APRSPH messages — handled by aprs-thursday.js
+       // Skip ANSRVR/APRSPH messages when feature is enabled — handled by aprs-thursday.js
        var fromCall = msg['from_call'] ? msg['from_call'].toUpperCase() : '';
-       if (fromCall === 'ANSRVR' || fromCall === 'APRSPH') {
+       if (typeof init_aprs_thursday === 'function' && (fromCall === 'ANSRVR' || fromCall === 'APRSPH')) {
            radio_icon_blink(false);
            return;
        }
@@ -655,14 +655,15 @@ function init_messages() {
     console.log(callsign_location);
 
     // Clean up ANSRVR/APRSPH/APRSTHURSDAY from persisted callsign_list
-    // These are handled by aprs-thursday.js and should not have regular tabs
-    delete callsign_list['ANSRVR'];
-    delete callsign_list['APRSPH'];
-    delete callsign_list['APRSTHURSDAY'];
-    // Also clean up messages for these callsigns
-    delete message_list['ANSRVR'];
-    delete message_list['APRSPH'];
-    delete message_list['APRSTHURSDAY'];
+    // when APRSThursday feature is enabled (handled by aprs-thursday.js)
+    if (typeof init_aprs_thursday === 'function') {
+        delete callsign_list['ANSRVR'];
+        delete callsign_list['APRSPH'];
+        delete callsign_list['APRSTHURSDAY'];
+        delete message_list['ANSRVR'];
+        delete message_list['APRSPH'];
+        delete message_list['APRSTHURSDAY'];
+    }
 
     // Now loop through each callsign and add the tabs
     first_callsign = null;
@@ -799,8 +800,8 @@ function create_callsign_tab_content(callsign, active=false) {
 }
 
 function delete_tab(callsign) {
-    // Prevent deleting APRSThursday tab (must toggle off instead)
-    if (callsign === 'APRSTHURSDAY') {
+    // Prevent deleting APRSThursday tab when feature is enabled (must toggle off instead)
+    if (typeof init_aprs_thursday === 'function' && callsign === 'APRSTHURSDAY') {
         raise_warning("Use the APRSThursday toggle button to disable this feature.");
         return;
     }
@@ -858,10 +859,10 @@ function delete_tab(callsign) {
 
 function add_callsign(callsign, msg) {
    /* Ensure a callsign exists in the left hand nav */
-  // Never create regular tabs for ANSRVR/APRSPH (APRSThursday handles these)
-  // or APRSTHURSDAY (has its own special tab)
+  // When APRSThursday feature is enabled, never create regular tabs for
+  // ANSRVR/APRSPH/APRSTHURSDAY (has its own special tab)
   var upper = callsign ? callsign.toUpperCase() : '';
-  if (upper === 'ANSRVR' || upper === 'APRSPH' || upper === 'APRSTHURSDAY') {
+  if (typeof init_aprs_thursday === 'function' && (upper === 'ANSRVR' || upper === 'APRSPH' || upper === 'APRSTHURSDAY')) {
       return false;
   }
   if (callsign in callsign_list) {
