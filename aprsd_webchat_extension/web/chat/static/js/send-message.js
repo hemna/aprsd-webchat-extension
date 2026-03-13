@@ -1039,7 +1039,7 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
         if (acked) {
             msg_html += '<span class="material-symbols-rounded md-10" id="' + escaped_ack_id + '">thumb_up</span>';
         } else {
-            msg_html += '<span class="material-symbols-rounded md-10" id="' + escaped_ack_id + '">thumb_down</span>';
+            msg_html += '<span class="ack-spinner" id="' + escaped_ack_id + '"><span class="spinner-border spinner-border-sm" role="status" aria-label="Waiting for acknowledgment"></span></span>';
         }
     }
     msg_html += "</p>";
@@ -1151,7 +1151,7 @@ function ack_msg(msg) {
 
    if (msg['ack'] == true) {
        var ack_div = $('#' + ack_id);
-       ack_div.html('thumb_up');
+       ack_div.replaceWith('<span class="material-symbols-rounded md-10" id="' + ack_id + '">thumb_up</span>');
    }
 
    //$('.ui.accordion').accordion('refresh');

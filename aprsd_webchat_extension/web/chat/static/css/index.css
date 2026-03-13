@@ -9,11 +9,11 @@
 
     /* Background Colors - Light Theme */
     --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-tertiary: #f1f5f9;
+    --bg-secondary: #e2e8f0;
+    --bg-tertiary: #e2e8f0;
     --bg-header: #ffffff;
-    --bg-info: #f8fafc;
-    --bg-footer: #f8fafc;
+    --bg-info: #e2e8f0;
+    --bg-footer: #e2e8f0;
 
     /* Text Colors - Light Theme */
     --text-primary: #1e293b;
@@ -22,7 +22,7 @@
     --text-inverse: #ffffff;
 
     /* Border Colors - Light Theme */
-    --border-color: #e2e8f0;
+    --border-color: #cbd5e1;
     --border-hover: #cbd5e1;
 
     /* Shadow - Light Theme */

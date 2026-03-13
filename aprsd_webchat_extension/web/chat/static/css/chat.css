@@ -4,12 +4,12 @@
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
     --bg-bubble-sent: #2563eb;
-    --bg-bubble-received: #f1f5f9;
+    --bg-bubble-received: #e2e8f0;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
     --text-inverse: #ffffff;
-    --border-color: #e2e8f0;
+    --border-color: #cbd5e1;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --radius-md: 0.75rem;
@@ -40,7 +40,7 @@ input[type=search]::-webkit-search-cancel-button {
 .speech-wrapper {
     padding: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     flex: 1 1 auto;
     min-height: 0;
     max-height: 100%;
@@ -199,6 +199,28 @@ input[type=search]::-webkit-search-cancel-button {
 
 .bubble.alt .material-symbols-rounded:hover {
     color: rgba(255, 255, 255, 1);
+}
+
+.bubble.alt .material-symbols-rounded.md-10,
+.bubble.alt .material-symbols-rounded.md-10:hover {
+    color: #22c55e;
+}
+
+/* Ack spinner for unacknowledged sent messages */
+.ack-spinner {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.ack-spinner .spinner-border-sm {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-width: 0.12em;
+}
+
+.bubble.alt .ack-spinner .spinner-border {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 /* Popover Styles */
