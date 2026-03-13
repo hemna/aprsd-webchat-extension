@@ -44,6 +44,8 @@ notify_queue = queue.Queue()
 # List of callsigns that we don't want to track/fetch their location
 callsign_no_track = [
     "APDW16",
+    "ANSRVR",
+    "APRSPH",
     "BLN0",
     "BLN1",
     "BLN2",
@@ -336,6 +338,85 @@ def populate_callsign_location(callsign, data=None):
         )
 
 
+def is_hotg_message(from_call, message_text):
+    """Check if a message is an ANSRVR HOTG group relay.
+
+    Matches either:
+    - Source is ANSRVR and content contains ':' (traditional relay format)
+    - Content starts with 'N:HOTG' (ANSRVR notification relay format)
+    """
+    if not message_text:
+        return False
+    # Traditional ANSRVR relay: source=ANSRVR, content="CALL: msg"
+    if from_call and from_call.upper() == "ANSRVR" and ":" in message_text:
+        return True
+    # ANSRVR notification relay: content starts with N:HOTG
+    upper = message_text.upper()
+    if upper.startswith("N:HOTG ") or upper.startswith("N:HOTG:"):
+        return True
+    return False
+
+
+def parse_hotg_message(from_call, message_text):
+    """Parse an ANSRVR HOTG relay message.
+
+    Returns dict with 'sender' and 'message' keys, or None if parse fails.
+    Two formats:
+    - Traditional: source=ANSRVR, content="SENDERCALL: their message"
+    - Notification: content="N:HOTG their message" (source is original sender)
+    """
+    if not message_text:
+        return None
+
+    upper = message_text.upper()
+
+    # Try notification format first: N:HOTG message or N:HOTG:message
+    for prefix in ["N:HOTG ", "N:HOTG:"]:
+        if upper.startswith(prefix):
+            content = message_text[len(prefix) :].strip()
+            if content and from_call:
+                return {
+                    "sender": from_call.upper(),
+                    "message": content,
+                }
+            return None
+
+    # Traditional format: SENDERCALL: their message
+    if from_call and from_call.upper() == "ANSRVR" and ":" in message_text:
+        colon_idx = message_text.index(":")
+        sender = message_text[:colon_idx].strip()
+        content = message_text[colon_idx + 1 :].strip()
+        if sender:
+            return {
+                "sender": sender.upper(),
+                "message": content,
+            }
+
+    return None
+
+
+def is_ansrvr_confirmation(from_call, message_text):
+    """Check if a message is an ANSRVR/APRSPH confirmation."""
+    if not from_call or not message_text:
+        return False
+    upper_from = from_call.upper()
+    if upper_from in ("ANSRVR", "APRSPH"):
+        lower = message_text.lower()
+        if any(
+            kw in lower
+            for kw in (
+                "subscribed",
+                "joined",
+                "unsubscribed",
+                "left",
+                "logged",
+                "confirmed",
+            )
+        ):
+            return True
+    return False
+
+
 class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
     """Class that handles packets being sent to us."""
 
@@ -373,6 +454,46 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
                 location_data = _calculate_location_data(location_data)
                 callsign_locations[callsign] = location_data
                 send_location_data_to_browser(location_data)
+                return
+        # Check for APRSThursday HOTG messages (only when feature is enabled)
+        message_text = packet.get("message_text", "")
+        if CONF.aprsd_webchat_extension.enable_aprsthursday:
+            if is_hotg_message(from_call, message_text):
+                parsed = parse_hotg_message(from_call, message_text)
+                if parsed:
+                    LOG.info(
+                        f"APRSThursday HOTG message from {parsed['sender']}: {parsed['message']}"
+                    )
+                    self.socketio.emit(
+                        "aprsthursday_message",
+                        {
+                            "sender": parsed["sender"],
+                            "message": parsed["message"],
+                            "timestamp": str(
+                                datetime.datetime.now(datetime.timezone.utc).isoformat()
+                            ),
+                            "raw_packet": packet.get("raw", ""),
+                        },
+                        namespace="/sendmsg",
+                    )
+                return
+            # Check for ANSRVR/APRSPH confirmation messages
+            if is_ansrvr_confirmation(from_call, message_text):
+                lower = message_text.lower()
+                if "unsubscribed" in lower or "left" in lower:
+                    conf_type = "unsubscribed"
+                elif "subscribed" in lower or "joined" in lower:
+                    conf_type = "subscribed"
+                else:
+                    conf_type = "logged"
+                self.socketio.emit(
+                    "aprsthursday_confirmation",
+                    {
+                        "type": conf_type,
+                        "message": message_text,
+                    },
+                    namespace="/sendmsg",
+                )
                 return
         elif (
             from_call not in callsign_locations
@@ -648,6 +769,7 @@ def index():
         is_digipi=CONF.is_digipi,
         beaconing_enabled=CONF.enable_beacon,
         default_path=default_path,
+        aprsthursday_enabled=CONF.aprsd_webchat_extension.enable_aprsthursday,
     )
 
 
@@ -798,6 +920,71 @@ class SendMessageNamespace(Namespace):
         self.msg = pkt
         msgs = SentMessages()
         tx.send(pkt)
+        msgs.add(pkt)
+        msgs.set_status(pkt.msgNo, "Sending")
+        obj = msgs.get(pkt.msgNo)
+        socketio.emit(
+            "sent",
+            obj,
+            namespace="/sendmsg",
+        )
+
+    def on_aprsthursday_send(self, data):
+        """Handle APRSThursday actions from WebSocket client.
+
+        Args:
+            data: Dictionary with keys:
+                - action: 'join', 'silent_subscribe', 'unsubscribe', or 'message'
+                - message: Optional message text
+                - mode: 'broadcast' or 'logonly'
+        """
+        if not CONF.aprsd_webchat_extension.enable_aprsthursday:
+            LOG.warning("APRSThursday feature is disabled, ignoring request")
+            return
+
+        global socketio
+        LOG.debug(f"WS: on_aprsthursday_send {data}")
+        action = data.get("action", "")
+        message = data.get("message", "")
+        mode = data.get("mode", "broadcast")
+        path = data.get("path", None)
+
+        if not path:
+            path = []
+        elif "," in path:
+            path_opts = path.split(",")
+            path = [x.strip() for x in path_opts]
+        else:
+            path = [path]
+
+        # Determine destination and message text based on action and mode
+        if action == "join" or action == "message":
+            if mode == "logonly":
+                to_call = "APRSPH"
+                msg_text = f"HOTG {message}" if message else "HOTG"
+            else:
+                to_call = "ANSRVR"
+                msg_text = f"CQ HOTG {message}" if message else "CQ HOTG"
+        elif action == "silent_subscribe":
+            to_call = "ANSRVR"
+            msg_text = "K HOTG"
+        elif action == "unsubscribe":
+            to_call = "ANSRVR"
+            msg_text = "U HOTG"
+        else:
+            LOG.warning(f"Unknown APRSThursday action: {action}")
+            return
+
+        pkt = packets.MessagePacket(
+            from_call=CONF.callsign,
+            to_call=to_call,
+            message_text=msg_text,
+            path=path,
+        )
+        pkt.prepare()
+        tx.send(pkt)
+
+        msgs = SentMessages()
         msgs.add(pkt)
         msgs.set_status(pkt.msgNo, "Sending")
         obj = msgs.get(pkt.msgNo)

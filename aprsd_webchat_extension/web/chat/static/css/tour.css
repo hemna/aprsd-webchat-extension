@@ -54,7 +54,7 @@
 .tour-tooltip {
     position: fixed !important;
     background: var(--bg-primary) !important;
-    border: 2px solid var(--primary-color) !important;
+    border: 2px solid #22c55e !important;
     border-radius: 16px !important;
     padding: 0 !important;
     max-width: 360px !important;
@@ -294,7 +294,8 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .tour-tooltip {
-        max-width: calc(100vw - 2rem);
+        max-width: calc(100vw - 2rem) !important;
+        min-width: 0 !important;
         margin: 0 var(--spacing-md);
     }
 

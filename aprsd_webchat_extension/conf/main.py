@@ -36,6 +36,14 @@ extension_opts = [
         default=1800,
         help="The number of seconds between beacon packets.",
     ),
+    cfg.BoolOpt(
+        "enable_aprsthursday",
+        default=False,
+        help="Enable the APRSThursday net support feature. When enabled, "
+        "adds a toggle button for joining the HOTG group via ANSRVR, "
+        "with dedicated tab, message routing, and quick templates. "
+        "When disabled, HOTG messages appear as normal incoming messages.",
+    ),
 ]
 
 ALL_OPTS = extension_opts
