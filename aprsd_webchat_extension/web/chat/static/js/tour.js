@@ -9,42 +9,56 @@
     const TOUR_STORAGE_KEY = 'aprsd-webchat-tour-completed';
     const TOUR_STEPS = [
         {
-            id: 'theme-toggle',
-            selector: '#theme-toggle',
-            title: 'Theme Toggle',
-            description: 'Switch between light and dark themes. Your preference is saved automatically.',
+            id: 'beacon-symbol',
+            selector: '#btn_symbol_picker',
+            title: 'Beacon Symbol',
+            description: 'Click this icon to change your APRS beacon symbol. Choose from cars, houses, bikes, and many more. Your selection is saved for future sessions.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6,
             beforeShow: function() {
-                // Ensure GPS panel is closed at the start of the tour
-                $('#collapseGPS').removeClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+                // Ensure GPS modal is closed at the start of the tour
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getInstance(gpsModalEl);
+                    if (gpsModal) gpsModal.hide();
+                }
             }
         },
         {
             id: 'gps-button',
             selector: '.btn-gps',
             title: 'GPS & Beaconing',
-            description: 'View your GPS coordinates and configure beaconing settings. Click to expand the GPS panel.',
+            description: 'View your GPS coordinates and configure beaconing settings. Click to open the GPS panel.',
             position: 'bottom',
-            offset: { x: 0, y: 10 },
-            beforeShow: function() {
-                // Expand the GPS panel when entering GPS section
-                if (!$('#collapseGPS').hasClass('show')) {
-                    $('#collapseGPS').addClass('show');
-                    $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
-                }
-            }
+            offset: { x: 0, y: 10 }
+        },
+        {
+            id: 'theme-toggle',
+            selector: '#theme-toggle',
+            title: 'Theme Toggle',
+            description: 'Switch between light and dark themes. Your preference is saved automatically.',
+            position: 'bottom',
+            offset: { x: 0, y: 10 }
         },
         {
             id: 'gps-info',
             selector: '#gps_info_box',
             title: 'GPS Information',
             description: 'Shows your current GPS coordinates, altitude, speed, and course. This information is used when sending beacons.',
-            position: 'right',
-            offset: { x: 10, y: 0 },
+            position: 'bottom',
+            offset: { x: 0, y: 10 },
             spotlightShape: 'rectangle',
-            spotlightBorderRadius: 8
+            spotlightBorderRadius: 8,
+            beforeShow: function() {
+                // Open the GPS modal to show the GPS info inside it
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getOrCreateInstance(gpsModalEl);
+                    gpsModal.show();
+                }
+            }
         },
         {
             id: 'beaconing-mode',
@@ -56,16 +70,6 @@
             spotlightShape: 'rectangle'
         },
         {
-            id: 'beacon-symbol',
-            selector: '#beacon-symbol-icon',
-            title: 'Beacon Symbol',
-            description: 'Click this icon to change your APRS beacon symbol. Choose from cars, houses, bikes, and many more. Your selection is saved for future sessions.',
-            position: 'bottom',
-            offset: { x: 0, y: 10 },
-            spotlightShape: 'rectangle',
-            spotlightBorderRadius: 6
-        },
-        {
             id: 'send-beacon',
             selector: '#send_beacon_quick',
             title: 'Quick Beacon Button',
@@ -74,21 +78,32 @@
             offset: { x: 0, y: 10 },
             spotlightShape: 'rectangle',
             spotlightBorderRadius: 6,
-            additionalSelectors: ['#send_beacon']
+            additionalSelectors: ['#send_beacon'],
+            beforeShow: function() {
+                // Ensure GPS modal is open so #send_beacon additional spotlight is visible
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getOrCreateInstance(gpsModalEl);
+                    gpsModal.show();
+                }
+            }
         },
         {
             id: 'save-beacon-settings',
             selector: '#save_beacon_settings',
             title: 'Save Beacon Settings',
             description: 'Save your beaconing mode and interval settings to the server.',
-            position: 'bottom',
-            offset: { x: 0, y: 10 },
+            position: 'top',
+            offset: { x: 0, y: -10 },
             spotlightShape: 'rectangle',
             spotlightBorderRadius: 6,
             beforeShow: function() {
-                // Ensure GPS panel is open (for when navigating backwards from step 7)
-                $('#collapseGPS').addClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'true');
+                // Ensure GPS modal is open (for when navigating backwards from step 7)
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getOrCreateInstance(gpsModalEl);
+                    gpsModal.show();
+                }
             }
         },
         {
@@ -98,10 +113,16 @@
             description: 'Click the + tab to start a new conversation. Enter a valid ham radio callsign (e.g., K1ABC) and press Enter.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
+            mobileSelector: '#mobileAddChat',
+            mobileTitle: 'Add New Conversation',
+            mobileDescription: 'Tap the + button to start a new conversation. Enter a valid ham radio callsign (e.g., K1ABC) and press Enter.',
             beforeShow: function() {
-                // Close the GPS panel when moving to conversation steps
-                $('#collapseGPS').removeClass('show');
-                $('[data-bs-target="#collapseGPS"]').attr('aria-expanded', 'false');
+                // Close the GPS modal when moving to conversation steps
+                var gpsModalEl = document.getElementById('gpsModal');
+                if (gpsModalEl) {
+                    var gpsModal = bootstrap.Modal.getInstance(gpsModalEl);
+                    if (gpsModal) gpsModal.hide();
+                }
             }
         },
         {
@@ -111,7 +132,12 @@
             description: 'Each tab represents a conversation with a callsign. Click a tab to switch conversations. The path selector remembers your choice per callsign.',
             position: 'bottom',
             offset: { x: 0, y: 10 },
-            optional: true // Only show if tabs exist
+            spotlightShape: 'rectangle',
+            spotlightBorderRadius: 6,
+            mobileSelector: '#mobileChatDropdown',
+            mobileTitle: 'Conversations',
+            mobileDescription: 'Use this dropdown to switch between conversations. Each callsign you message gets its own entry.',
+            optional: true // Only show if tabs exist (desktop) or dropdown has entries (mobile)
         },
         {
             id: 'get-location',
@@ -163,6 +189,8 @@
     ];
 
     let currentStep = 0;
+    let stepGeneration = 0; // Incremented each showStep call to cancel stale timers
+    let tourRunning = false; // Guard against multiple startTour calls
     let tooltipClickHandler = null; // Store handler reference for proper removal
     let overlay = null;
     let spotlight = null;
@@ -637,11 +665,16 @@
         tooltip.setAttribute('data-position', step.position || 'bottom');
 
         // Make tooltip temporarily visible to get dimensions
-        // Use visibility hidden instead of opacity 0 to avoid inline style conflicts
+        // Use fixed positioning for measurement to match final rendering
         tooltip.style.visibility = 'hidden';
         tooltip.style.display = 'block';
-        tooltip.style.position = 'absolute';
-        // Don't set opacity inline - let CSS handle it
+        tooltip.style.position = 'fixed';
+        tooltip.style.top = '0';
+        tooltip.style.left = '0';
+        // Clear any stale inline width constraints from previous steps
+        // (tour.css !important rules handle max-width/min-width)
+        tooltip.style.removeProperty('max-width');
+        tooltip.style.removeProperty('min-width');
 
         // Force a reflow to ensure dimensions are calculated
         void tooltip.offsetWidth;
@@ -651,25 +684,57 @@
 
         // Position based on step.position
         // Use elementRect (already calculated above) for accurate positioning relative to viewport
+        var gap = 16; // gap between element and tooltip
 
-        if (step.position === 'top') {
-            top = elementRect.top - tooltipRect.height - 20 + offset.y;
-            left = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2) + offset.x;
-        } else if (step.position === 'left') {
-            top = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2) + offset.y;
-            left = elementRect.left - tooltipRect.width - 20 + offset.x;
-        } else if (step.position === 'right') {
-            top = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2) + offset.y;
-            left = elementRect.right + 20 + offset.x;
-        } else { // bottom (default)
-            top = elementRect.bottom + 20 + offset.y;
-            left = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2) + offset.x;
+        function calcPosition(pos) {
+            var t, l;
+            if (pos === 'top') {
+                t = elementRect.top - tooltipRect.height - gap + offset.y;
+                l = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2) + offset.x;
+            } else if (pos === 'left') {
+                t = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2) + offset.y;
+                l = elementRect.left - tooltipRect.width - gap + offset.x;
+            } else if (pos === 'right') {
+                t = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2) + offset.y;
+                l = elementRect.right + gap + offset.x;
+            } else { // bottom
+                t = elementRect.bottom + gap + offset.y;
+                l = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2) + offset.x;
+            }
+            // Clamp horizontal
+            if (l < margin) l = margin;
+            if (l + tooltipRect.width > viewportWidth - margin) {
+                l = viewportWidth - tooltipRect.width - margin;
+            }
+            return { top: t, left: l };
         }
 
-        // Keep tooltip within viewport
-        if (left < margin) left = margin;
-        if (left + tooltipRect.width > viewportWidth - margin) {
-            left = viewportWidth - tooltipRect.width - margin;
+        function overlapsElement(t, l) {
+            var tRight = l + tooltipRect.width;
+            var tBottom = t + tooltipRect.height;
+            return !(l >= elementRect.right || tRight <= elementRect.left ||
+                     t >= elementRect.bottom || tBottom <= elementRect.top);
+        }
+
+        var preferred = step.position || 'bottom';
+        var fallbackOrder = { top: ['bottom', 'left', 'right'], bottom: ['top', 'left', 'right'],
+                              left: ['right', 'bottom', 'top'], right: ['left', 'bottom', 'top'] };
+        var pos = calcPosition(preferred);
+        top = pos.top;
+        left = pos.left;
+
+        // If preferred position overlaps the element, try fallbacks
+        if (overlapsElement(top, left)) {
+            var fallbacks = fallbackOrder[preferred] || ['bottom'];
+            for (var fi = 0; fi < fallbacks.length; fi++) {
+                var altPos = calcPosition(fallbacks[fi]);
+                if (!overlapsElement(altPos.top, altPos.left)) {
+                    top = altPos.top;
+                    left = altPos.left;
+                    tooltip.setAttribute('data-position', fallbacks[fi]);
+                    break;
+                }
+            }
         }
 
         // Account for header height when positioning near top
@@ -695,14 +760,13 @@
         tooltip.style.position = 'fixed';
         tooltip.style.zIndex = '2147483647';
         tooltip.style.background = bgPrimary;
-        tooltip.style.border = '2px solid ' + primaryColor;
+        tooltip.style.border = '2px solid #22c55e';
         tooltip.style.borderRadius = '16px';
         tooltip.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)';
         tooltip.style.padding = '0';
         tooltip.style.margin = '0';
         tooltip.style.overflow = 'hidden';
-        tooltip.style.minWidth = '280px';
-        tooltip.style.maxWidth = '360px';
+        // min-width/max-width handled by tour.css with !important
 
         // Ensure no inline opacity is set - CSS will handle it via .active class
         if (tooltip.style.opacity !== '') {
@@ -758,12 +822,40 @@
     tooltipClickHandler = handleTooltipClick;
 
     /**
+     * Resolve the effective selector, title, and description for a step.
+     * If the primary element is hidden and a mobileSelector exists, use the mobile variant.
+     */
+    function resolveStep(step) {
+        var element = document.querySelector(step.selector);
+        var isVisible = element && element.offsetParent !== null;
+
+        if (!isVisible && step.mobileSelector) {
+            var mobileEl = document.querySelector(step.mobileSelector);
+            if (mobileEl && mobileEl.offsetParent !== null) {
+                return {
+                    selector: step.mobileSelector,
+                    title: step.mobileTitle || step.title,
+                    description: step.mobileDescription || step.description,
+                    isMobile: true
+                };
+            }
+        }
+        return {
+            selector: step.selector,
+            title: step.title,
+            description: step.description,
+            isMobile: false
+        };
+    }
+
+    /**
      * Get visible steps (filter out optional steps if elements don't exist)
      */
     function getVisibleSteps() {
         return TOUR_STEPS.filter(step => {
+            var resolved = resolveStep(step);
+            var element = document.querySelector(resolved.selector);
             if (step.optional) {
-                const element = document.querySelector(step.selector);
                 return element && element.offsetParent !== null;
             }
             return true;
@@ -781,15 +873,25 @@
             return;
         }
 
+        // Increment generation to invalidate any pending timers from previous steps
+        const thisGeneration = ++stepGeneration;
+
         currentStep = stepIndex;
         const step = visibleSteps[currentStep];
 
-        const element = document.querySelector(step.selector);
+        // Resolve mobile fallback if needed
+        const resolved = resolveStep(step);
+        const activeSelector = resolved.selector;
+        const activeTitle = resolved.title;
+        const activeDescription = resolved.description;
+
+        const element = document.querySelector(activeSelector);
 
         if (!element) {
             // Try to find element one more time after a short delay
             setTimeout(() => {
-                const retryElement = document.querySelector(step.selector);
+                if (stepGeneration !== thisGeneration) return;
+                const retryElement = document.querySelector(activeSelector);
                 if (!retryElement) {
                     // Skip this step if element doesn't exist
                     if (stepIndex < visibleSteps.length - 1) {
@@ -804,6 +906,12 @@
             }, 100);
             return;
         }
+
+        // Create an effective step with resolved title/description for tooltip rendering
+        const effectiveStep = Object.assign({}, step, {
+            title: activeTitle,
+            description: activeDescription
+        });
 
         // Call beforeShow hook if defined
         if (step.beforeShow && typeof step.beforeShow === 'function') {
@@ -830,10 +938,10 @@
         }
 
         // Update spotlight IMMEDIATELY (before scrolling) so it's visible right away
-        updateSpotlight(element, step);
+        updateSpotlight(element, effectiveStep);
 
         // Update additional spotlights if defined
-        updateAdditionalSpotlights(step);
+        updateAdditionalSpotlights(effectiveStep);
 
         // Explicitly ensure spotlight is visible immediately with multiple attempts
         if (spotlight) {
@@ -847,6 +955,7 @@
 
             // Double-check visibility after reflow
             setTimeout(() => {
+                if (stepGeneration !== thisGeneration) return;
                 if (spotlight) {
                     spotlight.style.display = 'block';
                     spotlight.style.visibility = 'visible';
@@ -860,11 +969,14 @@
 
         // Wait for scroll to complete, then update positions and show tooltip
         setTimeout(() => {
+            // If user navigated to a different step, abandon this callback
+            if (stepGeneration !== thisGeneration) return;
+
             // Update spotlight position again after scroll (element may have moved)
-            updateSpotlight(element, step);
+            updateSpotlight(element, effectiveStep);
 
             // Update additional spotlights after scroll
-            updateAdditionalSpotlights(step);
+            updateAdditionalSpotlights(effectiveStep);
 
             // Force a reflow to ensure spotlight is rendered
             void spotlight.offsetWidth;
@@ -877,7 +989,7 @@
             }
 
             // Update tooltip position (skip button is now inside tooltip)
-            updateTooltip(step, element);
+            updateTooltip(effectiveStep, element);
 
             // Show tooltip
             if (tooltip) {
@@ -1058,6 +1170,7 @@
         // Skip button is now inside tooltip, so it will be removed with overlay
         skipButton = null;
 
+        tourRunning = false;
         markTourCompleted();
     }
 
@@ -1070,6 +1183,12 @@
         if (!force && isTourCompleted()) {
             return;
         }
+
+        // Prevent re-entry if tour is already running
+        if (tourRunning && !force) {
+            return;
+        }
+        tourRunning = true;
 
         // Clean up any existing overlay first
         if (overlay && overlay.parentNode) {
@@ -1087,6 +1206,7 @@
 
         // Reset current step
         currentStep = 0;
+        stepGeneration++; // Cancel any stale timers from a previous tour run
 
         createOverlay();
 
@@ -1101,29 +1221,20 @@
      */
     function waitForElements(callback, maxAttempts = 30) {
         let attempts = 0;
-        const requiredSelectors = ['#theme-toggle', '.btn-gps', '#beacon-symbol-icon', '#message', '#pkt_path', '#send_msg'];
-        const optionalSelectors = ['#add-tab-button']; // These are nice to have but not required
+        let callbackFired = false;
+        const requiredSelectors = ['#theme-toggle', '.btn-gps', '#btn_symbol_picker', '#message', '#pkt_path', '#send_msg'];
 
         function checkElements() {
+            if (callbackFired) return;
             attempts++;
             const allRequiredExist = requiredSelectors.every(selector => {
                 const element = document.querySelector(selector);
                 return element && element.offsetParent !== null;
             });
 
-            // Check optional elements but don't block on them
-            const optionalExist = optionalSelectors.every(selector => {
-                const element = document.querySelector(selector);
-                return element && element.offsetParent !== null;
-            });
-
             if (allRequiredExist || attempts >= maxAttempts) {
-                // If optional elements don't exist yet, wait a bit more
-                if (!optionalExist && attempts < maxAttempts) {
-                    setTimeout(checkElements, 200);
-                } else {
-                    callback();
-                }
+                callbackFired = true;
+                callback();
             } else {
                 setTimeout(checkElements, 200);
             }
