@@ -2,3 +2,5 @@ __pycache*
 .superpowers/
 node_modules/
 dist/
+*.egg-info/
+node-compile-cache/
