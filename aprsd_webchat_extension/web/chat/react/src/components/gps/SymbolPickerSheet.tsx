@@ -3,6 +3,7 @@ import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { X, Search } from 'lucide-react'
+import { APRSSymbol } from './APRSSymbol'
 import type { BeaconSymbol } from '@/types'
 
 const PRIMARY_SYMBOLS: Record<string, string> = {
@@ -100,14 +101,16 @@ export function SymbolPickerSheet() {
             />
           </div>
           {symbol && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Current: <span className="font-mono">{symbol.table}{symbol.symbol}</span> ({symbol.description})
-            </p>
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Current:</span>
+              <APRSSymbol table={symbol.table} symbol={symbol.symbol} size={24} />
+              <span>{symbol.description}</span>
+            </div>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-5 sm:grid-cols-6 gap-1">
             {filteredSymbols.map(({ char, desc }) => (
               <button
                 key={char}
@@ -119,7 +122,7 @@ export function SymbolPickerSheet() {
                 }`}
                 title={desc}
               >
-                <span className="text-lg font-mono">/{char}</span>
+                <APRSSymbol table="/" symbol={char} size={36} />
                 <span className="text-[9px] text-muted-foreground leading-tight truncate w-full">
                   {desc}
                 </span>

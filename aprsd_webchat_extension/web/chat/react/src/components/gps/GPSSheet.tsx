@@ -4,6 +4,7 @@ import { useConnection } from '@/stores/connection'
 import { useSocketEmitters } from '@/hooks/useSocket'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { X, Satellite, Send, MapPin } from 'lucide-react'
+import { APRSSymbol } from './APRSSymbol'
 
 const BEACON_MODES = [
   { value: 0, label: 'Disabled', description: 'No automatic beaconing' },
@@ -117,8 +118,8 @@ export function GPSSheet() {
               onClick={() => setActiveSheet('symbol')}
               className="flex items-center gap-3 w-full rounded-lg border border-border p-3 hover:bg-accent/50 transition-colors"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-lg font-mono">
-                {symbol.table}{symbol.symbol}
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary">
+                <APRSSymbol table={symbol.table} symbol={symbol.symbol} size={36} />
               </div>
               <div className="text-left">
                 <p className="text-sm font-medium">{symbol.description}</p>
