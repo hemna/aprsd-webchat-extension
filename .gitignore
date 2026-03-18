@@ -1,1 +1,4 @@
 __pycache*
+.superpowers/
+node_modules/
+dist/
