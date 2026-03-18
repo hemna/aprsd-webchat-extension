@@ -9,17 +9,25 @@ import { AppShell } from '@/components/layout/AppShell'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { Sidebar } from '@/components/channels/Sidebar'
 import { MainPanel } from '@/components/chat/MainPanel'
+import { GPSSheet } from '@/components/gps/GPSSheet'
+import { SymbolPickerSheet } from '@/components/gps/SymbolPickerSheet'
+import { CommandPalette } from '@/components/command-palette/CommandPalette'
 import type { ConfigResponse } from '@/types'
 
 function AppContent({ socket }: { socket: Socket }) {
   useSocketEvents(socket)
 
   return (
-    <AppShell
-      statusBar={<StatusBar />}
-      sidebar={<Sidebar />}
-      main={<MainPanel />}
-    />
+    <>
+      <AppShell
+        statusBar={<StatusBar />}
+        sidebar={<Sidebar />}
+        main={<MainPanel />}
+      />
+      <GPSSheet />
+      <SymbolPickerSheet />
+      <CommandPalette />
+    </>
   )
 }
 
