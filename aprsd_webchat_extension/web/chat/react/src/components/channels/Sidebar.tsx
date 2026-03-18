@@ -58,6 +58,14 @@ export function Sidebar() {
                 <Settings className="h-4 w-4" />
               </button>
             </Tooltip>
+            <Tooltip text="About APRSD Webchat">
+              <button
+                onClick={() => setAboutOpen(true)}
+                className="rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                <Info className="h-4 w-4" />
+              </button>
+            </Tooltip>
           </div>
           {(version || aprsdVersion) && (
             <span className="text-[10px] text-muted-foreground">
