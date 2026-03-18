@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { createSafeStorage } from '@/lib/safe-storage'
 
 type Theme = 'light' | 'dark'
 type SheetType = 'gps' | 'symbol' | null
@@ -83,6 +84,7 @@ export const useUI = create<UIStore>()(
     }),
     {
       name: 'aprsd-webchat-ui',
+      storage: createSafeStorage('ui'),
       partialize: (state) => ({
         theme: state.theme,
         tourCompleted: state.tourCompleted,

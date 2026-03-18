@@ -1,7 +1,12 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, type StorageValue } from 'zustand/middleware'
 import type { Channel, Message, CallsignLocation } from '@/types'
 import { generateMessageId } from '@/lib/utils'
+
+// Maximum messages kept per channel to prevent unbounded growth
+const MAX_MESSAGES_PER_CHANNEL = 200
+// Maximum location entries cached
+const MAX_LOCATIONS = 100
 
 interface MessagesState {
   channels: Record<string, Channel>
@@ -22,6 +27,46 @@ interface MessagesActions {
 }
 
 type MessagesStore = MessagesState & MessagesActions
+type PersistedMessages = Partial<MessagesState>
+
+/** Safe localStorage wrapper with quota recovery for the messages store */
+const messagesStorage = {
+  getItem: (name: string): StorageValue<PersistedMessages> | null => {
+    try {
+      const value = localStorage.getItem(name)
+      if (!value) return null
+      return JSON.parse(value) as StorageValue<PersistedMessages>
+    } catch (e) {
+      console.error('Failed to read persisted messages, clearing:', e)
+      try { localStorage.removeItem(name) } catch { /* ignore */ }
+      return null
+    }
+  },
+  setItem: (name: string, value: StorageValue<PersistedMessages>) => {
+    try {
+      localStorage.setItem(name, JSON.stringify(value))
+    } catch (e) {
+      console.error('Failed to persist messages (likely quota exceeded), trimming:', e)
+      // Try to recover by aggressively trimming message history
+      try {
+        const state = value.state
+        if (state?.messages) {
+          const trimmed = { ...state.messages }
+          for (const callsign of Object.keys(trimmed)) {
+            trimmed[callsign] = trimmed[callsign].slice(-50)
+          }
+          localStorage.setItem(name, JSON.stringify({ ...value, state: { ...state, messages: trimmed } }))
+        }
+      } catch {
+        // Last resort: clear entirely
+        try { localStorage.removeItem(name) } catch { /* ignore */ }
+      }
+    }
+  },
+  removeItem: (name: string) => {
+    try { localStorage.removeItem(name) } catch { /* ignore */ }
+  },
+}
 
 export const useMessages = create<MessagesStore>()(
   persist(
@@ -65,27 +110,41 @@ export const useMessages = create<MessagesStore>()(
           updatedUnread[callsign] = (updatedUnread[callsign] || 0) + 1
         }
 
+        // Append and cap at MAX_MESSAGES_PER_CHANNEL (no sort -- just append in order)
+        let channelMsgs = [...existing, msg]
+        if (channelMsgs.length > MAX_MESSAGES_PER_CHANNEL) {
+          channelMsgs = channelMsgs.slice(-MAX_MESSAGES_PER_CHANNEL)
+        }
+
         set({
           channels: updatedChannels,
           messages: {
             ...messages,
-            [callsign]: [...existing, msg].sort(
-              (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            ),
+            [callsign]: channelMsgs,
           },
           unreadCounts: updatedUnread,
         })
       },
 
       ackMessage: (msgNo: string) => {
+        // Only scan and update the channel that contains this msgNo
         const { messages } = get()
-        const updated = { ...messages }
-        for (const callsign of Object.keys(updated)) {
-          updated[callsign] = updated[callsign].map(msg =>
-            msg.msgNo === msgNo ? { ...msg, ack: true } : msg
-          )
+        for (const callsign of Object.keys(messages)) {
+          const channelMsgs = messages[callsign]
+          const idx = channelMsgs.findIndex(m => m.msgNo === msgNo && !m.ack)
+          if (idx !== -1) {
+            // Found it -- only update this one channel
+            const updated = [...channelMsgs]
+            updated[idx] = { ...updated[idx], ack: true }
+            set({
+              messages: {
+                ...messages,
+                [callsign]: updated,
+              },
+            })
+            return
+          }
         }
-        set({ messages: updated })
       },
 
       selectChannel: (callsign: string | null) => {
@@ -111,12 +170,24 @@ export const useMessages = create<MessagesStore>()(
 
       updateLocation: (location: CallsignLocation) => {
         const { locations } = get()
-        set({
-          locations: {
-            ...locations,
-            [location.callsign]: { ...location, last_updated: new Date().toISOString() },
-          },
-        })
+        const updated = {
+          ...locations,
+          [location.callsign]: { ...location, last_updated: new Date().toISOString() },
+        }
+        // Cap location cache size
+        const keys = Object.keys(updated)
+        if (keys.length > MAX_LOCATIONS) {
+          // Remove oldest entries
+          const sorted = keys.sort((a, b) => {
+            const aTime = updated[a].last_updated || '0'
+            const bTime = updated[b].last_updated || '0'
+            return aTime.localeCompare(bTime)
+          })
+          for (let i = 0; i < keys.length - MAX_LOCATIONS; i++) {
+            delete updated[sorted[i]]
+          }
+        }
+        set({ locations: updated })
       },
 
       ensureChannel: (callsign: string, category: Channel['category'] = 'dm') => {
@@ -145,6 +216,7 @@ export const useMessages = create<MessagesStore>()(
     }),
     {
       name: 'aprsd-webchat-messages',
+      storage: messagesStorage,
       partialize: (state) => ({
         channels: state.channels,
         messages: state.messages,

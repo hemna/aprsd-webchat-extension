@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BeaconSymbol, GPSSettings } from '@/types'
+import { createSafeStorage } from '@/lib/safe-storage'
 
 interface GPSState {
   fix: boolean
@@ -84,6 +85,7 @@ export const useGPS = create<GPSStore>()(
     }),
     {
       name: 'aprsd-webchat-gps',
+      storage: createSafeStorage('gps'),
       partialize: (state) => ({
         symbol: state.symbol,
         lastBeaconTime: state.lastBeaconTime,
