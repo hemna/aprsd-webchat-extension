@@ -6,6 +6,7 @@ import { useSocketEmitters } from '@/hooks/useSocket'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { Command, Radio, Satellite, Send, Wifi, WifiOff } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
+import { Tooltip } from '@/components/ui/Tooltip'
 
 export function StatusBar() {
   const connected = useConnection((s) => s.connected)
@@ -26,33 +27,31 @@ export function StatusBar() {
 
   const [beaconSent, setBeaconSent] = useState(false)
 
-  // GPS status: hardware fix, config location, or no location
+  // GPS status
   const hasCoords = gpsLat !== 0 || gpsLon !== 0
   const gpsStatus = gpsFix ? 'fix' : hasCoords ? 'config' : 'none'
   const gpsColor = gpsStatus === 'fix' ? 'text-success' : gpsStatus === 'config' ? 'text-warning' : 'text-muted-foreground'
   const gpsLabel = gpsStatus === 'fix' ? 'GPS Fix' : gpsStatus === 'config' ? 'Config Loc' : 'No GPS'
 
-  // Strip HTML tags from aprsConnection (backend sends it with <a> tags)
+  // Parse server info
   const serverString = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '').trim() : ''
-  // Extract the APRS-IS server name (e.g. "T2TEXAS" from "# aprsc 2.1.20-g... T2TEXAS 205.209.228.99:14580")
-  // Server name is the second-to-last token in the server_string
   const serverTokens = serverString.split(/\s+/)
   const aprsServerName = serverTokens.length >= 2 ? serverTokens[serverTokens.length - 2] : serverString
 
   // Tooltip strings
-  const radioTitle = radioBlinkTx ? 'Transmitting' : radioBlinkRx ? 'Receiving' : 'Radio idle'
-  const gpsTitle = gpsFix
+  const radioTip = radioBlinkTx ? 'Transmitting' : radioBlinkRx ? 'Receiving' : 'Radio idle'
+  const gpsTip = gpsFix
     ? `GPS Fix: ${gpsLat.toFixed(4)}, ${gpsLon.toFixed(4)}`
     : hasCoords
       ? `Configured location: ${gpsLat.toFixed(4)}, ${gpsLon.toFixed(4)}`
       : 'No GPS location available'
-  const connectionTitle = connected
+  const connectionTip = connected
     ? `Connected via ${transport}${serverString ? ' — ' + serverString : ''}`
     : 'Disconnected from APRS'
-  const beaconTitle = beaconSent
+  const beaconTip = beaconSent
     ? 'Beacon sent!'
-    : `Send beacon now (${symbol.description} at ${gpsLat.toFixed(4)}, ${gpsLon.toFixed(4)})`
-  const lastBeaconTitle = lastBeaconTime
+    : `Send beacon (${symbol.description} at ${gpsLat.toFixed(4)}, ${gpsLon.toFixed(4)})`
+  const lastBeaconTip = lastBeaconTime
     ? `Last beacon sent ${timeAgo(lastBeaconTime)}`
     : ''
 
@@ -67,54 +66,53 @@ export function StatusBar() {
     return (
       <div className="flex h-10 items-center justify-between border-b border-border bg-card px-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold" title={`Station: ${callsign}`}>{callsign || 'APRSD'}</span>
+          <span className="text-sm font-semibold">{callsign || 'APRSD'}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          {/* Action buttons -- bordered to look tappable */}
           {hasCoords && (
-            <button
-              onClick={handleQuickBeacon}
-              disabled={!connected}
-              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
-                beaconSent
-                  ? 'border-success bg-success/10 text-success'
-                  : 'border-border bg-secondary text-foreground hover:bg-accent'
-              }`}
-              title={beaconTitle}
-            >
-              <Send className="h-3 w-3" />
-              <span>{beaconSent ? 'Sent' : 'Bcn'}</span>
-            </button>
+            <Tooltip text={beaconTip}>
+              <button
+                onClick={handleQuickBeacon}
+                disabled={!connected}
+                className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
+                  beaconSent
+                    ? 'border-success bg-success/10 text-success'
+                    : 'border-border bg-secondary text-foreground hover:bg-accent'
+                }`}
+              >
+                <Send className="h-3 w-3" />
+                <span>{beaconSent ? 'Sent' : 'Bcn'}</span>
+              </button>
+            </Tooltip>
           )}
-          <button
-            onClick={() => setCommandPaletteOpen(true)}
-            className="flex items-center rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground hover:bg-accent transition-colors"
-            title="Command palette — search, navigate, actions"
-          >
-            <Command className="h-3 w-3" />
-          </button>
+          <Tooltip text="Commands">
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              className="flex items-center rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground hover:bg-accent transition-colors"
+            >
+              <Command className="h-3 w-3" />
+            </button>
+          </Tooltip>
 
-          {/* Separator */}
           <div className="mx-0.5 h-4 w-px bg-border" />
 
-          {/* Status indicators -- no border, muted */}
-          <span title={radioTitle}>
+          <Tooltip text={radioTip}>
             <Radio
               className={`h-3.5 w-3.5 transition-colors ${
                 radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
               }`}
             />
-          </span>
-          <span title={gpsTitle}>
+          </Tooltip>
+          <Tooltip text={gpsTip}>
             <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
-          </span>
-          <span title={connectionTitle}>
+          </Tooltip>
+          <Tooltip text={connectionTip}>
             {connected ? (
               <Wifi className="h-3.5 w-3.5 text-success" />
             ) : (
               <WifiOff className="h-3.5 w-3.5 text-destructive" />
             )}
-          </span>
+          </Tooltip>
         </div>
       </div>
     )
@@ -123,59 +121,70 @@ export function StatusBar() {
   return (
     <div className="flex h-10 items-center justify-between border-b border-border bg-card px-4">
       <div className="flex items-center gap-4">
-        <span className="text-sm font-semibold" title={`Station: ${callsign}`}>{callsign || 'APRSD Webchat'}</span>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title={connectionTitle}>
-          {connected ? (
-            <>
-              <Wifi className="h-3.5 w-3.5 text-success" />
-              <span>{transport}{aprsServerName ? ` — ${aprsServerName}` : ''}</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3.5 w-3.5 text-destructive" />
-              <span>Disconnected</span>
-            </>
-          )}
-        </div>
+        <Tooltip text={`Station: ${callsign}`}>
+          <span className="text-sm font-semibold">{callsign || 'APRSD Webchat'}</span>
+        </Tooltip>
+        <Tooltip text={connectionTip}>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {connected ? (
+              <>
+                <Wifi className="h-3.5 w-3.5 text-success" />
+                <span>{transport}{aprsServerName ? ` — ${aprsServerName}` : ''}</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3.5 w-3.5 text-destructive" />
+                <span>Disconnected</span>
+              </>
+            )}
+          </div>
+        </Tooltip>
       </div>
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        {/* Quick Beacon */}
         {hasCoords && (
-          <button
-            onClick={handleQuickBeacon}
-            disabled={!connected}
-            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors disabled:opacity-50 ${
-              beaconSent
-                ? 'border-success bg-success/10 text-success'
-                : 'border-border hover:bg-accent'
-            }`}
-            title={beaconTitle}
-          >
-            <Send className="h-3 w-3" />
-            <span>{beaconSent ? 'Sent!' : 'Beacon'}</span>
-          </button>
+          <Tooltip text={beaconTip}>
+            <button
+              onClick={handleQuickBeacon}
+              disabled={!connected}
+              className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors disabled:opacity-50 ${
+                beaconSent
+                  ? 'border-success bg-success/10 text-success'
+                  : 'border-border hover:bg-accent'
+              }`}
+            >
+              <Send className="h-3 w-3" />
+              <span>{beaconSent ? 'Sent!' : 'Beacon'}</span>
+            </button>
+          </Tooltip>
         )}
-        <button
-          onClick={() => setCommandPaletteOpen(true)}
-          className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 hover:bg-accent transition-colors"
-          title="Command palette — search, navigate, actions (Ctrl+K)"
-        >
-          <Command className="h-3 w-3" />
-          <span>Ctrl+K</span>
-        </button>
-        <span className="flex items-center gap-1.5" title={radioTitle}>
-          <Radio
-            className={`h-3.5 w-3.5 transition-colors ${
-              radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
-            }`}
-          />
-        </span>
-        <span className="flex items-center gap-1.5" title={gpsTitle}>
-          <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
-          <span>{gpsLabel}</span>
-        </span>
+        <Tooltip text="Command palette (Ctrl+K)">
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 hover:bg-accent transition-colors"
+          >
+            <Command className="h-3 w-3" />
+            <span>Ctrl+K</span>
+          </button>
+        </Tooltip>
+        <Tooltip text={radioTip}>
+          <span className="flex items-center gap-1.5">
+            <Radio
+              className={`h-3.5 w-3.5 transition-colors ${
+                radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
+              }`}
+            />
+          </span>
+        </Tooltip>
+        <Tooltip text={gpsTip}>
+          <span className="flex items-center gap-1.5">
+            <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
+            <span>{gpsLabel}</span>
+          </span>
+        </Tooltip>
         {lastBeaconTime && (
-          <span title={lastBeaconTitle}>Beacon: {timeAgo(lastBeaconTime)}</span>
+          <Tooltip text={lastBeaconTip}>
+            <span>Beacon: {timeAgo(lastBeaconTime)}</span>
+          </Tooltip>
         )}
       </div>
     </div>
