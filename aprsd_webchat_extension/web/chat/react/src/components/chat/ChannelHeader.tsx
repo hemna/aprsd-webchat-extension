@@ -3,7 +3,7 @@ import { useMessages } from '@/stores/messages'
 import { useUI } from '@/stores/ui'
 import { useSocketEmitters } from '@/hooks/useSocket'
 import { useIsMobile } from '@/hooks/useMediaQuery'
-import { ArrowLeft, Code2, MapPin, Copy, Trash2, MoreVertical } from 'lucide-react'
+import { ArrowLeft, Code2, MapPin, Copy, Trash2, MoreVertical, Navigation } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 
 export function ChannelHeader() {
@@ -72,9 +72,15 @@ export function ChannelHeader() {
           {isAPRSThursday ? '#APRSThursday' : selectedChannel}
         </h2>
         {location && (
-          <p className="text-xs text-muted-foreground truncate">
-            {location.distance} away · last heard {timeAgo(location.lasttime)}
-          </p>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Navigation
+              className="h-3.5 w-3.5 text-primary flex-shrink-0"
+              style={{ transform: `rotate(${parseFloat(String(location.course)) || 0}deg)` }}
+            />
+            <span className="truncate">
+              {location.distance}km {location.compass_bearing} · {timeAgo(location.lasttime)}
+            </span>
+          </div>
         )}
       </div>
 
