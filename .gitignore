@@ -1,6 +1,12 @@
 __pycache*
 .superpowers/
 node_modules/
-dist/
 *.egg-info/
 node-compile-cache/
+
+# Python package dist (top-level build artifacts)
+/dist/
+/build/
+
+# React dev artifacts (source maps, etc.) but NOT the built output
+# The React dist/ is committed so users don't need npm to install

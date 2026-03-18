@@ -1,7 +1,8 @@
 REQUIREMENTS_TXT ?= requirements.txt requirements-dev.txt
+REACT_DIR = aprsd_webchat_extension/web/chat/react
 .DEFAULT_GOAL := help
 
-.PHONY: help dev test
+.PHONY: help dev test react-build react-clean
 
 include Makefile.venv
 Makefile.venv:
@@ -27,7 +28,7 @@ docs: build changelog
 	cp ChangeLog.rst docs/changelog.rst
 	tox -edocs
 
-clean: clean-build clean-pyc clean-test clean-pyenv ## remove all build, test, coverage and Python artifacts
+clean: clean-build clean-pyc clean-test clean-pyenv react-clean ## remove all build, test, coverage and Python artifacts
 
 clean-pyenv:
 	rm -rf .venv
@@ -52,6 +53,16 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+react-build: ## Build the React UI (requires Node.js and npm)
+	@echo "Building React UI..."
+	@command -v npm >/dev/null 2>&1 || { echo "npm is required to build the React UI. Install Node.js v18+."; exit 1; }
+	cd $(REACT_DIR) && npm install && npm run build
+	@echo "React UI built successfully in $(REACT_DIR)/dist/"
+
+react-clean: ## Remove React build artifacts and node_modules
+	rm -fr $(REACT_DIR)/node_modules
+	@echo "React node_modules removed (dist/ preserved for packaging)"
+
 coverage: ## check code coverage quickly with the default Python
 	coverage run --source aprsd_webchat_extension setup.py test
 	coverage report -m
@@ -61,11 +72,14 @@ coverage: ## check code coverage quickly with the default Python
 test: dev  ## Run all the tox tests
 	tox -p all
 
-build: test  ## Make the build artifact prior to doing an upload
-	$(VENV)/python3 setup.py sdist bdist_wheel
+build: test react-build  ## Build React UI + Python package for release
+	$(VENV)/python3 -m build
 	$(VENV)/twine check dist/*
+	@echo ""
+	@echo "Verifying React UI is included in package..."
+	@tar tzf dist/aprsd_webchat_extension-*.tar.gz 2>/dev/null | grep -q 'react/dist/index.html' && echo "  React UI: included" || echo "  WARNING: React UI not found in package!"
 
-upload: build  ## Upload a new version of the plugin
+upload: build  ## Upload a new version of the plugin to PyPI
 	$(VENV)/twine upload dist/*
 
 check: dev ## Code format check with tox and pep8

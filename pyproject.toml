@@ -156,8 +156,14 @@ Documentation = "https://aprsd-webchat-extension.readthedocs.io/en/latest/"
 # If there are data files included in your packages that need to be
 # installed, specify them here.
 py-modules = ["aprsd_webchat_extension"]
-package-data = {"sample" = ["*.dat"]}
 packages = ["aprsd_webchat_extension"]
+
+[tool.setuptools.package-data]
+aprsd_webchat_extension = [
+    "web/chat/templates/**/*",
+    "web/chat/static/**/*",
+    "web/chat/react/dist/**/*",
+]
 
 [build-system]
 requires = [
