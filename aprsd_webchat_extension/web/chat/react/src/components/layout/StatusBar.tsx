@@ -44,38 +44,45 @@ export function StatusBar() {
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{callsign || 'APRSD'}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Quick Beacon */}
+        <div className="flex items-center gap-1.5">
+          {/* Action buttons -- bordered to look tappable */}
           {hasCoords && (
             <button
               onClick={handleQuickBeacon}
               disabled={!connected}
-              className={`rounded-md p-1 transition-colors ${
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
                 beaconSent
-                  ? 'text-success'
-                  : 'text-muted-foreground hover:bg-accent disabled:opacity-50'
+                  ? 'border-success bg-success/10 text-success'
+                  : 'border-border bg-secondary text-foreground hover:bg-accent'
               }`}
               title="Send Beacon"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3 w-3" />
+              <span>{beaconSent ? 'Sent' : 'Bcn'}</span>
             </button>
           )}
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            className="rounded-md p-1 text-muted-foreground hover:bg-accent"
+            className="flex items-center rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground hover:bg-accent transition-colors"
+            title="Commands"
           >
-            <Command className="h-4 w-4" />
+            <Command className="h-3 w-3" />
           </button>
+
+          {/* Separator */}
+          <div className="mx-0.5 h-4 w-px bg-border" />
+
+          {/* Status indicators -- no border, muted */}
           <Radio
-            className={`h-4 w-4 transition-colors ${
+            className={`h-3.5 w-3.5 transition-colors ${
               radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
             }`}
           />
-          <Satellite className={`h-4 w-4 ${gpsColor}`} />
+          <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
           {connected ? (
-            <Wifi className="h-4 w-4 text-success" />
+            <Wifi className="h-3.5 w-3.5 text-success" />
           ) : (
-            <WifiOff className="h-4 w-4 text-destructive" />
+            <WifiOff className="h-3.5 w-3.5 text-destructive" />
           )}
         </div>
       </div>
