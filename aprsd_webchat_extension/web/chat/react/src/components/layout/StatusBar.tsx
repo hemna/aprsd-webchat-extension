@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useConnection } from '@/stores/connection'
 import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
@@ -26,6 +26,13 @@ export function StatusBar() {
   const isMobile = useIsMobile()
 
   const [beaconSent, setBeaconSent] = useState(false)
+  const [mobileLabel, setMobileLabel] = useState<string | null>(null)
+
+  // Show a brief label on mobile when a status icon is tapped
+  const showMobileLabel = useCallback((label: string) => {
+    setMobileLabel(label)
+    setTimeout(() => setMobileLabel(null), 2500)
+  }, [])
 
   // GPS status
   const hasCoords = gpsLat !== 0 || gpsLon !== 0
@@ -64,13 +71,14 @@ export function StatusBar() {
 
   if (isMobile) {
     return (
-      <div className="flex h-10 items-center justify-between border-b border-border bg-card px-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{callsign || 'APRSD'}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {hasCoords && (
-            <Tooltip text={beaconTip}>
+      <div className="flex flex-col border-b border-border bg-card">
+        <div className="flex h-10 items-center justify-between px-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">{callsign || 'APRSD'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {/* Action buttons */}
+            {hasCoords && (
               <button
                 onClick={handleQuickBeacon}
                 disabled={!connected}
@@ -83,37 +91,52 @@ export function StatusBar() {
                 <Send className="h-3 w-3" />
                 <span>{beaconSent ? 'Sent' : 'Bcn'}</span>
               </button>
-            </Tooltip>
-          )}
-          <Tooltip text="Commands">
+            )}
             <button
               onClick={() => setCommandPaletteOpen(true)}
               className="flex items-center rounded-md border border-border bg-secondary px-2 py-1 text-xs text-foreground hover:bg-accent transition-colors"
             >
               <Command className="h-3 w-3" />
             </button>
-          </Tooltip>
 
-          <div className="mx-0.5 h-4 w-px bg-border" />
+            <div className="mx-0.5 h-4 w-px bg-border" />
 
-          <Tooltip text={radioTip}>
-            <Radio
-              className={`h-3.5 w-3.5 transition-colors ${
-                radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
-              }`}
-            />
-          </Tooltip>
-          <Tooltip text={gpsTip}>
-            <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
-          </Tooltip>
-          <Tooltip text={connectionTip}>
-            {connected ? (
-              <Wifi className="h-3.5 w-3.5 text-success" />
-            ) : (
-              <WifiOff className="h-3.5 w-3.5 text-destructive" />
-            )}
-          </Tooltip>
+            {/* Status indicators -- tappable on mobile */}
+            <button
+              onClick={() => showMobileLabel(radioTip)}
+              className="rounded-md p-1 active:bg-accent/50"
+            >
+              <Radio
+                className={`h-3.5 w-3.5 transition-colors ${
+                  radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
+                }`}
+              />
+            </button>
+            <button
+              onClick={() => showMobileLabel(gpsTip)}
+              className="rounded-md p-1 active:bg-accent/50"
+            >
+              <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
+            </button>
+            <button
+              onClick={() => showMobileLabel(connectionTip)}
+              className="rounded-md p-1 active:bg-accent/50"
+            >
+              {connected ? (
+                <Wifi className="h-3.5 w-3.5 text-success" />
+              ) : (
+                <WifiOff className="h-3.5 w-3.5 text-destructive" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Tap-to-reveal label bar */}
+        {mobileLabel && (
+          <div className="flex items-center justify-center border-t border-border bg-secondary/50 px-3 py-1">
+            <span className="text-[11px] text-muted-foreground">{mobileLabel}</span>
+          </div>
+        )}
       </div>
     )
   }
