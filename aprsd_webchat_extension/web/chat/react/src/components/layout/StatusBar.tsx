@@ -144,10 +144,10 @@ export function StatusBar() {
   return (
     <div className="flex h-10 items-center justify-between border-b border-border bg-card px-4">
       <div className="flex items-center gap-4">
-        <Tooltip text={`Station: ${callsign}`}>
+        <Tooltip text={`Station: ${callsign}`} position="below">
           <span className="text-sm font-semibold">{callsign || 'APRSD Webchat'}</span>
         </Tooltip>
-        <Tooltip text={connectionTip}>
+        <Tooltip text={connectionTip} position="below">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {connected ? (
               <>
@@ -165,7 +165,7 @@ export function StatusBar() {
       </div>
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         {hasCoords && (
-          <Tooltip text={beaconTip}>
+          <Tooltip text={beaconTip} position="below">
             <button
               onClick={handleQuickBeacon}
               disabled={!connected}
@@ -180,7 +180,7 @@ export function StatusBar() {
             </button>
           </Tooltip>
         )}
-        <Tooltip text="Command palette (Ctrl+K)">
+        <Tooltip text="Command palette (Ctrl+K)" position="below">
           <button
             onClick={() => setCommandPaletteOpen(true)}
             className="flex items-center gap-1.5 rounded-md border border-border px-2 py-1 hover:bg-accent transition-colors"
@@ -189,7 +189,7 @@ export function StatusBar() {
             <span>Ctrl+K</span>
           </button>
         </Tooltip>
-        <Tooltip text={radioTip}>
+        <Tooltip text={radioTip} position="below">
           <span className="flex items-center gap-1.5">
             <Radio
               className={`h-3.5 w-3.5 transition-colors ${
@@ -198,14 +198,14 @@ export function StatusBar() {
             />
           </span>
         </Tooltip>
-        <Tooltip text={gpsTip}>
+        <Tooltip text={gpsTip} position="below">
           <span className="flex items-center gap-1.5">
             <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
             <span>{gpsLabel}</span>
           </span>
         </Tooltip>
         {lastBeaconTime && (
-          <Tooltip text={lastBeaconTip}>
+          <Tooltip text={lastBeaconTip} position="below">
             <span>Beacon: {timeAgo(lastBeaconTime)}</span>
           </Tooltip>
         )}
