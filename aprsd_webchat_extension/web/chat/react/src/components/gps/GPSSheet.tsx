@@ -43,7 +43,8 @@ export function GPSSheet() {
   if (!isOpen) return null
 
   const handleSendBeacon = () => {
-    if (fix && latitude && longitude) {
+    const hasCoords = latitude !== 0 || longitude !== 0
+    if (hasCoords) {
       sendBeacon(latitude, longitude, defaultPath, `${symbol.table}${symbol.symbol}`)
       setBeaconStatus('sent')
       setTimeout(() => setBeaconStatus('idle'), 2000)
@@ -87,7 +88,7 @@ export function GPSSheet() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <Satellite className={`h-5 w-5 ${fix ? 'text-success' : 'text-muted-foreground'}`} />
+            <Satellite className={`h-5 w-5 ${fix ? 'text-success' : (latitude !== 0 || longitude !== 0) ? 'text-warning' : 'text-muted-foreground'}`} />
             <h2 className="text-base font-semibold">GPS & Beaconing</h2>
           </div>
           <button
@@ -101,23 +102,31 @@ export function GPSSheet() {
         <div className="p-4 space-y-6">
           {/* GPS Status */}
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">GPS Status</h3>
-            <div className={`rounded-lg p-3 ${fix ? 'bg-success/10' : 'bg-destructive/10'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin className={`h-4 w-4 ${fix ? 'text-success' : 'text-destructive'}`} />
-                <span className={`text-sm font-medium ${fix ? 'text-success' : 'text-destructive'}`}>
-                  {fix ? 'GPS Fix Acquired' : 'No GPS Fix'}
-                </span>
-              </div>
-              {fix && (
-                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                  <div>Lat: {latitude.toFixed(6)}</div>
-                  <div>Lon: {longitude.toFixed(6)}</div>
-                  <div>Alt: {altitude.toFixed(1)}m</div>
-                  <div>Speed: {(speed * 3.6).toFixed(1)} km/h</div>
+            <h3 className="text-sm font-medium text-muted-foreground">Location Status</h3>
+            {(() => {
+              const hasCoords = latitude !== 0 || longitude !== 0
+              const statusColor = fix ? 'bg-success/10' : hasCoords ? 'bg-warning/10' : 'bg-destructive/10'
+              const iconColor = fix ? 'text-success' : hasCoords ? 'text-warning' : 'text-destructive'
+              const statusText = fix ? 'GPS Fix Acquired' : hasCoords ? 'Using Configured Location' : 'No Location Available'
+              return (
+                <div className={`rounded-lg p-3 ${statusColor}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className={`h-4 w-4 ${iconColor}`} />
+                    <span className={`text-sm font-medium ${iconColor}`}>
+                      {statusText}
+                    </span>
+                  </div>
+                  {hasCoords && (
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>Lat: {latitude.toFixed(6)}</div>
+                      <div>Lon: {longitude.toFixed(6)}</div>
+                      {fix && <div>Alt: {altitude.toFixed(1)}m</div>}
+                      {fix && <div>Speed: {(speed * 3.6).toFixed(1)} km/h</div>}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
           </div>
 
           {/* Beacon Symbol */}
@@ -203,7 +212,7 @@ export function GPSSheet() {
             <h3 className="text-sm font-medium text-muted-foreground">Quick Beacon</h3>
             <button
               onClick={handleSendBeacon}
-              disabled={!fix}
+              disabled={latitude === 0 && longitude === 0}
               className={`flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 ${
                 beaconStatus === 'sent'
                   ? 'bg-success text-white'

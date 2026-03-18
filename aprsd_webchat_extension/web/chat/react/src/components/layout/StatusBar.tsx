@@ -10,11 +10,19 @@ export function StatusBar() {
   const transport = useConnection((s) => s.transport)
   const callsign = useConnection((s) => s.callsign)
   const gpsFix = useGPS((s) => s.fix)
+  const gpsLat = useGPS((s) => s.latitude)
+  const gpsLon = useGPS((s) => s.longitude)
   const lastBeaconTime = useGPS((s) => s.lastBeaconTime)
   const radioBlinkTx = useUI((s) => s.radioBlinkTx)
   const radioBlinkRx = useUI((s) => s.radioBlinkRx)
   const setCommandPaletteOpen = useUI((s) => s.setCommandPaletteOpen)
   const isMobile = useIsMobile()
+
+  // GPS status: hardware fix, config location, or no location
+  const hasCoords = gpsLat !== 0 || gpsLon !== 0
+  const gpsStatus = gpsFix ? 'fix' : hasCoords ? 'config' : 'none'
+  const gpsColor = gpsStatus === 'fix' ? 'text-success' : gpsStatus === 'config' ? 'text-warning' : 'text-muted-foreground'
+  const gpsLabel = gpsStatus === 'fix' ? 'GPS Fix' : gpsStatus === 'config' ? 'Config Loc' : 'No GPS'
 
   if (isMobile) {
     return (
@@ -34,7 +42,7 @@ export function StatusBar() {
               radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
             }`}
           />
-          <Satellite className={`h-4 w-4 ${gpsFix ? 'text-success' : 'text-muted-foreground'}`} />
+          <Satellite className={`h-4 w-4 ${gpsColor}`} />
           {connected ? (
             <Wifi className="h-4 w-4 text-success" />
           ) : (
@@ -80,8 +88,8 @@ export function StatusBar() {
           />
         </div>
         <div className="flex items-center gap-1.5">
-          <Satellite className={`h-3.5 w-3.5 ${gpsFix ? 'text-success' : 'text-muted-foreground'}`} />
-          <span>{gpsFix ? 'GPS Fix' : 'No GPS'}</span>
+          <Satellite className={`h-3.5 w-3.5 ${gpsColor}`} />
+          <span>{gpsLabel}</span>
         </div>
         {lastBeaconTime && (
           <span>Beacon: {timeAgo(lastBeaconTime)}</span>

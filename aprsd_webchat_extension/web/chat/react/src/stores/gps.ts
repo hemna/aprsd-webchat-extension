@@ -25,6 +25,7 @@ interface GPSActions {
   setSymbol: (symbol: BeaconSymbol) => void
   setBeaconType: (type: 0 | 1 | 2 | 3) => void
   setBeaconInterval: (interval: number) => void
+  hydrateFromConfig: (latitude: number, longitude: number) => void
 }
 
 type GPSStore = GPSState & GPSActions
@@ -73,6 +74,13 @@ export const useGPS = create<GPSStore>()(
       setSymbol: (symbol) => set({ symbol }),
       setBeaconType: (type) => set({ beaconType: type }),
       setBeaconInterval: (interval) => set({ beaconInterval: interval }),
+      hydrateFromConfig: (latitude, longitude) => {
+        // Only set if we don't already have a GPS fix with real coordinates
+        const current = useGPS.getState()
+        if (!current.fix && current.latitude === 0 && current.longitude === 0) {
+          set({ latitude, longitude })
+        }
+      },
     }),
     {
       name: 'aprsd-webchat-gps',

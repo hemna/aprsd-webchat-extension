@@ -3,6 +3,7 @@ import { io, type Socket } from 'socket.io-client'
 import { SocketContext } from '@/hooks/useSocket'
 import { useSocketEvents } from '@/hooks/useSocketEvents'
 import { useConnection } from '@/stores/connection'
+import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
 import { AppShell } from '@/components/layout/AppShell'
@@ -35,6 +36,7 @@ export default function App() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const hydrate = useConnection((s) => s.hydrate)
   const configLoaded = useConnection((s) => s.configLoaded)
+  const hydrateGPS = useGPS((s) => s.hydrateFromConfig)
   const theme = useUI((s) => s.theme)
 
   // Apply theme immediately on mount
@@ -48,6 +50,10 @@ export default function App() {
       .then((res) => res.json())
       .then((config: ConfigResponse) => {
         hydrate(config)
+        // Set initial GPS coordinates from config (before gps_stats events arrive)
+        if (config.latitude && config.longitude) {
+          hydrateGPS(config.latitude, config.longitude)
+        }
       })
       .catch((err) => {
         console.error('Failed to load config:', err)
