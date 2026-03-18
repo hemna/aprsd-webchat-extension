@@ -68,7 +68,7 @@ export function AboutDialog({ open, onClose }: AboutDialogProps) {
           {/* Author */}
           <div className="rounded-lg bg-secondary/50 p-4">
             <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wide mb-2">Author</p>
-            <p className="text-sm font-medium">Craig Lamparter — WB4BOR</p>
+            <p className="text-sm font-medium">Walter A. Boring IV — WB4BOR</p>
           </div>
 
           {/* Version info */}
