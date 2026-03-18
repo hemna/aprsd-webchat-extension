@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useMessages } from '@/stores/messages'
-import { useConnection } from '@/stores/connection'
 import { ChannelItem } from './ChannelItem'
 import { isValidCallsign } from '@/lib/utils'
 import { Plus, Search, X } from 'lucide-react'
@@ -9,12 +8,11 @@ export function ChannelList() {
   const channels = useMessages((s) => s.channels)
   const ensureChannel = useMessages((s) => s.ensureChannel)
   const selectChannel = useMessages((s) => s.selectChannel)
-  const aprsthursdayEnabled = useConnection((s) => s.aprsthursdayEnabled)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNewChat, setShowNewChat] = useState(false)
   const [newCallsign, setNewCallsign] = useState('')
 
-  const groupedChannels = useMemo(() => {
+  const sortedChannels = useMemo(() => {
     const all = Object.values(channels)
     const filtered = searchQuery
       ? all.filter((c) =>
@@ -22,16 +20,9 @@ export function ChannelList() {
         )
       : all
 
-    // Sort by last activity within groups
-    const sorted = filtered.sort(
+    return filtered.sort(
       (a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
     )
-
-    return {
-      dm: sorted.filter((c) => c.category === 'dm'),
-      group: sorted.filter((c) => c.category === 'group'),
-      system: sorted.filter((c) => c.category === 'system'),
-    }
   }, [channels, searchQuery])
 
   const handleNewChat = () => {
@@ -52,16 +43,13 @@ export function ChannelList() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search channels..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full rounded-lg bg-secondary py-2 pl-9 pr-3 text-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
-            >
+            <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
           )}
@@ -103,48 +91,14 @@ export function ChannelList() {
         )}
       </div>
 
-      {/* Channel Groups */}
+      {/* Flat conversation list sorted by recency */}
       <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {groupedChannels.dm.length > 0 && (
-          <div className="mb-2">
-            <h3 className="px-3 py-1.5 text-xs font-semibold uppercase text-muted-foreground">
-              Direct Messages
-            </h3>
-            <div className="space-y-0.5">
-              {groupedChannels.dm.map((channel) => (
-                <ChannelItem key={channel.callsign} channel={channel} />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="space-y-0.5">
+          {sortedChannels.map((channel) => (
+            <ChannelItem key={channel.callsign} channel={channel} />
+          ))}
+        </div>
 
-        {(groupedChannels.group.length > 0 || aprsthursdayEnabled) && (
-          <div className="mb-2">
-            <h3 className="px-3 py-1.5 text-xs font-semibold uppercase text-muted-foreground">
-              Groups
-            </h3>
-            <div className="space-y-0.5">
-              {groupedChannels.group.map((channel) => (
-                <ChannelItem key={channel.callsign} channel={channel} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {groupedChannels.system.length > 0 && (
-          <div className="mb-2">
-            <h3 className="px-3 py-1.5 text-xs font-semibold uppercase text-muted-foreground">
-              System
-            </h3>
-            <div className="space-y-0.5">
-              {groupedChannels.system.map((channel) => (
-                <ChannelItem key={channel.callsign} channel={channel} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty state */}
         {Object.keys(channels).length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-muted-foreground">No conversations yet</p>

@@ -1,76 +1,46 @@
 import { useConnection } from '@/stores/connection'
-import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { useIsMobile } from '@/hooks/useMediaQuery'
-import { Radio, Satellite, Wifi, WifiOff } from 'lucide-react'
-import { timeAgo } from '@/lib/utils'
+import { Wifi, WifiOff, Moon, Sun, Satellite } from 'lucide-react'
 
 export function StatusBar() {
   const connected = useConnection((s) => s.connected)
-  const transport = useConnection((s) => s.transport)
   const callsign = useConnection((s) => s.callsign)
-  const gpsFix = useGPS((s) => s.fix)
-  const lastBeaconTime = useGPS((s) => s.lastBeaconTime)
-  const radioBlinkTx = useUI((s) => s.radioBlinkTx)
-  const radioBlinkRx = useUI((s) => s.radioBlinkRx)
+  const theme = useUI((s) => s.theme)
+  const toggleTheme = useUI((s) => s.toggleTheme)
+  const setActiveSheet = useUI((s) => s.setActiveSheet)
   const isMobile = useIsMobile()
 
-  if (isMobile) {
-    return (
-      <div className="flex h-10 items-center justify-between border-b border-border bg-card px-3">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{callsign || 'APRSD'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Radio
-            className={`h-4 w-4 transition-colors ${
-              radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
-            }`}
-          />
-          <Satellite className={`h-4 w-4 ${gpsFix ? 'text-success' : 'text-muted-foreground'}`} />
-          {connected ? (
-            <Wifi className="h-4 w-4 text-success" />
-          ) : (
-            <WifiOff className="h-4 w-4 text-destructive" />
-          )}
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex h-10 items-center justify-between border-b border-border bg-card px-4">
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-semibold">{callsign || 'APRSD Webchat'}</span>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          {connected ? (
-            <>
-              <Wifi className="h-3.5 w-3.5 text-success" />
-              <span>{transport}</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="h-3.5 w-3.5 text-destructive" />
-              <span>Disconnected</span>
-            </>
-          )}
+    <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
+      <div className="flex items-center gap-3">
+        <h1 className={`font-semibold ${isMobile ? 'text-base' : 'text-lg'}`}>
+          {callsign || 'APRSD Webchat'}
+        </h1>
+        <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+          connected
+            ? 'bg-success/10 text-success'
+            : 'bg-destructive/10 text-destructive'
+        }`}>
+          {connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+          <span>{connected ? 'Connected' : 'Offline'}</span>
         </div>
       </div>
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Radio
-            className={`h-3.5 w-3.5 transition-colors ${
-              radioBlinkTx ? 'text-destructive' : radioBlinkRx ? 'text-success' : 'text-muted-foreground'
-            }`}
-          />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Satellite className={`h-3.5 w-3.5 ${gpsFix ? 'text-success' : 'text-muted-foreground'}`} />
-          <span>{gpsFix ? 'GPS Fix' : 'No GPS'}</span>
-        </div>
-        {lastBeaconTime && (
-          <span>Beacon: {timeAgo(lastBeaconTime)}</span>
-        )}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setActiveSheet('gps')}
+          className="rounded-md p-2 text-muted-foreground hover:bg-accent transition-colors"
+          title="GPS"
+        >
+          <Satellite className="h-4 w-4" />
+        </button>
+        <button
+          onClick={toggleTheme}
+          className="rounded-md p-2 text-muted-foreground hover:bg-accent transition-colors"
+          title="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
       </div>
     </div>
   )

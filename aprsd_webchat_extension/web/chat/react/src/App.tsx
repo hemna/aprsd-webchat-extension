@@ -9,17 +9,23 @@ import { AppShell } from '@/components/layout/AppShell'
 import { StatusBar } from '@/components/layout/StatusBar'
 import { Sidebar } from '@/components/channels/Sidebar'
 import { MainPanel } from '@/components/chat/MainPanel'
+import { GPSSheet } from '@/components/gps/GPSSheet'
+import { SymbolPickerSheet } from '@/components/gps/SymbolPickerSheet'
 import type { ConfigResponse } from '@/types'
 
 function AppContent({ socket }: { socket: Socket }) {
   useSocketEvents(socket)
 
   return (
-    <AppShell
-      statusBar={<StatusBar />}
-      sidebar={<Sidebar />}
-      main={<MainPanel />}
-    />
+    <>
+      <AppShell
+        statusBar={<StatusBar />}
+        sidebar={<Sidebar />}
+        main={<MainPanel />}
+      />
+      <GPSSheet />
+      <SymbolPickerSheet />
+    </>
   )
 }
 
@@ -29,12 +35,10 @@ export default function App() {
   const configLoaded = useConnection((s) => s.configLoaded)
   const theme = useUI((s) => s.theme)
 
-  // Apply theme immediately on mount
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
 
-  // Fetch config from Flask
   useEffect(() => {
     fetch('/api/config')
       .then((res) => res.json())
@@ -46,16 +50,12 @@ export default function App() {
       })
   }, [hydrate])
 
-  // Initialize Socket.IO
   useEffect(() => {
     const s = io('/sendmsg', {
       transports: ['websocket', 'polling'],
     })
     setSocket(s)
-
-    return () => {
-      s.disconnect()
-    }
+    return () => { s.disconnect() }
   }, [])
 
   if (!configLoaded) {
