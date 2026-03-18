@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=1" />
+    <title>APRSD Webchat</title>
+    <script>
+      // Prevent theme flash: apply saved theme before CSS loads
+      (function() {
+        try {
+          var stored = JSON.parse(localStorage.getItem('aprsd-webchat-ui') || '{}');
+          var theme = (stored.state && stored.state.theme) || 'dark';
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch(e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
