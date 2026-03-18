@@ -13,10 +13,13 @@ import { MainPanel } from '@/components/chat/MainPanel'
 import { GPSSheet } from '@/components/gps/GPSSheet'
 import { SymbolPickerSheet } from '@/components/gps/SymbolPickerSheet'
 import { CommandPalette } from '@/components/command-palette/CommandPalette'
+import { AboutDialog } from '@/components/ui/AboutDialog'
 import type { ConfigResponse } from '@/types'
 
 function AppContent({ socket }: { socket: Socket }) {
   useSocketEvents(socket)
+  const aboutOpen = useUI((s) => s.aboutOpen)
+  const setAboutOpen = useUI((s) => s.setAboutOpen)
 
   return (
     <>
@@ -28,6 +31,7 @@ function AppContent({ socket }: { socket: Socket }) {
       <GPSSheet />
       <SymbolPickerSheet />
       <CommandPalette />
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </>
   )
 }

@@ -6,7 +6,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery'
 import { isValidCallsign } from '@/lib/utils'
 import {
   Search, MessageSquare, Satellite, Code2, Sun, Moon,
-  X, Radio, Palette,
+  X, Radio, Palette, Info,
 } from 'lucide-react'
 
 interface CommandItem {
@@ -22,6 +22,7 @@ interface CommandItem {
 export function CommandPalette() {
   const isOpen = useUI((s) => s.commandPaletteOpen)
   const setOpen = useUI((s) => s.setCommandPaletteOpen)
+  const setAboutOpen = useUI((s) => s.setAboutOpen)
   const theme = useUI((s) => s.theme)
   const toggleTheme = useUI((s) => s.toggleTheme)
   const setActiveSheet = useUI((s) => s.setActiveSheet)
@@ -112,9 +113,18 @@ export function CommandPalette() {
         action: () => setOpen(false),
         keywords: ['callsign', 'station'],
       },
+      {
+        id: 'about',
+        label: 'About APRSD Webchat',
+        description: 'Version info, author, and links',
+        icon: <Info className="h-4 w-4" />,
+        category: 'Info',
+        action: () => { setAboutOpen(true); setOpen(false) },
+        keywords: ['about', 'version', 'info', 'help', 'author'],
+      },
     ]
     return items
-  }, [channels, theme, showRawPackets, callsign, selectChannel, setOpen, toggleTheme, toggleRawPackets, setActiveSheet])
+  }, [channels, theme, showRawPackets, callsign, selectChannel, setOpen, setAboutOpen, toggleTheme, toggleRawPackets, setActiveSheet])
 
   const filteredCommands = useMemo(() => {
     if (!query.trim()) return commands

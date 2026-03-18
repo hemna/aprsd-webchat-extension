@@ -9,6 +9,7 @@ interface UIState {
   theme: Theme
   sidebarOpen: boolean
   commandPaletteOpen: boolean
+  aboutOpen: boolean
   showRawPackets: boolean
   tourCompleted: boolean
   activeSheet: SheetType
@@ -22,6 +23,7 @@ interface UIActions {
   setSidebarOpen: (open: boolean) => void
   toggleSidebar: () => void
   setCommandPaletteOpen: (open: boolean) => void
+  setAboutOpen: (open: boolean) => void
   setShowRawPackets: (show: boolean) => void
   toggleRawPackets: () => void
   setTourCompleted: (completed: boolean) => void
@@ -44,6 +46,7 @@ export const useUI = create<UIStore>()(
       theme: getSystemTheme(),
       sidebarOpen: false,
       commandPaletteOpen: false,
+      aboutOpen: false,
       showRawPackets: false,
       tourCompleted: false,
       activeSheet: null,
@@ -65,6 +68,7 @@ export const useUI = create<UIStore>()(
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
       setCommandPaletteOpen: (open: boolean) => set({ commandPaletteOpen: open }),
+      setAboutOpen: (open: boolean) => set({ aboutOpen: open }),
 
       setShowRawPackets: (show: boolean) => set({ showRawPackets: show }),
       toggleRawPackets: () => set((s) => ({ showRawPackets: !s.showRawPackets })),

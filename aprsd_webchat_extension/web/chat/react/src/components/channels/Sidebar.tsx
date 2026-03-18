@@ -6,6 +6,7 @@ import { useGPS } from '@/stores/gps'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { Moon, Sun, Satellite, Settings, X, Palette, Info } from 'lucide-react'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { AboutDialog } from '@/components/ui/AboutDialog'
 
 export function Sidebar() {
   const theme = useUI((s) => s.theme)
@@ -13,14 +14,14 @@ export function Sidebar() {
   const setActiveSheet = useUI((s) => s.setActiveSheet)
   const version = useConnection((s) => s.version)
   const aprsdVersion = useConnection((s) => s.aprsdVersion)
-  const callsign = useConnection((s) => s.callsign)
-  const transport = useConnection((s) => s.transport)
   const gpsFix = useGPS((s) => s.fix)
   const gpsLat = useGPS((s) => s.latitude)
   const gpsLon = useGPS((s) => s.longitude)
   const isMobile = useIsMobile()
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const aboutOpen = useUI((s) => s.aboutOpen)
+  const setAboutOpen = useUI((s) => s.setAboutOpen)
 
   const hasCoords = gpsLat !== 0 || gpsLon !== 0
   const gpsLabel = gpsFix ? 'GPS Fix' : hasCoords ? 'Configured' : 'None'
@@ -137,40 +138,23 @@ export function Sidebar() {
               </button>
 
               {/* About */}
-              <div className="rounded-lg border border-border p-3">
-                <div className="flex items-center gap-3 mb-3">
-                  <Info className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-sm font-medium">About</p>
+              <button
+                onClick={() => { setSettingsOpen(false); setAboutOpen(true) }}
+                className="flex w-full items-center gap-3 rounded-lg border border-border p-3 hover:bg-accent/50 transition-colors"
+              >
+                <Info className="h-5 w-5 text-muted-foreground" />
+                <div className="text-left">
+                  <p className="text-sm font-medium">About APRSD Webchat</p>
+                  <p className="text-xs text-muted-foreground">v{version} / APRSD v{aprsdVersion}</p>
                 </div>
-                <div className="space-y-1.5 text-xs text-muted-foreground">
-                  <div className="flex justify-between">
-                    <span>Callsign</span>
-                    <span className="font-medium text-foreground">{callsign}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Transport</span>
-                    <span className="font-medium text-foreground">{transport}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Webchat Extension</span>
-                    <span className="font-medium text-foreground">v{version}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>APRSD</span>
-                    <span className="font-medium text-foreground">v{aprsdVersion}</span>
-                  </div>
-                  {hasCoords && (
-                    <div className="flex justify-between">
-                      <span>Location</span>
-                      <span className="font-medium text-foreground">{gpsLat.toFixed(4)}, {gpsLon.toFixed(4)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
+              </button>
             </div>
           </div>
         </>
       )}
+
+      {/* About Dialog */}
+      <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   )
 }
