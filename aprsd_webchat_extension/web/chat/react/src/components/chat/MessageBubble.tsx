@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Message } from '@/types'
 import { escapeHtml, timeAgo } from '@/lib/utils'
 import { useUI } from '@/stores/ui'
-import { Check, CheckCheck, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, ThumbsUp, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface MessageBubbleProps {
   message: Message
@@ -46,9 +46,9 @@ export function MessageBubble({ message, showCallsign = false }: MessageBubblePr
           {isSent && (
             <span className="inline-flex">
               {message.ack ? (
-                <CheckCheck className="h-3.5 w-3.5 opacity-70" />
+                <ThumbsUp className="h-3.5 w-3.5 text-green-400" />
               ) : (
-                <Check className="h-3.5 w-3.5 opacity-50" />
+                <Loader2 className="h-3.5 w-3.5 opacity-50 animate-spin" />
               )}
             </span>
           )}

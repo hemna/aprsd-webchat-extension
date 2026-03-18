@@ -39,12 +39,28 @@ export function generateMessageId(from: string, to: string, timestamp: string, m
   return `${from}-${to}-${timestamp}-${msgNo}`
 }
 
+/** Parse a timestamp that could be ISO string, Unix epoch (seconds or ms), or Date-compatible string */
+function parseTimestamp(value: string | number): Date {
+  if (typeof value === 'number' || /^\d+(\.\d+)?$/.test(String(value))) {
+    const num = Number(value)
+    // If it looks like seconds (< year 2100 in seconds = 4102444800), treat as seconds
+    // Otherwise treat as milliseconds
+    if (num < 4102444800) {
+      return new Date(num * 1000)
+    }
+    return new Date(num)
+  }
+  return new Date(value)
+}
+
 /** Format relative time (e.g., "2m ago", "1h ago") */
 export function timeAgo(dateString: string): string {
-  const date = new Date(dateString)
+  const date = parseTimestamp(dateString)
+  if (isNaN(date.getTime())) return ''
   const now = new Date()
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
+  if (seconds < 0) return 'just now'
   if (seconds < 60) return 'just now'
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
