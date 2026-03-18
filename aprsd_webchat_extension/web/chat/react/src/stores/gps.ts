@@ -51,11 +51,11 @@ export const useGPS = create<GPSStore>()(
       updateFix: (data) =>
         set({
           fix: data.fix,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          altitude: data.altitude,
-          speed: data.speed,
-          course: data.track,
+          latitude: Number(data.latitude) || 0,
+          longitude: Number(data.longitude) || 0,
+          altitude: Number(data.altitude) || 0,
+          speed: Number(data.speed) || 0,
+          course: Number(data.track) || 0,
         }),
 
       updateSettings: (settings) =>
@@ -79,7 +79,7 @@ export const useGPS = create<GPSStore>()(
         // Only set if we don't already have a GPS fix with real coordinates
         const current = useGPS.getState()
         if (!current.fix && current.latitude === 0 && current.longitude === 0) {
-          set({ latitude, longitude })
+          set({ latitude: Number(latitude) || 0, longitude: Number(longitude) || 0 })
         }
       },
     }),
