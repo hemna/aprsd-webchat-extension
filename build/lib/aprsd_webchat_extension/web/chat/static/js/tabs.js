@@ -1,0 +1,39 @@
+function openTab(evt, tabName) {
+  // Declare all variables
+  var i, tabcontent, tablinks;
+
+  if (typeof tabName == 'undefined') {
+      return
+  }
+
+  // Sanitize tabName to prevent XSS - only allow alphanumeric, hyphens, and underscores
+  // This prevents injection attacks via getElementById
+  var sanitizedTabName = String(tabName).replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!sanitizedTabName || sanitizedTabName !== tabName) {
+      console.warn("Invalid tabName provided to openTab, sanitized:", tabName, "->", sanitizedTabName);
+      return;
+  }
+
+  // Get all elements with class="tabcontent" and hide them
+  tabcontent = document.getElementsByClassName("tabcontent");
+  for (i = 0; i < tabcontent.length; i++) {
+    tabcontent[i].style.display = "none";
+  }
+
+  // Get all elements with class="tablinks" and remove the class "active"
+  tablinks = document.getElementsByClassName("tablinks");
+  for (i = 0; i < tablinks.length; i++) {
+    tablinks[i].className = tablinks[i].className.replace(" active", "");
+  }
+
+  // Show the current tab, and add an "active" class to the button that opened the tab
+  var tabElement = document.getElementById(sanitizedTabName);
+  if (tabElement) {
+      tabElement.style.display = "block";
+  }
+  if (typeof evt.currentTarget == 'undefined') {
+      return
+  } else {
+      evt.currentTarget.className += " active";
+  }
+}

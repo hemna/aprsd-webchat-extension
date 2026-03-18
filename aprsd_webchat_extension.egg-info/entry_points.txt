@@ -1,0 +1,5 @@
+[aprsd.extension]
+webchat = aprsd_webchat_extension.extension
+
+[oslo.config.opts]
+aprsd_webchat_extension.conf = aprsd_webchat_extension.conf.opts:list_opts

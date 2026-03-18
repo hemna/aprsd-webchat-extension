@@ -1,0 +1,1249 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aprsd_webchat_extension.cmds.webchat &mdash; APRSD Webchat Extension 1.3.1.dev14+gcc995ba3c.d20251211 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/fira_code.min.css" />
+
+
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=ddfcd3e1"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="../../../index.html" class="icon icon-home">
+            APRSD Webchat Extension
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../readme.html">APRSD Webchat</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">APRSD Webchat Extension</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">aprsd_webchat_extension.cmds.webchat</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <h1>Source code for aprsd_webchat_extension.cmds.webchat</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">queue</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">signal</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">aprsd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">click</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">flask</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">timeago</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">wrapt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd</span><span class="w"> </span><span class="kn">import</span> <span class="n">cli_helper</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">packets</span><span class="p">,</span> <span class="n">plugin_utils</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">threads</span><span class="p">,</span> <span class="n">utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">aprsd_utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.client.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">APRSDClient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.main</span><span class="w"> </span><span class="kn">import</span> <span class="n">cli</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.packets</span><span class="w"> </span><span class="kn">import</span> <span class="n">collector</span> <span class="k">as</span> <span class="n">packets_collector</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">aprsd</span> <span class="k">as</span> <span class="n">aprsd_threads</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">keepalive</span><span class="p">,</span> <span class="n">rx</span><span class="p">,</span> <span class="n">service</span><span class="p">,</span> <span class="n">tx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd.threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">stats</span> <span class="k">as</span> <span class="n">stats_thread</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">request</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask_httpauth</span><span class="w"> </span><span class="kn">import</span> <span class="n">HTTPBasicAuth</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask_socketio</span><span class="w"> </span><span class="kn">import</span> <span class="n">Namespace</span><span class="p">,</span> <span class="n">SocketIO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">haversine</span><span class="w"> </span><span class="kn">import</span> <span class="n">haversine</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">oslo_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">cfg</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">aprsd_webchat_extension</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">aprsd_webchat_extension</span><span class="w"> </span><span class="kn">import</span> <span class="n">utils</span> <span class="k">as</span> <span class="n">webchat_utils</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">aprsd_gps_extension.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">GPSStats</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+    <span class="n">GPSStats</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="n">CONF</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">CONF</span>
+<span class="n">LOG</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+<span class="n">auth</span> <span class="o">=</span> <span class="n">HTTPBasicAuth</span><span class="p">()</span>
+<span class="n">socketio</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="c1"># for the gps extension thread to notify</span>
+<span class="c1"># when the settings have changed.</span>
+<span class="n">notify_queue</span> <span class="o">=</span> <span class="n">queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+
+<span class="c1"># List of callsigns that we don&#39;t want to track/fetch their location</span>
+<span class="n">callsign_no_track</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;APDW16&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN0&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN1&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN3&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN4&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN5&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN6&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN7&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN8&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;BLN9&quot;</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># Callsign location information</span>
+<span class="c1"># callsign: {lat: 0.0, long: 0.0, last_update: datetime}</span>
+<span class="n">callsign_locations</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="n">flask_app</span> <span class="o">=</span> <span class="n">flask</span><span class="o">.</span><span class="n">Flask</span><span class="p">(</span>
+    <span class="s2">&quot;aprsd_webchat_extension&quot;</span><span class="p">,</span>
+    <span class="n">static_url_path</span><span class="o">=</span><span class="s2">&quot;/static&quot;</span><span class="p">,</span>
+    <span class="n">static_folder</span><span class="o">=</span><span class="s2">&quot;web/chat/static&quot;</span><span class="p">,</span>
+    <span class="n">template_folder</span><span class="o">=</span><span class="s2">&quot;web/chat/templates&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="signal_handler">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.signal_handler">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">signal_handler</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Ctrl+C, Sending all threads(</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">threads</span><span class="o">.</span><span class="n">APRSDThreadList</span><span class="p">())</span><span class="si">}</span><span class="s2">) exit! &quot;</span>
+        <span class="sa">f</span><span class="s2">&quot;Can take up to 10 seconds </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">stats</span><span class="o">.</span><span class="n">stats_collector</span><span class="o">.</span><span class="n">stop_all</span><span class="p">()</span>
+    <span class="n">threads</span><span class="o">.</span><span class="n">APRSDThreadList</span><span class="p">()</span><span class="o">.</span><span class="n">stop_all</span><span class="p">()</span>
+    <span class="k">if</span> <span class="s2">&quot;subprocess&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">frame</span><span class="p">):</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.5</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Telling flask to bail.&quot;</span><span class="p">)</span>
+        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">aprsd_gps_extension</span>  <span class="c1"># noqa: F401</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="WebChatPacketMonitor">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatPacketMonitor">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WebChatPacketMonitor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to monitor packets for the webchat UI radio icon blinking.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="WebChatPacketMonitor.rx">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatPacketMonitor.rx">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">rx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">:</span> <span class="n">packets</span><span class="o">.</span><span class="n">Packet</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WebChatPacketMonitor rx: </span><span class="si">{</span><span class="n">packet</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">packet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;to_call&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WebChatPacketMonitor rx: </span><span class="si">{</span><span class="n">packet</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                <span class="s2">&quot;rx_pkt&quot;</span><span class="p">,</span>
+                <span class="n">packet</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">,</span>
+                <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebChatPacketMonitor.tx">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatPacketMonitor.tx">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">tx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">:</span> <span class="n">packets</span><span class="o">.</span><span class="n">Packet</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WebChatPacketMonitor tx: </span><span class="si">{</span><span class="n">packet</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">packet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;from_call&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WebChatPacketMonitor tx: </span><span class="si">{</span><span class="n">packet</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                <span class="s2">&quot;tx_pkt&quot;</span><span class="p">,</span>
+                <span class="n">packet</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">,</span>
+                <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+            <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="WebChatPacketMonitor.flush">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatPacketMonitor.flush">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="WebChatPacketMonitor.load">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatPacketMonitor.load">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SentMessages">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SentMessages</span><span class="p">:</span>
+    <span class="n">_instance</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;This magic turns this into a singleton.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_instance</span>
+
+<div class="viewcode-block" id="SentMessages.is_initialized">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.is_initialized">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_initialized</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="SentMessages.add">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.add">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">msg</span><span class="o">.</span><span class="n">msgNo</span><span class="p">]</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="vm">__dict__</span></div>
+
+
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+<div class="viewcode-block" id="SentMessages.get">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.get">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="SentMessages.get_all">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.get_all">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span></div>
+
+
+<div class="viewcode-block" id="SentMessages.set_status">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.set_status">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="s2">&quot;last_update&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">status</span></div>
+
+
+<div class="viewcode-block" id="SentMessages.ack">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.ack">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ack</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;The message got an ack!&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="s2">&quot;last_update&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="s2">&quot;ack&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="SentMessages.reply">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SentMessages.reply">[docs]</a>
+    <span class="nd">@wrapt</span><span class="o">.</span><span class="n">synchronized</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reply</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">packet</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;We got a packet back from the sent message.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="nb">id</span><span class="p">][</span><span class="s2">&quot;reply&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">packet</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_build_location_from_repeat</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="c1"># This is a location message Format is</span>
+    <span class="c1"># ^ld^callsign:latitude,longitude,altitude,course,speed,timestamp</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="n">callsign</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;^ld^&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span><span class="p">:</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">alt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">course</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+            <span class="n">speed</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">b</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+            <span class="n">compass_bearing</span> <span class="o">=</span> <span class="n">aprsd_utils</span><span class="o">.</span><span class="n">degrees_to_cardinal</span><span class="p">(</span><span class="n">course</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;callsign&quot;</span><span class="p">:</span> <span class="n">callsign</span><span class="p">,</span>
+                <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="n">alt</span><span class="p">,</span>
+                <span class="s2">&quot;course&quot;</span><span class="p">:</span> <span class="n">course</span><span class="p">,</span>
+                <span class="s2">&quot;compass_bearing&quot;</span><span class="p">:</span> <span class="n">compass_bearing</span><span class="p">,</span>
+                <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">speed</span><span class="p">,</span>
+                <span class="s2">&quot;lasttime&quot;</span><span class="p">:</span> <span class="n">time</span><span class="p">,</span>
+                <span class="s2">&quot;timeago&quot;</span><span class="p">:</span> <span class="n">timeago</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">time</span><span class="p">),</span>
+            <span class="p">}</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Location data from REPEAT </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">data</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_calculate_location_data</span><span class="p">(</span><span class="n">location_data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate all of the location data from data from aprs.fi or REPEAT.&quot;&quot;&quot;</span>
+    <span class="n">lat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">])</span>
+    <span class="n">lon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">])</span>
+    <span class="n">alt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;altitude&quot;</span><span class="p">])</span>
+    <span class="n">speed</span> <span class="o">=</span> <span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;speed&quot;</span><span class="p">]</span>
+    <span class="n">lasttime</span> <span class="o">=</span> <span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;lasttime&quot;</span><span class="p">]</span>
+    <span class="n">timeago_str</span> <span class="o">=</span> <span class="n">location_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+        <span class="s2">&quot;timeago&quot;</span><span class="p">,</span>
+        <span class="n">timeago</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lasttime</span><span class="p">),</span>
+    <span class="p">)</span>
+    <span class="c1"># now calculate distance from our own location</span>
+    <span class="n">distance</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># if we have the gps extension installed, then we can use the gps extension to get the location data.</span>
+    <span class="k">if</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+        <span class="n">gps_stats</span> <span class="o">=</span> <span class="n">GPSStats</span><span class="p">()</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">serializable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">gps_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fix&quot;</span><span class="p">):</span>
+            <span class="n">our_lat</span> <span class="o">=</span> <span class="n">gps_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;latitude&quot;</span><span class="p">)</span>
+            <span class="n">our_lon</span> <span class="o">=</span> <span class="n">gps_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;longitude&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">our_lat</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span>
+            <span class="n">our_lon</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">our_lat</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span>
+        <span class="n">our_lon</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span>
+
+    <span class="n">our_lat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">our_lat</span><span class="p">)</span>
+    <span class="n">our_lon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">our_lon</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">our_lat</span> <span class="ow">and</span> <span class="n">our_lon</span><span class="p">:</span>
+        <span class="n">distance</span> <span class="o">=</span> <span class="n">haversine</span><span class="p">((</span><span class="n">our_lat</span><span class="p">,</span> <span class="n">our_lon</span><span class="p">),</span> <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">))</span>
+        <span class="n">bearing</span> <span class="o">=</span> <span class="n">aprsd_utils</span><span class="o">.</span><span class="n">calculate_initial_compass_bearing</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">our_lat</span><span class="p">,</span> <span class="n">our_lon</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">compass_bearing</span> <span class="o">=</span> <span class="n">aprsd_utils</span><span class="o">.</span><span class="n">degrees_to_cardinal</span><span class="p">(</span><span class="n">bearing</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">distance</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">bearing</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">compass_bearing</span> <span class="o">=</span> <span class="s2">&quot;N&quot;</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;callsign&quot;</span><span class="p">:</span> <span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;callsign&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+        <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+        <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="n">alt</span><span class="p">,</span>
+        <span class="s2">&quot;course&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bearing</span><span class="si">:</span><span class="s2">0.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;compass_bearing&quot;</span><span class="p">:</span> <span class="n">compass_bearing</span><span class="p">,</span>
+        <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="n">speed</span><span class="p">,</span>
+        <span class="s2">&quot;lasttime&quot;</span><span class="p">:</span> <span class="n">lasttime</span><span class="p">,</span>
+        <span class="s2">&quot;timeago&quot;</span><span class="p">:</span> <span class="n">timeago_str</span><span class="p">,</span>
+        <span class="s2">&quot;distance&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">distance</span><span class="si">:</span><span class="s2">0.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="send_location_data_to_browser">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.send_location_data_to_browser">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">send_location_data_to_browser</span><span class="p">(</span><span class="n">location_data</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">socketio</span>
+    <span class="n">callsign</span> <span class="o">=</span> <span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;callsign&quot;</span><span class="p">]</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Got location for </span><span class="si">{</span><span class="n">callsign</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">callsign_locations</span><span class="p">[</span><span class="n">callsign</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+        <span class="s2">&quot;callsign_location&quot;</span><span class="p">,</span>
+        <span class="n">callsign_locations</span><span class="p">[</span><span class="n">callsign</span><span class="p">],</span>
+        <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="populate_callsign_location">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.populate_callsign_location">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">populate_callsign_location</span><span class="p">(</span><span class="n">callsign</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Populate the location for the callsign.</span>
+
+<span class="sd">    if data is passed in, then we have the location already from</span>
+<span class="sd">    an APRS packet.  If data is None, then we need to fetch the</span>
+<span class="sd">    location from aprs.fi or REPEAT.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">socketio</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch the location for the callsign.&quot;&quot;&quot;</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;populate_callsign_location </span><span class="si">{</span><span class="n">callsign</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">data</span><span class="p">:</span>
+        <span class="n">location_data</span> <span class="o">=</span> <span class="n">_calculate_location_data</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">callsign_locations</span><span class="p">[</span><span class="n">callsign</span><span class="p">]</span> <span class="o">=</span> <span class="n">location_data</span>
+        <span class="n">send_location_data_to_browser</span><span class="p">(</span><span class="n">location_data</span><span class="p">)</span>
+        <span class="k">return</span>
+
+    <span class="c1"># First we are going to try to get the location from aprs.fi</span>
+    <span class="c1"># if there is no internets, then this will fail and we will</span>
+    <span class="c1"># fallback to calling REPEAT for the location for the callsign.</span>
+    <span class="n">fallback</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprs_fi</span><span class="o">.</span><span class="n">apiKey</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">&quot;Config aprs_fi.apiKey is not set. Can&#39;t get location from aprs.fi &quot;</span>
+            <span class="s2">&quot; falling back to sending REPEAT to get location.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">fallback</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">aprs_data</span> <span class="o">=</span> <span class="n">plugin_utils</span><span class="o">.</span><span class="n">get_aprs_fi</span><span class="p">(</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprs_fi</span><span class="o">.</span><span class="n">apiKey</span><span class="p">,</span> <span class="n">callsign</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">]):</span>
+                <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Didn&#39;t get any entries from aprs.fi&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="n">lat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lat&quot;</span><span class="p">])</span>
+            <span class="n">lon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lng&quot;</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>  <span class="c1"># altitude not always provided</span>
+                <span class="n">alt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;altitude&quot;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">alt</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">location_data</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;callsign&quot;</span><span class="p">:</span> <span class="n">callsign</span><span class="p">,</span>
+                <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">,</span>
+                <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span>
+                <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="n">alt</span><span class="p">,</span>
+                <span class="s2">&quot;lasttime&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;lasttime&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;course&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;course&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+                <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">aprs_data</span><span class="p">[</span><span class="s2">&quot;entries&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;speed&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+            <span class="p">}</span>
+            <span class="n">location_data</span> <span class="o">=</span> <span class="n">_calculate_location_data</span><span class="p">(</span><span class="n">location_data</span><span class="p">)</span>
+            <span class="n">callsign_locations</span><span class="p">[</span><span class="n">callsign</span><span class="p">]</span> <span class="o">=</span> <span class="n">location_data</span>
+            <span class="n">send_location_data_to_browser</span><span class="p">(</span><span class="n">location_data</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to fetch aprs.fi &#39;</span><span class="si">{</span><span class="n">ex</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+            <span class="n">fallback</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">if</span> <span class="n">fallback</span><span class="p">:</span>
+        <span class="c1"># We don&#39;t have the location data</span>
+        <span class="c1"># and we can&#39;t get it from aprs.fi</span>
+        <span class="c1"># Send a special message to REPEAT to get the location data</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sending REPEAT to get location for callsign </span><span class="si">{</span><span class="n">callsign</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="n">tx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">packets</span><span class="o">.</span><span class="n">MessagePacket</span><span class="p">(</span>
+                <span class="n">from_call</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">,</span>
+                <span class="n">to_call</span><span class="o">=</span><span class="s2">&quot;REPEAT&quot;</span><span class="p">,</span>
+                <span class="n">message_text</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;ld </span><span class="si">{</span><span class="n">callsign</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="WebChatProcessPacketThread">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatProcessPacketThread">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">WebChatProcessPacketThread</span><span class="p">(</span><span class="n">rx</span><span class="o">.</span><span class="n">APRSDProcessPacketThread</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class that handles packets being sent to us.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet_queue</span><span class="p">,</span> <span class="n">socketio</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socketio</span> <span class="o">=</span> <span class="n">socketio</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connected</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">packet_queue</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WebChatProcessPacketThread.process_ack_packet">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatProcessPacketThread.process_ack_packet">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">process_ack_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">:</span> <span class="n">packets</span><span class="o">.</span><span class="n">AckPacket</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">process_ack_packet</span><span class="p">(</span><span class="n">packet</span><span class="p">)</span>
+        <span class="n">ack_num</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;msgNo&quot;</span><span class="p">)</span>
+        <span class="n">SentMessages</span><span class="p">()</span><span class="o">.</span><span class="n">ack</span><span class="p">(</span><span class="n">ack_num</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">msg</span> <span class="o">:=</span> <span class="n">SentMessages</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ack_num</span><span class="p">):</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sending ack to browser </span><span class="si">{</span><span class="n">msg</span><span class="si">}</span><span class="s2"> for ack </span><span class="si">{</span><span class="n">ack_num</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                <span class="s2">&quot;ack&quot;</span><span class="p">,</span>
+                <span class="n">msg</span><span class="p">,</span>
+                <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No message found for ack </span><span class="si">{</span><span class="n">ack_num</span><span class="si">}</span><span class="s2"> in SentMessages&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">got_ack</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="WebChatProcessPacketThread.process_our_message_packet">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.WebChatProcessPacketThread.process_our_message_packet">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">process_our_message_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">:</span> <span class="n">packets</span><span class="o">.</span><span class="n">MessagePacket</span><span class="p">):</span>
+        <span class="k">global</span> <span class="n">callsign_locations</span>
+        <span class="c1"># ok lets see if we have the location for the</span>
+        <span class="c1"># person we just sent a message to.</span>
+        <span class="n">from_call</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;from_call&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">from_call</span> <span class="o">==</span> <span class="s2">&quot;REPEAT&quot;</span><span class="p">:</span>
+            <span class="c1"># We got a message from REPEAT.  Is this a location message?</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message_text&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;^ld^&quot;</span><span class="p">):</span>
+                <span class="n">location_data</span> <span class="o">=</span> <span class="n">_build_location_from_repeat</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+                <span class="n">callsign</span> <span class="o">=</span> <span class="n">location_data</span><span class="p">[</span><span class="s2">&quot;callsign&quot;</span><span class="p">]</span>
+                <span class="n">location_data</span> <span class="o">=</span> <span class="n">_calculate_location_data</span><span class="p">(</span><span class="n">location_data</span><span class="p">)</span>
+                <span class="n">callsign_locations</span><span class="p">[</span><span class="n">callsign</span><span class="p">]</span> <span class="o">=</span> <span class="n">location_data</span>
+                <span class="n">send_location_data_to_browser</span><span class="p">(</span><span class="n">location_data</span><span class="p">)</span>
+                <span class="k">return</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">from_call</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">callsign_locations</span>
+            <span class="ow">and</span> <span class="n">from_call</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">callsign_no_track</span>
+            <span class="ow">and</span> <span class="n">APRSDClient</span><span class="p">()</span><span class="o">.</span><span class="n">driver</span><span class="o">.</span><span class="n">transport</span>
+            <span class="ow">in</span> <span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">TRANSPORT_APRSIS</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">TRANSPORT_FAKE</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="c1"># We have to ask aprs for the location for the callsign</span>
+            <span class="c1"># We send a message packet to wb4bor-11 asking for location.</span>
+            <span class="n">populate_callsign_location</span><span class="p">(</span><span class="n">from_call</span><span class="p">)</span>
+        <span class="c1"># Send the packet to the browser.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+            <span class="s2">&quot;new&quot;</span><span class="p">,</span>
+            <span class="n">packet</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">,</span>
+            <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="NonGPSExtensionBeaconThread">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.NonGPSExtensionBeaconThread">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NonGPSExtensionBeaconThread</span><span class="p">(</span><span class="n">aprsd_threads</span><span class="o">.</span><span class="n">APRSDThread</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Beacon thread for when the gps extension is not installed.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">notify_queue</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;BeaconSendThread&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span> <span class="o">=</span> <span class="n">notify_queue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beacon_interval</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">beacon_interval</span>
+        <span class="c1"># Default this to none.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beacon_type</span> <span class="o">=</span> <span class="s2">&quot;none&quot;</span>
+
+        <span class="c1"># Make sure Latitude and Longitude are set.</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="ow">not</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span>
+            <span class="ow">or</span> <span class="ow">not</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span>
+        <span class="p">):</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+                <span class="s2">&quot;Latitude and Longitude are not set in the config file.&quot;</span>
+                <span class="s2">&quot;Beacon will not be sent and thread is STOPPED.&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Beacon thread is running and will send &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;beacons every </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">beacon_interval</span><span class="si">}</span><span class="s2"> seconds.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="NonGPSExtensionBeaconThread.update_settings">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.NonGPSExtensionBeaconThread.update_settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">update_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beacon_type</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;beacon_type&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beacon_interval</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;beacon_interval&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NonGPSExtensionBeaconThread.get_gps_settings">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.NonGPSExtensionBeaconThread.get_gps_settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_gps_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Getting GPS settings&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;gps_settings&quot;</span><span class="p">,</span> <span class="s2">&quot;settings&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_settings</span><span class="p">()}</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="NonGPSExtensionBeaconThread.get_settings">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.NonGPSExtensionBeaconThread.get_settings">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_settings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;beacon_type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">beacon_type</span><span class="p">,</span>
+            <span class="s2">&quot;beacon_interval&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">beacon_interval</span><span class="p">,</span>
+        <span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="NonGPSExtensionBeaconThread.loop">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.NonGPSExtensionBeaconThread.loop">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># First check if the notify queue has a message</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Notify queue message: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">match</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">):</span>
+                <span class="k">case</span> <span class="s2">&quot;get_gps_settings&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">get_gps_settings</span><span class="p">()</span>
+                <span class="k">case</span> <span class="s2">&quot;beaconing_settings_changed&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">update_settings</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+                <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+                    <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown message: </span><span class="si">{</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+        <span class="c1"># we only send beacons if the beacon type is interval.</span>
+        <span class="c1"># since we only have hard coded lat/lon in the config</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">beacon_type</span> <span class="o">!=</span> <span class="s2">&quot;interval&quot;</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+
+        <span class="c1"># Only dump out the stats every N seconds</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop_count</span> <span class="o">%</span> <span class="n">CONF</span><span class="o">.</span><span class="n">beacon_interval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">pkt</span> <span class="o">=</span> <span class="n">packets</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">BeaconPacket</span><span class="p">(</span>
+                <span class="n">from_call</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">,</span>
+                <span class="n">to_call</span><span class="o">=</span><span class="s2">&quot;APRS&quot;</span><span class="p">,</span>
+                <span class="n">latitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">CONF</span><span class="o">.</span><span class="n">latitude</span><span class="p">),</span>
+                <span class="n">longitude</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">CONF</span><span class="o">.</span><span class="n">longitude</span><span class="p">),</span>
+                <span class="n">comment</span><span class="o">=</span><span class="s2">&quot;APRSD GPS Beacon&quot;</span><span class="p">,</span>
+                <span class="n">symbol</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">beacon_symbol</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Only send it once</span>
+                <span class="n">pkt</span><span class="o">.</span><span class="n">retry_count</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">tx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">direct</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to send beacon: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">APRSDClient</span><span class="p">()</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="LocationProcessingThread">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.LocationProcessingThread">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">LocationProcessingThread</span><span class="p">(</span><span class="n">aprsd_threads</span><span class="o">.</span><span class="n">APRSDThread</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to handle the location processing.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">notify_queue</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;LocationProcessingThread&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span> <span class="o">=</span> <span class="n">notify_queue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_fix</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_sent_time</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_should_send_gps_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gps_stats</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">gps_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fix&quot;</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_fix</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_sent_time</span>
+            <span class="ow">and</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_sent_time</span>
+            <span class="o">&gt;</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="LocationProcessingThread.loop">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.LocationProcessingThread.loop">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">loop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># First check if the notify queue has a message</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">get_nowait</span><span class="p">()</span>
+
+            <span class="k">match</span> <span class="n">message</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">):</span>
+                <span class="k">case</span> <span class="s2">&quot;beacon sent&quot;</span><span class="p">:</span>
+                    <span class="c1"># notify the browser that the beacon was sent.</span>
+                    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sending beacon sent to browser&quot;</span><span class="p">)</span>
+                    <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                        <span class="s2">&quot;gps_beacon_sent&quot;</span><span class="p">,</span>
+                        <span class="n">message</span><span class="p">,</span>
+                        <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">case</span> <span class="s2">&quot;gps_settings&quot;</span><span class="p">:</span>
+                    <span class="c1"># update the browser with the GPS settings.</span>
+                    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Sending GPS settings to browser&quot;</span><span class="p">)</span>
+                    <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                        <span class="s2">&quot;gps_settings&quot;</span><span class="p">,</span>
+                        <span class="n">message</span><span class="p">,</span>
+                        <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">notify_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+            <span class="c1"># Check every 10 seconds to see if we have a fix.</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop_count</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">GPSStats</span><span class="p">:</span>
+                    <span class="n">gps_stats</span> <span class="o">=</span> <span class="n">GPSStats</span><span class="p">()</span><span class="o">.</span><span class="n">stats</span><span class="p">(</span><span class="n">serializable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_send_gps_stats</span><span class="p">(</span><span class="n">gps_stats</span><span class="p">):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_fix</span> <span class="o">=</span> <span class="n">gps_stats</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;fix&quot;</span><span class="p">)</span>
+                        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sending GPS stats to browser: </span><span class="si">{</span><span class="n">gps_stats</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">last_gps_sent_time</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                        <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                            <span class="s2">&quot;gps_stats&quot;</span><span class="p">,</span>
+                            <span class="n">gps_stats</span><span class="p">,</span>
+                            <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+                        <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loop_count</span> <span class="o">%</span> <span class="mi">60</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">gps_stats</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;fix&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                    <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+                    <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span>
+                    <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                    <span class="s2">&quot;track&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+                <span class="p">}</span>
+                <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+                    <span class="s2">&quot;gps_stats&quot;</span><span class="p">,</span>
+                    <span class="n">gps_stats</span><span class="p">,</span>
+                    <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+</div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_transport</span><span class="p">(</span><span class="n">stats</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprs_network</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="n">transport</span> <span class="o">=</span> <span class="s2">&quot;aprs-is&quot;</span>
+        <span class="n">aprs_connection</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;APRS-IS Server: &lt;a href=&#39;http://status.aprs2.net&#39; &gt;&quot;</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">&lt;/a&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;APRSClientStats&quot;</span><span class="p">][</span><span class="s2">&quot;server_string&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_tcp</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="n">transport</span> <span class="o">=</span> <span class="s2">&quot;kiss_tcp&quot;</span>
+        <span class="n">aprs_connection</span> <span class="o">=</span> <span class="s2">&quot;TCPKISS://</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_tcp</span><span class="o">.</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_tcp</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_serial</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="n">transport</span> <span class="o">=</span> <span class="s2">&quot;kiss_serial&quot;</span>
+        <span class="c1"># for pep8 violation</span>
+        <span class="n">aprs_connection</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;SerialKISS://</span><span class="si">{}</span><span class="s2">@</span><span class="si">{}</span><span class="s2"> baud&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_serial</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                <span class="n">CONF</span><span class="o">.</span><span class="n">kiss_serial</span><span class="o">.</span><span class="n">baudrate</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">CONF</span><span class="o">.</span><span class="n">fake_client</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+        <span class="n">transport</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">TRANSPORT_FAKE</span>
+        <span class="n">aprs_connection</span> <span class="o">=</span> <span class="s2">&quot;Fake Client&quot;</span>
+
+    <span class="k">return</span> <span class="n">transport</span><span class="p">,</span> <span class="n">aprs_connection</span>
+
+
+<div class="viewcode-block" id="location">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.location">[docs]</a>
+<span class="nd">@flask_app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/location/&lt;callsign&gt;&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">location</span><span class="p">(</span><span class="n">callsign</span><span class="p">):</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fetch location for callsign </span><span class="si">{</span><span class="n">callsign</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">callsign</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">callsign_no_track</span><span class="p">:</span>
+        <span class="n">populate_callsign_location</span><span class="p">(</span><span class="n">callsign</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="index">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.index">[docs]</a>
+<span class="nd">@auth</span><span class="o">.</span><span class="n">login_required</span>
+<span class="nd">@flask_app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">_stats</span><span class="p">()</span>
+
+    <span class="c1"># For development</span>
+    <span class="n">html_template</span> <span class="o">=</span> <span class="s2">&quot;index.html&quot;</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Template </span><span class="si">{</span><span class="n">html_template</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">transport</span><span class="p">,</span> <span class="n">aprs_connection</span> <span class="o">=</span> <span class="n">_get_transport</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="s2">&quot;stats&quot;</span><span class="p">])</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;transport </span><span class="si">{</span><span class="n">transport</span><span class="si">}</span><span class="s2"> aprs_connection </span><span class="si">{</span><span class="n">aprs_connection</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;transport&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">transport</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s2">&quot;aprs_connection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">aprs_connection</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;initial stats = </span><span class="si">{</span><span class="n">stats</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># The hard coded lat/long are from the</span>
+    <span class="c1"># aprsd_webchat_extension.</span>
+    <span class="c1"># when the aprsd_gps_extension is installed, we will</span>
+    <span class="c1"># Get the lat/long from the gps extension</span>
+    <span class="n">latitude</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span>
+    <span class="k">if</span> <span class="n">latitude</span><span class="p">:</span>
+        <span class="n">latitude</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span><span class="p">)</span>
+
+    <span class="n">longitude</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span>
+    <span class="k">if</span> <span class="n">longitude</span><span class="p">:</span>
+        <span class="n">longitude</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">longitude</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">latitude</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">longitude</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Latitude or longitude is not set in the config file.&quot;</span><span class="p">)</span>
+        <span class="n">latitude</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">longitude</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># since we just hit the index page, we need to fetch</span>
+    <span class="c1"># the gps settings from the LocationProcessingThread.</span>
+    <span class="n">notify_queue</span><span class="o">.</span><span class="n">put</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;get_gps_settings&quot;</span><span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">flask</span><span class="o">.</span><span class="n">render_template</span><span class="p">(</span>
+        <span class="n">html_template</span><span class="p">,</span>
+        <span class="n">initial_stats</span><span class="o">=</span><span class="n">stats</span><span class="p">,</span>
+        <span class="n">aprs_connection</span><span class="o">=</span><span class="n">aprs_connection</span><span class="p">,</span>
+        <span class="n">callsign</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span>
+        <span class="n">aprsd_version</span><span class="o">=</span><span class="n">aprsd</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span>
+        <span class="n">latitude</span><span class="o">=</span><span class="n">latitude</span><span class="p">,</span>
+        <span class="n">longitude</span><span class="o">=</span><span class="n">longitude</span><span class="p">,</span>
+        <span class="n">is_digipi</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">is_digipi</span><span class="p">,</span>
+        <span class="n">beaconing_enabled</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">enable_beacon</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="send_message_status">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.send_message_status">[docs]</a>
+<span class="nd">@auth</span><span class="o">.</span><span class="n">login_required</span>
+<span class="nd">@flask_app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/send-message-status&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">send_message_status</span><span class="p">():</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="n">msgs</span> <span class="o">=</span> <span class="n">SentMessages</span><span class="p">()</span>
+    <span class="n">info</span> <span class="o">=</span> <span class="n">msgs</span><span class="o">.</span><span class="n">get_all</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">info</span><span class="p">)</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stats</span><span class="p">():</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+
+    <span class="n">time_format</span> <span class="o">=</span> <span class="s2">&quot;%m-</span><span class="si">%d</span><span class="s2">-%Y %H:%M:%S&quot;</span>
+    <span class="n">stats_dict</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">stats_collector</span><span class="o">.</span><span class="n">collect</span><span class="p">(</span><span class="n">serializable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;stats_dict: </span><span class="si">{</span><span class="n">stats_dict</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># Webchat doesnt need these</span>
+    <span class="k">if</span> <span class="s2">&quot;WatchList&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;WatchList&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;SeenList&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;SeenList&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;APRSDThreadList&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;APRSDThreadList&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;PacketList&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;PacketList&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;EmailStats&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;EmailStats&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="s2">&quot;PluginManager&quot;</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="k">del</span> <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;PluginManager&quot;</span><span class="p">]</span>
+
+    <span class="c1"># the webchat UI needs to know if we are running on a Digipi.</span>
+    <span class="c1"># digipi wants ui elements to be disabled.</span>
+    <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;is_digipi&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">is_digipi</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+        <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;GPSStats&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;track&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="k">elif</span> <span class="s2">&quot;GPSStats&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">stats_dict</span><span class="p">:</span>
+        <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;GPSStats&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span>
+            <span class="s2">&quot;altitude&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;speed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s2">&quot;track&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;gps&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;beaconing_enabled&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">enable_beacon</span><span class="p">,</span>
+        <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">latitude</span><span class="p">,</span>
+        <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">longitude</span><span class="p">,</span>
+        <span class="s2">&quot;beacon_interval&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">beacon_interval</span><span class="p">,</span>
+        <span class="s2">&quot;gps_extension&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;is_installed&quot;</span><span class="p">:</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">(),</span>
+            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+            <span class="s2">&quot;gpsd_host&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;gpsd_port&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;polling_period&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;beacon_type&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;smart_beacon_distance_threshold&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;smart_beacon_time_window&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;aprsd-gps-extension is installed&quot;</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension enabled: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">enabled</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension gpsd_host: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">gpsd_host</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension gpsd_port: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">gpsd_port</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension beacon_type: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">beacon_type</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension smart_beacon_distance_threshold: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">smart_beacon_distance_threshold</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;aprsd-gps-extension smart_beacon_time_window: </span><span class="si">{</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">smart_beacon_time_window</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+        <span class="n">stats_dict</span><span class="p">[</span><span class="s2">&quot;gps&quot;</span><span class="p">][</span><span class="s2">&quot;gps_extension&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;is_installed&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">enabled</span><span class="p">,</span>
+            <span class="s2">&quot;gpsd_host&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">gpsd_host</span><span class="p">,</span>
+            <span class="s2">&quot;gpsd_port&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">gpsd_port</span><span class="p">,</span>
+            <span class="s2">&quot;beacon_type&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">beacon_type</span><span class="p">,</span>
+            <span class="s2">&quot;smart_beacon_distance_threshold&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">smart_beacon_distance_threshold</span><span class="p">,</span>
+            <span class="s2">&quot;smart_beacon_time_window&quot;</span><span class="p">:</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">smart_beacon_time_window</span><span class="p">,</span>
+        <span class="p">}</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">now</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="n">time_format</span><span class="p">),</span>
+        <span class="s2">&quot;stats&quot;</span><span class="p">:</span> <span class="n">stats_dict</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="get_stats">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.get_stats">[docs]</a>
+<span class="nd">@flask_app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/stats&quot;</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_stats</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">_stats</span><span class="p">())</span></div>
+
+
+
+<div class="viewcode-block" id="SendMessageNamespace">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SendMessageNamespace</span><span class="p">(</span><span class="n">Namespace</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to handle the socketio interactions.&quot;&quot;&quot;</span>
+
+    <span class="n">got_ack</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">reply_sent</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">msg</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">request</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">namespace</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SendMessageNamespace.on_connect">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_connect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">global</span> <span class="n">socketio</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Web socket connected&quot;</span><span class="p">)</span>
+        <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+            <span class="s2">&quot;connected&quot;</span><span class="p">,</span>
+            <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="s2">&quot;/sendmsg Connected&quot;</span><span class="p">},</span>
+            <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.on_disconnect">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_disconnect">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;WS Disconnected&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.on_send">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_send">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">global</span> <span class="n">socketio</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WS: on_send </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">request</span> <span class="o">=</span> <span class="n">data</span>
+        <span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="s2">&quot;,&quot;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">path_opts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">path_opts</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span>
+
+        <span class="n">pkt</span> <span class="o">=</span> <span class="n">packets</span><span class="o">.</span><span class="n">MessagePacket</span><span class="p">(</span>
+            <span class="n">from_call</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;from&quot;</span><span class="p">],</span>
+            <span class="n">to_call</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
+            <span class="n">message_text</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">],</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">pkt</span><span class="o">.</span><span class="n">prepare</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">pkt</span>
+        <span class="n">msgs</span> <span class="o">=</span> <span class="n">SentMessages</span><span class="p">()</span>
+        <span class="n">tx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+        <span class="n">msgs</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span>
+        <span class="n">msgs</span><span class="o">.</span><span class="n">set_status</span><span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">msgNo</span><span class="p">,</span> <span class="s2">&quot;Sending&quot;</span><span class="p">)</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">msgs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">msgNo</span><span class="p">)</span>
+        <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+            <span class="s2">&quot;sent&quot;</span><span class="p">,</span>
+            <span class="n">obj</span><span class="p">,</span>
+            <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.on_gps">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_gps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_gps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WS on_GPS: </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">])</span>
+        <span class="n">long</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">])</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Lat </span><span class="si">{</span><span class="n">lat</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Long </span><span class="si">{</span><span class="n">long</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">elif</span> <span class="s2">&quot;,&quot;</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+            <span class="n">path_opts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">path_opts</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span>
+
+        <span class="n">tx</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
+            <span class="n">packets</span><span class="o">.</span><span class="n">BeaconPacket</span><span class="p">(</span>
+                <span class="n">from_call</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">callsign</span><span class="p">,</span>
+                <span class="n">to_call</span><span class="o">=</span><span class="s2">&quot;APDW16&quot;</span><span class="p">,</span>
+                <span class="n">latitude</span><span class="o">=</span><span class="n">lat</span><span class="p">,</span>
+                <span class="n">longitude</span><span class="o">=</span><span class="n">long</span><span class="p">,</span>
+                <span class="n">comment</span><span class="o">=</span><span class="s2">&quot;APRSD WebChat Beacon&quot;</span><span class="p">,</span>
+                <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">direct</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># Now let the browser know that the beacon was sent.</span>
+        <span class="n">socketio</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span>
+            <span class="s2">&quot;gps_beacon_sent&quot;</span><span class="p">,</span>
+            <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;beacon sent&quot;</span><span class="p">},</span>
+            <span class="n">namespace</span><span class="o">=</span><span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.on_set_beaconing_setting">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_set_beaconing_setting">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_set_beaconing_setting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">global</span> <span class="n">notify_queue</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WS on_set_beaconing_setting </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">beacon_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;beacon_type&quot;</span><span class="p">]</span>
+        <span class="n">lookup</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="mi">0</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span>
+            <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">,</span>
+            <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;interval&quot;</span><span class="p">,</span>
+            <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;smart&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="n">beacon_type</span> <span class="o">=</span> <span class="n">lookup</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">beacon_type</span><span class="p">)]</span>
+        <span class="n">beacon_interval</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;beacon_interval&quot;</span><span class="p">]</span>
+        <span class="n">smart_beacon_distance_threshold</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mi">0</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smart_beacon_distance_threshold&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smart_beacon_distance_threshold&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">smart_beacon_time_window</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="mi">0</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smart_beacon_time_window&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;smart_beacon_time_window&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># Now we have to restart the GPSBeaconThread</span>
+        <span class="n">notify_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;beaconing_settings_changed&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;beacon_type&quot;</span><span class="p">:</span> <span class="n">beacon_type</span><span class="p">,</span>
+                <span class="s2">&quot;beacon_interval&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">beacon_interval</span><span class="p">),</span>
+                <span class="s2">&quot;smart_beacon_distance_threshold&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">smart_beacon_distance_threshold</span><span class="p">),</span>
+                <span class="s2">&quot;smart_beacon_time_window&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">smart_beacon_time_window</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.handle_message">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.handle_message">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WS Data </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.handle_json">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.handle_json">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">handle_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;WS json </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SendMessageNamespace.on_get_callsign_location">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.SendMessageNamespace.on_get_callsign_location">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">on_get_callsign_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;on_callsign_location </span><span class="si">{</span><span class="n">data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;callsign&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">callsign_no_track</span><span class="p">:</span>
+            <span class="n">populate_callsign_location</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;callsign&quot;</span><span class="p">])</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="init_flask">
+<a class="viewcode-back" href="../../../apidoc/aprsd_webchat_extension.cmds.html#aprsd_webchat_extension.cmds.webchat.init_flask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">init_flask</span><span class="p">(</span><span class="n">loglevel</span><span class="p">,</span> <span class="n">quiet</span><span class="p">):</span>
+    <span class="k">global</span> <span class="n">socketio</span><span class="p">,</span> <span class="n">flask_app</span>
+
+    <span class="n">socketio</span> <span class="o">=</span> <span class="n">SocketIO</span><span class="p">(</span>
+        <span class="n">flask_app</span><span class="p">,</span>
+        <span class="n">logger</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">engineio_logger</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">async_mode</span><span class="o">=</span><span class="s2">&quot;threading&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">socketio</span><span class="o">.</span><span class="n">on_namespace</span><span class="p">(</span>
+        <span class="n">SendMessageNamespace</span><span class="p">(</span>
+            <span class="s2">&quot;/sendmsg&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">socketio</span></div>
+
+
+
+<span class="c1"># main() ###</span>
+<span class="nd">@cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="nd">@cli_helper</span><span class="o">.</span><span class="n">add_options</span><span class="p">(</span><span class="n">cli_helper</span><span class="o">.</span><span class="n">common_options</span><span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--flush&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;flush&quot;</span><span class="p">,</span>
+    <span class="n">is_flag</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Flush out all old aged messages on disk.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span>
+    <span class="s2">&quot;-p&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;--port&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;port&quot;</span><span class="p">,</span>
+    <span class="n">show_default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Port to listen to web requests.  This overrides the &quot;</span>
+    <span class="s2">&quot;config.aprsd_webchat_extension.web_port setting.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">pass_context</span>
+<span class="nd">@cli_helper</span><span class="o">.</span><span class="n">process_standard_options</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">webchat</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">flush</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Web based HAM Radio chat program!&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">notify_queue</span>
+    <span class="n">loglevel</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;loglevel&quot;</span><span class="p">]</span>
+    <span class="n">quiet</span> <span class="o">=</span> <span class="n">ctx</span><span class="o">.</span><span class="n">obj</span><span class="p">[</span><span class="s2">&quot;quiet&quot;</span><span class="p">]</span>
+
+    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal_handler</span><span class="p">)</span>
+    <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal_handler</span><span class="p">)</span>
+
+    <span class="c1"># setup webchat logging settings.</span>
+    <span class="n">webchat_utils</span><span class="o">.</span><span class="n">setup_logging</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">loglevel</span><span class="p">)</span>
+
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Python version: </span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;APRSD Started version: </span><span class="si">{</span><span class="n">aprsd</span><span class="o">.</span><span class="n">__version__</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">level</span><span class="p">,</span> <span class="n">msg</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">_check_version</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">level</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+    <span class="n">utils</span><span class="o">.</span><span class="n">package</span><span class="o">.</span><span class="n">log_installed_extensions_and_plugins</span><span class="p">()</span>
+
+    <span class="n">CONF</span><span class="o">.</span><span class="n">log_opt_values</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(),</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">port</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">web_port</span>
+
+    <span class="n">service_threads</span> <span class="o">=</span> <span class="n">service</span><span class="o">.</span><span class="n">ServiceThreads</span><span class="p">()</span>
+
+    <span class="c1"># Make sure we have 1 client transport enabled</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">APRSDClient</span><span class="p">()</span><span class="o">.</span><span class="n">is_enabled</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;No Clients are enabled in config.&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">APRSDClient</span><span class="p">()</span><span class="o">.</span><span class="n">is_configured</span><span class="p">:</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;APRS client is not properly configured in config file.&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Creates the client object</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Creating client connection&quot;</span><span class="p">)</span>
+    <span class="n">aprs_client</span> <span class="o">=</span> <span class="n">APRSDClient</span><span class="p">()</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">aprs_client</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">aprs_client</span><span class="o">.</span><span class="n">login_success</span><span class="p">:</span>
+        <span class="c1"># We failed to login, will just quit!</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Login Failure: </span><span class="si">{</span><span class="n">aprs_client</span><span class="o">.</span><span class="n">login_failure</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">LOG</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">keepalive</span><span class="o">.</span><span class="n">KeepAliveThread</span><span class="p">())</span>
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">stats_thread</span><span class="o">.</span><span class="n">APRSDStatsStoreThread</span><span class="p">())</span>
+
+    <span class="n">socketio</span> <span class="o">=</span> <span class="n">init_flask</span><span class="p">(</span><span class="n">loglevel</span><span class="p">,</span> <span class="n">quiet</span><span class="p">)</span>
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
+        <span class="n">rx</span><span class="o">.</span><span class="n">APRSDRXThread</span><span class="p">(</span>
+            <span class="n">packet_queue</span><span class="o">=</span><span class="n">threads</span><span class="o">.</span><span class="n">packet_queue</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span>
+        <span class="n">WebChatProcessPacketThread</span><span class="p">(</span>
+            <span class="n">packet_queue</span><span class="o">=</span><span class="n">threads</span><span class="o">.</span><span class="n">packet_queue</span><span class="p">,</span>
+            <span class="n">socketio</span><span class="o">=</span><span class="n">socketio</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="c1"># See if the aprsd-gps-extension is installed and enabled</span>
+    <span class="k">if</span> <span class="n">_is_aprsd_gps_extension_installed</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_gps_extension</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;aprsd-gps-extension is installed and enabled.  Starting GPSBeaconThread.&quot;</span>
+            <span class="p">)</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">aprsd_gps_extension.threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">GPSBeaconThread</span>
+
+            <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">GPSBeaconThread</span><span class="o">.</span><span class="n">GPSBeaconThread</span><span class="p">(</span><span class="n">notify_queue</span><span class="p">))</span>
+            <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">LocationProcessingThread</span><span class="p">(</span><span class="n">notify_queue</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># we have to use the built in beaconing thread from aprsd.</span>
+        <span class="k">if</span> <span class="n">CONF</span><span class="o">.</span><span class="n">enable_beacon</span><span class="p">:</span>
+            <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Beacon Enabled.  Starting Beacon thread.&quot;</span><span class="p">)</span>
+            <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">NonGPSExtensionBeaconThread</span><span class="p">(</span><span class="n">notify_queue</span><span class="p">))</span>
+            <span class="n">service_threads</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">LocationProcessingThread</span><span class="p">(</span><span class="n">notify_queue</span><span class="p">))</span>
+
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="c1"># So we can monitor all packets that are TX/RX for the UI.</span>
+    <span class="n">packets_collector</span><span class="o">.</span><span class="n">PacketCollector</span><span class="p">()</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">WebChatPacketMonitor</span><span class="p">)</span>
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Start socketio.run()&quot;</span><span class="p">)</span>
+    <span class="n">socketio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">flask_app</span><span class="p">,</span>
+        <span class="c1"># This is broken for now after removing cryptography</span>
+        <span class="c1"># and pyopenssl</span>
+        <span class="c1"># ssl_context=&quot;adhoc&quot;,</span>
+        <span class="n">host</span><span class="o">=</span><span class="n">CONF</span><span class="o">.</span><span class="n">aprsd_webchat_extension</span><span class="o">.</span><span class="n">web_ip</span><span class="p">,</span>
+        <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span>
+        <span class="n">allow_unsafe_werkzeug</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">service_threads</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+
+    <span class="n">LOG</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;WebChat exiting!!!!  Bye.&quot;</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

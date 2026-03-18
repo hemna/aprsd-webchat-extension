@@ -1,0 +1,318 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>APRSD Webchat &mdash; APRSD Webchat Extension 1.3.1.dev14+gcc995ba3c.d20251211 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/6.2.0/fira_code.min.css" />
+
+
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=ddfcd3e1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="Welcome to APRSD WebChat Extension’s documentation!" href="index.html" />
+</head>
+
+<body class="wy-body-for-nav">
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+
+
+          <a href="index.html" class="icon icon-home">
+            APRSD Webchat Extension
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">APRSD Webchat</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#features">Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#required-configuration">Required Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#webchat-specific-configuration">Webchat-Specific Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#authentication">Authentication</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#command-line-options">Command-Line Options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-running-with-custom-port">Example: Running with Custom Port</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#accessing-the-web-interface">Accessing the Web Interface</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#webchat-features">WebChat Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-with-aprsd-gps-extension">Integration with aprsd-gps-extension</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#license">License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#issues">Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#credits">Credits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#activity">Activity</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Authors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">History</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">APRSD Webchat Extension</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">APRSD Webchat</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/readme.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+
+  <section id="aprsd-webchat">
+<h1>APRSD Webchat<a class="headerlink" href="#aprsd-webchat" title="Link to this heading"></a></h1>
+<a class="reference external image-reference" href="https://pypi.org/project/aprsd-webchat-extension/"><img alt="PyPI" src="https://img.shields.io/pypi/v/aprsd-webchat-extension.svg" />
+</a>
+<a class="reference external image-reference" href="https://pypi.org/project/aprsd-webchat-extension/"><img alt="Status" src="https://img.shields.io/pypi/status/aprsd-webchat-extension.svg" />
+</a>
+<a class="reference external image-reference" href="https://pypi.org/project/aprsd-webchat-extension"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/aprsd-webchat-extension" />
+</a>
+<a class="reference external image-reference" href="https://opensource.org/licenses/Apache%20Software%20License%202.0"><img alt="License" src="https://img.shields.io/pypi/l/aprsd-webchat-extension" />
+</a>
+<a class="reference external image-reference" href="https://aprsd-webchat-extension.readthedocs.io/"><img alt="Read the documentation at https://aprsd-webchat-extension.readthedocs.io/" src="https://img.shields.io/readthedocs/aprsd-webchat-extension/latest.svg?label=Read%20the%20Docs" />
+</a>
+<a class="reference external image-reference" href="https://github.com/hemna/aprsd-webchat-extension/actions?workflow=Tests"><img alt="Tests" src="https://github.com/hemna/aprsd-webchat-extension/workflows/Tests/badge.svg" />
+</a>
+<a class="reference external image-reference" href="https://codecov.io/gh/hemna/aprsd-webchat-extension"><img alt="Codecov" src="https://codecov.io/gh/hemna/aprsd-webchat-extension/branch/main/graph/badge.svg" />
+</a>
+<a class="reference external image-reference" href="https://github.com/pre-commit/pre-commit"><img alt="pre-commit" src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&amp;logoColor=white" />
+</a>
+<a class="reference external image-reference" href="../../screenshot.png"><img alt="APRSD WebChat Interface" src="_images/screenshot.png" />
+</a>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>This is the webchat extension for APRSD. This was removed from APRSD
+proper to help those installs that don't want/need the webchat
+capability and all of it's requirements.</p></li>
+</ul>
+</section>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>aprsd &amp;gt;= 3.5.0</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h2>
+<p>You can install <em>APRSD Webchat</em> via <a class="reference external" href="https://pip.pypa.io/">pip</a> from
+<a class="reference external" href="https://pypi.org/">PyPI</a>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>aprsd-webchat-extension
+</pre></div>
+</div>
+<p>Or using <code class="docutils literal notranslate"><span class="pre">uv</span></code>:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>uv<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>aprsd-webchat-extension
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>Before running the webchat extension, you need to configure APRSD. The webchat extension uses
+the same configuration file as APRSD. Generate a sample configuration file if you haven’t already:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>aprsd<span class="w"> </span>sample-config
+</pre></div>
+</div>
+<p>This will create a configuration file at <code class="docutils literal notranslate"><span class="pre">~/.config/aprsd/aprsd.conf</span></code> (or <code class="docutils literal notranslate"><span class="pre">aprsd.yml</span></code>).</p>
+<section id="required-configuration">
+<h3>Required Configuration<a class="headerlink" href="#required-configuration" title="Link to this heading"></a></h3>
+<p>The webchat extension requires the following basic APRSD configuration:</p>
+<ol class="arabic simple">
+<li><p><strong>Callsign</strong>: Your amateur radio callsign</p></li>
+<li><p><strong>APRS-IS Network</strong>: Connection to APRS-IS servers</p></li>
+<li><p><strong>APRS Passcode</strong>: Your APRS passcode (generate with <code class="docutils literal notranslate"><span class="pre">aprsd</span> <span class="pre">passcode</span> <span class="pre">YOURCALL</span></code>)</p></li>
+</ol>
+</section>
+<section id="webchat-specific-configuration">
+<h3>Webchat-Specific Configuration<a class="headerlink" href="#webchat-specific-configuration" title="Link to this heading"></a></h3>
+<p>Add the following section to your APRSD configuration file to customize the webchat interface:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">[</span><span class="nv">aprsd_webchat_extension</span><span class="p p-Indicator">]</span>
+<span class="c1"># IP address to listen on (default: 0.0.0.0 - all interfaces)</span>
+<span class="l l-Scalar l-Scalar-Plain">web_ip = 0.0.0.0</span>
+
+<span class="l l-Scalar l-Scalar-Plain"># Port to listen on (default</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8001)</span>
+<span class="l l-Scalar l-Scalar-Plain">web_port = 8001</span>
+
+<span class="c1"># Latitude for GPS beacon button (optional)</span>
+<span class="c1"># If not set, the GPS beacon button will be disabled</span>
+<span class="l l-Scalar l-Scalar-Plain">latitude = 37.7749</span>
+
+<span class="c1"># Longitude for GPS beacon button (optional)</span>
+<span class="c1"># If not set, the GPS beacon button will be disabled</span>
+<span class="l l-Scalar l-Scalar-Plain">longitude = -122.4194</span>
+
+<span class="c1"># Beacon interval in seconds (default: 1800 = 30 minutes)</span>
+<span class="l l-Scalar l-Scalar-Plain">beacon_interval = 1800</span>
+
+<span class="c1"># Disable URL request logging (default: False)</span>
+<span class="l l-Scalar l-Scalar-Plain">disable_url_request_logging = False</span>
+</pre></div>
+</div>
+</section>
+<section id="authentication">
+<h3>Authentication<a class="headerlink" href="#authentication" title="Link to this heading"></a></h3>
+<p>The webchat interface uses HTTP Basic Authentication. You’ll need to set up authentication
+credentials. The username and password are typically configured through your web server
+or reverse proxy (if using one), or you can set them in your APRSD configuration.</p>
+</section>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<p>After installation and configuration, you can start the webchat server:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>aprsd<span class="w"> </span>webchat
+</pre></div>
+</div>
+<p>The webchat interface will be available at <code class="docutils literal notranslate"><span class="pre">http://localhost:8001</span></code> (or the IP/port you configured).</p>
+<section id="command-line-options">
+<h3>Command-Line Options<a class="headerlink" href="#command-line-options" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>aprsd<span class="w"> </span>webchat<span class="w"> </span>--help
+</pre></div>
+</div>
+<p>Available options:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-p,</span> <span class="pre">--port</span> <span class="pre">PORT</span></code>: Override the web port from configuration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-f,</span> <span class="pre">--flush</span></code>: Flush out all old aged messages on disk</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--loglevel</span> <span class="pre">LEVEL</span></code>: Set logging level (DEBUG, INFO, WARNING, ERROR)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--config-file</span> <span class="pre">FILE</span></code>: Specify a different configuration file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--quiet</span></code>: Disable console logging output</p></li>
+</ul>
+</section>
+<section id="example-running-with-custom-port">
+<h3>Example: Running with Custom Port<a class="headerlink" href="#example-running-with-custom-port" title="Link to this heading"></a></h3>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>aprsd<span class="w"> </span>webchat<span class="w"> </span>--port<span class="w"> </span><span class="m">9000</span><span class="w"> </span>--loglevel<span class="w"> </span>INFO
+</pre></div>
+</div>
+<p>This will start the webchat server on port 9000 instead of the default 8001.</p>
+</section>
+<section id="accessing-the-web-interface">
+<h3>Accessing the Web Interface<a class="headerlink" href="#accessing-the-web-interface" title="Link to this heading"></a></h3>
+<p>Once the server is running:</p>
+<ol class="arabic simple">
+<li><p>Open your web browser</p></li>
+<li><p>Navigate to <code class="docutils literal notranslate"><span class="pre">http://your-server-ip:8001</span></code> (or your configured port)</p></li>
+<li><p>Enter your authentication credentials when prompted</p></li>
+<li><p>You’ll see the APRSD WebChat interface</p></li>
+</ol>
+</section>
+<section id="webchat-features">
+<h3>WebChat Features<a class="headerlink" href="#webchat-features" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Send Messages</strong>: Send APRS messages to other stations</p></li>
+<li><p><strong>Receive Messages</strong>: View incoming APRS messages in real-time</p></li>
+<li><p><strong>Message Status</strong>: Track sent messages and their acknowledgments</p></li>
+<li><p><strong>GPS Beacon</strong>: Send GPS beacons (if latitude/longitude are configured)</p></li>
+<li><p><strong>Station Locations</strong>: View locations of stations you’re communicating with</p></li>
+<li><p><strong>Real-time Updates</strong>: Uses WebSockets for real-time message updates</p></li>
+</ul>
+</section>
+<section id="integration-with-aprsd-gps-extension">
+<h3>Integration with aprsd-gps-extension<a class="headerlink" href="#integration-with-aprsd-gps-extension" title="Link to this heading"></a></h3>
+<p>If you have <code class="docutils literal notranslate"><span class="pre">aprsd-gps-extension</span></code> installed and enabled, the webchat interface will
+automatically use GPS data from that extension instead of the static latitude/longitude
+configuration. This enables dynamic GPS beaconing based on actual GPS coordinates.</p>
+</section>
+</section>
+<section id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Link to this heading"></a></h2>
+<p>Contributions are very welcome. To learn more, see the <a class="reference external" href="CONTRIBUTING.rst">Contributor
+Guide</a>.</p>
+</section>
+<section id="license">
+<h2>License<a class="headerlink" href="#license" title="Link to this heading"></a></h2>
+<p>Distributed under the terms of the <a class="reference external" href="https://opensource.org/licenses/Apache%20Software%20License%202.0">Apache Software License 2.0
+license</a>,
+<em>APRSD Webchat</em> is free and open source software.</p>
+</section>
+<section id="issues">
+<h2>Issues<a class="headerlink" href="#issues" title="Link to this heading"></a></h2>
+<p>If you encounter any problems, please <a class="reference external" href="https://github.com/hemna/aprsd-webchat-extension/issues">file an
+issue</a> along
+with a detailed description.</p>
+</section>
+<section id="credits">
+<h2>Credits<a class="headerlink" href="#credits" title="Link to this heading"></a></h2>
+<p>This project was generated from <a class="reference external" href="https://github.com/hemna">&#64;hemna</a>'s
+<a class="reference external" href="https://github.com/hemna/cookiecutter-aprsd-extension">APRSD Extension Python Cookiecutter</a> template.</p>
+</section>
+<section id="activity">
+<h2>Activity<a class="headerlink" href="#activity" title="Link to this heading"></a></h2>
+<a class="reference external image-reference" href="https://repobeats.axiom.co/api/embed/ab02d395ffee8220385b7837d5883393aea7fee7.svg"><img alt="Alt" src="https://repobeats.axiom.co/api/embed/ab02d395ffee8220385b7837d5883393aea7fee7.svg" />
+</a>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to APRSD WebChat Extension’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+</body>
+</html>

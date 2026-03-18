@@ -1,4 +1,5 @@
 import { useConnection } from '@/stores/connection'
+import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { Wifi, WifiOff, Moon, Sun, Satellite } from 'lucide-react'
@@ -6,10 +7,17 @@ import { Wifi, WifiOff, Moon, Sun, Satellite } from 'lucide-react'
 export function StatusBar() {
   const connected = useConnection((s) => s.connected)
   const callsign = useConnection((s) => s.callsign)
+  const gpsFix = useGPS((s) => s.fix)
+  const gpsLat = useGPS((s) => s.latitude)
+  const gpsLon = useGPS((s) => s.longitude)
   const theme = useUI((s) => s.theme)
   const toggleTheme = useUI((s) => s.toggleTheme)
   const setActiveSheet = useUI((s) => s.setActiveSheet)
   const isMobile = useIsMobile()
+
+  // GPS status: hardware fix, config location, or no location
+  const hasCoords = gpsLat !== 0 || gpsLon !== 0
+  const gpsColor = gpsFix ? 'text-success' : hasCoords ? 'text-warning' : 'text-muted-foreground'
 
   return (
     <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
@@ -32,7 +40,7 @@ export function StatusBar() {
           className="rounded-md p-2 text-muted-foreground hover:bg-accent transition-colors"
           title="GPS"
         >
-          <Satellite className="h-4 w-4" />
+          <Satellite className={`h-4 w-4 ${gpsColor}`} />
         </button>
         <button
           onClick={toggleTheme}
