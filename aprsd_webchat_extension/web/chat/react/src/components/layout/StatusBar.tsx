@@ -4,9 +4,10 @@ import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { useSocketEmitters } from '@/hooks/useSocket'
 import { useIsMobile } from '@/hooks/useMediaQuery'
-import { Command, Radio, Satellite, Send, Wifi, WifiOff } from 'lucide-react'
+import { Command, Radio, Satellite, Wifi, WifiOff } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { APRSSymbol } from '@/components/gps/APRSSymbol'
 
 export function StatusBar() {
   const connected = useConnection((s) => s.connected)
@@ -82,13 +83,13 @@ export function StatusBar() {
               <button
                 onClick={handleQuickBeacon}
                 disabled={!connected}
-                className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
+                className={`flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-xs transition-colors disabled:opacity-50 ${
                   beaconSent
                     ? 'border-success bg-success/10 text-success'
                     : 'border-border bg-secondary text-foreground hover:bg-accent'
                 }`}
               >
-                <Send className="h-3 w-3" />
+                <APRSSymbol table={symbol.table} symbol={symbol.symbol} size={18} />
                 <span>{beaconSent ? 'Sent' : 'Bcn'}</span>
               </button>
             )}
@@ -169,13 +170,13 @@ export function StatusBar() {
             <button
               onClick={handleQuickBeacon}
               disabled={!connected}
-              className={`flex items-center gap-1.5 rounded-md border px-2 py-1 transition-colors disabled:opacity-50 ${
+              className={`flex items-center gap-1.5 rounded-md border px-1.5 py-0.5 transition-colors disabled:opacity-50 ${
                 beaconSent
                   ? 'border-success bg-success/10 text-success'
                   : 'border-border hover:bg-accent'
               }`}
             >
-              <Send className="h-3 w-3" />
+              <APRSSymbol table={symbol.table} symbol={symbol.symbol} size={20} />
               <span>{beaconSent ? 'Sent!' : 'Beacon'}</span>
             </button>
           </Tooltip>
