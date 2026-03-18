@@ -32,6 +32,9 @@ export function StatusBar() {
   const gpsColor = gpsStatus === 'fix' ? 'text-success' : gpsStatus === 'config' ? 'text-warning' : 'text-muted-foreground'
   const gpsLabel = gpsStatus === 'fix' ? 'GPS Fix' : gpsStatus === 'config' ? 'Config Loc' : 'No GPS'
 
+  // Strip HTML tags from aprsConnection (backend sends it with <a> tags)
+  const serverName = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '') : ''
+
   // Tooltip strings
   const radioTitle = radioBlinkTx ? 'Transmitting' : radioBlinkRx ? 'Receiving' : 'Radio idle'
   const gpsTitle = gpsFix
@@ -121,7 +124,7 @@ export function StatusBar() {
           {connected ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-success" />
-              <span>{transport}</span>
+              <span>{transport}{serverName ? ` — ${serverName}` : ''}</span>
             </>
           ) : (
             <>
