@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useGPS } from '@/stores/gps'
 import { useUI } from '@/stores/ui'
 import { useConnection } from '@/stores/connection'
@@ -27,6 +28,8 @@ export function GPSSheet() {
   const speed = useGPS((s) => s.speed)
   const beaconType = useGPS((s) => s.beaconType)
   const beaconInterval = useGPS((s) => s.beaconInterval)
+  const smartBeaconDistance = useGPS((s) => s.smartBeaconDistance)
+  const smartBeaconTimeWindow = useGPS((s) => s.smartBeaconTimeWindow)
   const lastBeaconTime = useGPS((s) => s.lastBeaconTime)
   const symbol = useGPS((s) => s.symbol)
   const setBeaconType = useGPS((s) => s.setBeaconType)
@@ -34,12 +37,16 @@ export function GPSSheet() {
 
   const isMobile = useIsMobile()
   const isOpen = activeSheet === 'gps'
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle')
+  const [beaconStatus, setBeaconStatus] = useState<'idle' | 'sent'>('idle')
 
   if (!isOpen) return null
 
   const handleSendBeacon = () => {
     if (fix && latitude && longitude) {
       sendBeacon(latitude, longitude, defaultPath, `${symbol.table}${symbol.symbol}`)
+      setBeaconStatus('sent')
+      setTimeout(() => setBeaconStatus('idle'), 2000)
     }
   }
 
@@ -47,9 +54,11 @@ export function GPSSheet() {
     setBeaconingSetting({
       beacon_type: beaconType,
       beacon_interval: beaconInterval,
-      smart_beacon_distance_threshold: 100,
-      smart_beacon_time_window: 300,
+      smart_beacon_distance_threshold: smartBeaconDistance,
+      smart_beacon_time_window: smartBeaconTimeWindow,
     })
+    setSaveStatus('saved')
+    setTimeout(() => setSaveStatus('idle'), 2000)
   }
 
   return (
@@ -178,9 +187,13 @@ export function GPSSheet() {
               {/* Save settings */}
               <button
                 onClick={handleSaveSettings}
-                className="w-full rounded-lg bg-secondary py-2 text-sm font-medium hover:bg-secondary/80 transition-colors"
+                className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+                  saveStatus === 'saved'
+                    ? 'bg-success text-white'
+                    : 'bg-secondary hover:bg-secondary/80'
+                }`}
               >
-                Save Settings
+                {saveStatus === 'saved' ? 'Saved!' : 'Save Settings'}
               </button>
             </div>
           )}
@@ -191,10 +204,14 @@ export function GPSSheet() {
             <button
               onClick={handleSendBeacon}
               disabled={!fix}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className={`flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-medium transition-colors disabled:opacity-50 ${
+                beaconStatus === 'sent'
+                  ? 'bg-success text-white'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+              }`}
             >
               <Send className="h-4 w-4" />
-              Send Beacon Now
+              {beaconStatus === 'sent' ? 'Beacon Sent!' : 'Send Beacon Now'}
             </button>
             {lastBeaconTime && (
               <p className="text-xs text-center text-muted-foreground">
