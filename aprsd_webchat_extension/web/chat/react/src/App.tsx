@@ -63,7 +63,8 @@ export default function App() {
   // Initialize Socket.IO
   useEffect(() => {
     const s = io('/sendmsg', {
-      transports: ['websocket', 'polling'],
+      path: '/socket.io/',
+      transports: ['polling', 'websocket'],
     })
     setSocket(s)
 
