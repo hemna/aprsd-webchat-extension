@@ -33,7 +33,11 @@ export function StatusBar() {
   const gpsLabel = gpsStatus === 'fix' ? 'GPS Fix' : gpsStatus === 'config' ? 'Config Loc' : 'No GPS'
 
   // Strip HTML tags from aprsConnection (backend sends it with <a> tags)
-  const serverName = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '') : ''
+  const serverString = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '').trim() : ''
+  // Extract the APRS-IS server name (e.g. "T2TEXAS" from "# aprsc 2.1.20-g... T2TEXAS 205.209.228.99:14580")
+  // Server name is the second-to-last token in the server_string
+  const serverTokens = serverString.split(/\s+/)
+  const aprsServerName = serverTokens.length >= 2 ? serverTokens[serverTokens.length - 2] : serverString
 
   // Tooltip strings
   const radioTitle = radioBlinkTx ? 'Transmitting' : radioBlinkRx ? 'Receiving' : 'Radio idle'
@@ -43,7 +47,7 @@ export function StatusBar() {
       ? `Configured location: ${gpsLat.toFixed(4)}, ${gpsLon.toFixed(4)}`
       : 'No GPS location available'
   const connectionTitle = connected
-    ? `Connected via ${transport}${aprsConnection ? ' — ' + aprsConnection.replace(/<[^>]*>/g, '') : ''}`
+    ? `Connected via ${transport}${serverString ? ' — ' + serverString : ''}`
     : 'Disconnected from APRS'
   const beaconTitle = beaconSent
     ? 'Beacon sent!'
@@ -124,7 +128,7 @@ export function StatusBar() {
           {connected ? (
             <>
               <Wifi className="h-3.5 w-3.5 text-success" />
-              <span>{transport}{serverName ? ` — ${serverName}` : ''}</span>
+              <span>{transport}{aprsServerName ? ` — ${aprsServerName}` : ''}</span>
             </>
           ) : (
             <>
