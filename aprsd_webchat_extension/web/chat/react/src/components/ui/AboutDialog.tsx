@@ -1,6 +1,7 @@
 import { useConnection } from '@/stores/connection'
 import { useGPS } from '@/stores/gps'
 import { useIsMobile } from '@/hooks/useMediaQuery'
+import { stripHtml } from '@/lib/utils'
 import { X, Radio, ExternalLink } from 'lucide-react'
 import { APRSSymbol } from '@/components/gps/APRSSymbol'
 
@@ -24,7 +25,7 @@ export function AboutDialog({ open, onClose }: AboutDialogProps) {
   if (!open) return null
 
   const hasCoords = gpsLat !== 0 || gpsLon !== 0
-  const serverString = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '').trim() : ''
+  const serverString = aprsConnection ? stripHtml(aprsConnection).trim() : ''
 
   return (
     <>

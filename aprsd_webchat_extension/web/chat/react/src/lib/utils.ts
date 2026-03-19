@@ -13,6 +13,17 @@ export function escapeHtml(text: string): string {
   return div.innerHTML
 }
 
+/**
+ * Safely strip all HTML tags from a string using the DOM parser.
+ * Unlike regex-based approaches, this handles nested/malformed tags
+ * and is not vulnerable to incomplete multi-character sanitization.
+ */
+export function stripHtml(html: string): string {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  return doc.body.textContent || ''
+}
+
 /** Escape string for use in HTML attributes */
 export function escapeHtmlAttribute(text: string): string {
   return text

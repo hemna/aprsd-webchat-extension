@@ -5,7 +5,7 @@ import { useUI } from '@/stores/ui'
 import { useSocketEmitters } from '@/hooks/useSocket'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { Command, Radio, Satellite, Wifi, WifiOff } from 'lucide-react'
-import { timeAgo } from '@/lib/utils'
+import { timeAgo, stripHtml } from '@/lib/utils'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { APRSSymbol } from '@/components/gps/APRSSymbol'
 
@@ -41,8 +41,8 @@ export function StatusBar() {
   const gpsColor = gpsStatus === 'fix' ? 'text-success' : gpsStatus === 'config' ? 'text-warning' : 'text-muted-foreground'
   const gpsLabel = gpsStatus === 'fix' ? 'GPS Fix' : gpsStatus === 'config' ? 'Config Loc' : 'No GPS'
 
-  // Parse server info
-  const serverString = aprsConnection ? aprsConnection.replace(/<[^>]*>/g, '').trim() : ''
+  // Safely strip HTML from aprsConnection (backend wraps it in <a> tags)
+  const serverString = aprsConnection ? stripHtml(aprsConnection).trim() : ''
   const serverTokens = serverString.split(/\s+/)
   const aprsServerName = serverTokens.length >= 2 ? serverTokens[serverTokens.length - 2] : serverString
 
