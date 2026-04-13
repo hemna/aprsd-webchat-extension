@@ -70,7 +70,7 @@ export function MessageBubble({ message, showCallsign = false }: MessageBubblePr
             )}
             {showRaw && (
               <pre
-                className={`mt-1 rounded-md p-2 text-[10px] font-mono overflow-x-auto ${
+                className={`mt-1 rounded-md p-2 text-[10px] font-mono whitespace-pre-wrap break-all ${
                   isSent
                     ? 'bg-black/10 text-primary-foreground'
                     : 'bg-black/5 text-secondary-foreground dark:bg-white/5'
