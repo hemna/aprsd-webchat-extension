@@ -16,16 +16,6 @@ extension_opts = [
         default=8001,
         help="The port to listen on",
     ),
-    cfg.StrOpt(
-        "latitude",
-        default=None,
-        help="Latitude for the GPS Beacon button.  If not set, the button will not be enabled.",
-    ),
-    cfg.StrOpt(
-        "longitude",
-        default=None,
-        help="Longitude for the GPS Beacon button.  If not set, the button will not be enabled.",
-    ),
     cfg.BoolOpt(
         "disable_url_request_logging",
         default=False,

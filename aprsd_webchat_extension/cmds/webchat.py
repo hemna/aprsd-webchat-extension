@@ -713,11 +713,7 @@ def _get_default_path():
 
 
 def _get_latitude():
-    """Get latitude from extension config, falling back to [DEFAULT] section."""
-    lat = CONF.aprsd_webchat_extension.latitude
-    if lat:
-        return float(lat)
-    # Fall back to [DEFAULT] section latitude
+    """Get latitude from the [DEFAULT] section of the APRSD config."""
     try:
         if CONF.latitude:
             return float(CONF.latitude)
@@ -727,11 +723,7 @@ def _get_latitude():
 
 
 def _get_longitude():
-    """Get longitude from extension config, falling back to [DEFAULT] section."""
-    lon = CONF.aprsd_webchat_extension.longitude
-    if lon:
-        return float(lon)
-    # Fall back to [DEFAULT] section longitude
+    """Get longitude from the [DEFAULT] section of the APRSD config."""
     try:
         if CONF.longitude:
             return float(CONF.longitude)

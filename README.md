@@ -69,20 +69,16 @@ web_ip = 0.0.0.0
 # Port to listen on (default: 8001)
 web_port = 8001
 
-# Latitude for GPS beacon button (optional)
-# If not set, the GPS beacon button will be disabled
-latitude = 37.7749
-
-# Longitude for GPS beacon button (optional)
-# If not set, the GPS beacon button will be disabled
-longitude = -122.4194
-
 # Beacon interval in seconds (default: 1800 = 30 minutes)
 beacon_interval = 1800
 
 # Disable URL request logging (default: False)
 disable_url_request_logging = False
 ```
+
+**Note:** Latitude and longitude are read from the `[DEFAULT]` section of your
+APRSD configuration (where `latitude` and `longitude` are already configured
+for APRSD core). There is no need to duplicate them in `[aprsd_webchat_extension]`.
 
 ### Authentication
 
