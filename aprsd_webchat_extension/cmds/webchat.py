@@ -222,11 +222,11 @@ def _calculate_location_data(location_data):
             our_lat = gps_stats.get("latitude")
             our_lon = gps_stats.get("longitude")
         else:
-            our_lat = CONF.aprsd_webchat_extension.latitude
-            our_lon = CONF.aprsd_webchat_extension.longitude
+            our_lat = _get_latitude()
+            our_lon = _get_longitude()
     else:
-        our_lat = CONF.aprsd_webchat_extension.latitude
-        our_lon = CONF.aprsd_webchat_extension.longitude
+        our_lat = _get_latitude()
+        our_lon = _get_longitude()
 
     our_lat = float(our_lat)
     our_lon = float(our_lon)
@@ -523,10 +523,7 @@ class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
         self.beacon_type = "none"
 
         # Make sure Latitude and Longitude are set.
-        if (
-            not CONF.aprsd_webchat_extension.latitude
-            or not CONF.aprsd_webchat_extension.longitude
-        ):
+        if not _get_latitude() or not _get_longitude():
             LOG.error(
                 "Latitude and Longitude are not set in the config file."
                 "Beacon will not be sent and thread is STOPPED.",
@@ -655,8 +652,8 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
             if self.loop_count % 60 == 0:
                 gps_stats = {
                     "fix": False,
-                    "latitude": CONF.aprsd_webchat_extension.latitude,
-                    "longitude": CONF.aprsd_webchat_extension.longitude,
+                    "latitude": _get_latitude(),
+                    "longitude": _get_longitude(),
                     "altitude": 0,
                     "speed": 0,
                     "track": 0,
@@ -715,6 +712,34 @@ def _get_default_path():
     return path if path else ""
 
 
+def _get_latitude():
+    """Get latitude from extension config, falling back to [DEFAULT] section."""
+    lat = CONF.aprsd_webchat_extension.latitude
+    if lat:
+        return float(lat)
+    # Fall back to [DEFAULT] section latitude
+    try:
+        if CONF.latitude:
+            return float(CONF.latitude)
+    except (cfg.NoSuchOptError, AttributeError, TypeError, ValueError):
+        pass
+    return 0.0
+
+
+def _get_longitude():
+    """Get longitude from extension config, falling back to [DEFAULT] section."""
+    lon = CONF.aprsd_webchat_extension.longitude
+    if lon:
+        return float(lon)
+    # Fall back to [DEFAULT] section longitude
+    try:
+        if CONF.longitude:
+            return float(CONF.longitude)
+    except (cfg.NoSuchOptError, AttributeError, TypeError, ValueError):
+        pass
+    return 0.0
+
+
 @flask_app.route("/location/<callsign>", methods=["POST"])
 def location(callsign):
     LOG.debug(f"Fetch location for callsign {callsign}")
@@ -733,22 +758,9 @@ def index():
 
     stats["transport"] = transport
     stats["aprs_connection"] = aprs_connection
-    # The hard coded lat/long are from the
-    # aprsd_webchat_extension.
-    # when the aprsd_gps_extension is installed, we will
-    # Get the lat/long from the gps extension
-    latitude = CONF.aprsd_webchat_extension.latitude
-    if latitude:
-        latitude = float(CONF.aprsd_webchat_extension.latitude)
-
-    longitude = CONF.aprsd_webchat_extension.longitude
-    if longitude:
-        longitude = float(longitude)
-
-    if not latitude or not longitude:
-        LOG.error("Latitude or longitude is not set in the config file.")
-        latitude = 0.0
-        longitude = 0.0
+    # Get lat/long from extension config, falling back to [DEFAULT] section
+    latitude = _get_latitude()
+    longitude = _get_longitude()
 
     # since we just hit the index page, we need to fetch
     # the gps settings from the LocationProcessingThread.
@@ -823,8 +835,8 @@ def _stats():
 
     stats_dict["gps"] = {
         "beaconing_enabled": CONF.enable_beacon,
-        "latitude": CONF.aprsd_webchat_extension.latitude,
-        "longitude": CONF.aprsd_webchat_extension.longitude,
+        "latitude": _get_latitude(),
+        "longitude": _get_longitude(),
         "beacon_interval": CONF.beacon_interval,
         "gps_extension": {
             "is_installed": _is_aprsd_gps_extension_installed(),
@@ -852,10 +864,7 @@ def _stats():
     # Get Location button is enabled when gps extension (installed & enabled) OR lat/lon set
     stats_dict["gps"]["get_location_available"] = (
         _is_aprsd_gps_extension_installed() and CONF.aprsd_gps_extension.enabled
-    ) or (
-        bool(CONF.aprsd_webchat_extension.latitude)
-        and bool(CONF.aprsd_webchat_extension.longitude)
-    )
+    ) or (bool(_get_latitude()) and bool(_get_longitude()))
 
     result = {
         "time": now.strftime(time_format),
