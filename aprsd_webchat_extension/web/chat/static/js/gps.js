@@ -413,8 +413,12 @@ function update_gps_info_box(latitude, longitude, altitude, speed, course, time)
     $('#gps_speed').text(Math.floor(speed_kph) + " km/h");
     $('#gps_course').text(Math.floor(course) + "°");
     $('#gps_timeago').timeago("update", time);
-    // now flash a green border around the gps_info_box.
-    $('#gps_info_box').fadeOut(200).fadeIn(500);
+    // Flash the gps_info_box with a highlight to indicate an update.
+    var box = $('#gps_info_box');
+    box.addClass('gps-info-flash');
+    setTimeout(function() {
+        box.removeClass('gps-info-flash');
+    }, 600);
 }
 
 function update_gps(data) {

@@ -626,6 +626,15 @@ body {
     background-color: #e2e3e5;
 }
 
+.gps-info-flash {
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    transition: box-shadow 0.15s ease-in;
+}
+
+.gps-info:not(.gps-info-flash) {
+    transition: box-shadow 0.5s ease-out;
+}
+
 .beaconing-controls {
     display: flex;
     flex-direction: column;
