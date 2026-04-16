@@ -68,6 +68,7 @@ flask_app = flask.Flask(
     static_folder="web/chat/static",
     template_folder="web/chat/templates",
 )
+flask_app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 
 def signal_handler(sig, frame):
@@ -641,13 +642,19 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
                     gps_stats = GPSStats().stats(serializable=True)
                     if self._should_send_gps_stats(gps_stats):
                         self.last_gps_fix = gps_stats.get("fix")
+                        # Ensure time field is serializable (str, not datetime)
+                        if hasattr(gps_stats.get("time"), "isoformat"):
+                            gps_stats["time"] = str(gps_stats["time"])
                         LOG.debug(f"Sending GPS stats to browser: {gps_stats}")
                         self.last_gps_sent_time = datetime.datetime.now()
-                        socketio.emit(
-                            "gps_stats",
-                            gps_stats,
-                            namespace="/sendmsg",
-                        )
+                        try:
+                            socketio.emit(
+                                "gps_stats",
+                                gps_stats,
+                                namespace="/sendmsg",
+                            )
+                        except TypeError as e:
+                            LOG.error(f"Error serializing GPS stats for browser: {e}")
         else:
             if self.loop_count % 60 == 0:
                 gps_stats = {
