@@ -266,9 +266,17 @@ function init_gps() {
     $('#gps_icon').css('opacity', 0.2);
     beaconing_description = '';
     if (gps.beaconing_enabled == false) {
+        // Beaconing is disabled in config - controls will be disabled,
+        // but we still detect GPS extension and display coordinates.
         beaconing_setting = 0;
-        // Still display the config lat/lon even when beaconing is disabled
-        if (gps.latitude !== null && gps.longitude !== null) {
+        if (gps.gps_extension.is_installed == true && gps.gps_extension.enabled == true) {
+            // GPS extension is running - live coords will arrive via WebSocket.
+            // Show config lat/lon initially until live data comes in.
+            if (gps.latitude !== null && gps.longitude !== null) {
+                update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+            }
+        } else if (gps.latitude !== null && gps.longitude !== null) {
+            // No GPS extension, but we have config lat/lon
             update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
         }
     } else {
@@ -382,14 +390,6 @@ function update_gps_info_box(latitude, longitude, altitude, speed, course, time)
 function update_gps(data) {
     console.log("update_gps Called: ", data);
     current_stats = data;
-    if (current_stats.stats.gps.beaconing_enabled == false) {
-        // Still display the config lat/lon even when beaconing is disabled
-        var gps = current_stats.stats.gps;
-        if (gps.latitude !== null && gps.longitude !== null) {
-            update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
-        }
-        return;
-    }
     update_gps_fix(current_stats.stats.GPSStats);
 }
 
@@ -401,39 +401,30 @@ function update_gps_fix(data) {
     //console.log("update_gps_fix Called.  GPS fix: ", data);
     beaconing_setting = $('#beaconing_setting').val();
     //console.log("beaconing_setting IS: ", beaconing_setting);
-    if (gps.beaconing_enabled == false) {
-        // Still display the config lat/lon even when beaconing is disabled
-        if (gps.latitude !== null && gps.longitude !== null) {
-            update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
-        }
-        return;
-    }
-
     if (gps.gps_extension.is_installed == true && gps.gps_extension.enabled == true) {
         // We have the gps extension installed and enabled, so we can get the lat/lon from the current gps position.
-        //console.log("gps extension installed and enabled")
         if (data.fix == true) {
-            //console.log("we have a fix")
-            $('#send_beacon, #send_beacon_quick').prop('disabled', false);
-            //Only set the send_beacon enabled if the beaconing type is 1 (manual).
-            if (beaconing_setting == 1) {
-                $('#send_beacon, #send_beacon_quick').prop('disabled', false);
-            }
-            $('#beaconing_status').text('enabled');
+            // Always display live GPS coordinates regardless of beaconing setting
+            update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track, data.time);
             $('#gps_icon').css('opacity', 1);
-            //console.log("Clearing GPS icon interval.  We have a fix!");
             clearInterval(gps_icon_interval);
             gps_icon_interval = null;
-            update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track, data.time);
+            // Only enable beacon controls if beaconing is enabled
+            if (gps.beaconing_enabled != false) {
+                $('#send_beacon, #send_beacon_quick').prop('disabled', false);
+                if (beaconing_setting == 1) {
+                    $('#send_beacon, #send_beacon_quick').prop('disabled', false);
+                }
+                $('#beaconing_status').text('enabled');
+            }
         } else {
-            //console.log("we don't have a fix")
-            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
             $('#send_beacon, #send_beacon_quick').prop('disabled', true);
-            $('#beaconing_status').text('disabled - No fix');
+            if (gps.beaconing_enabled != false) {
+                $('#beaconing_status').text('disabled - No fix');
+            }
             $('#gps_icon').css('opacity', 0.2);
             if (gps_icon_interval == null) {
-                //console.log("Setting GPS icon interval.  NO fix!");
                 if (beaconing_setting != 0) {
                     gps_icon_interval = window.setInterval(function() {
                         $('#gps_icon').css('opacity', gps_icon_opacity);
@@ -444,36 +435,42 @@ function update_gps_fix(data) {
             return;
         }
     } else if (gps.gps_extension.is_installed == true && gps.gps_extension.enabled == false) {
-        // We have the gps extension installed and disabled, so we can't get the lat/lon from the current gps position.
-        // but we can try to use the hard coded lat/lon in the config.
+        // GPS extension installed but disabled, fall back to config lat/lon
         if (gps.latitude !== null && gps.longitude !== null) {
-            // We have hard coded lat/lon in the config, so we can send a beacon.
-            $('#send_beacon, #send_beacon_quick').prop('disabled', false);
             update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
             $('#gps_icon').css('opacity', 1);
+            if (gps.beaconing_enabled != false) {
+                $('#send_beacon, #send_beacon_quick').prop('disabled', false);
+            }
         } else {
-            // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
             console.log("We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.");
             $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
-            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
-            $('#beaconing_status').text('disabled - No lat/lon in config');
+            if (gps.beaconing_enabled != false) {
+                $('#beaconing_status').text('disabled - No lat/lon in config');
+            }
             $('#gps_icon').css('opacity', 0.2);
         }
 
         return;
     }
 
-    // we know the gps extension is not installed or enabled, so we can't get the lat/lon from the current gps position.
+    // GPS extension not installed, fall back to config lat/lon
     if (gps.latitude !== null && gps.longitude !== null) {
-        // We have hard coded lat/lon in the config, so we can send a beacon.
-        $('#send_beacon, #send_beacon_quick').prop('disabled', false);
         update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
         $('#gps_icon').css('opacity', 1);
+        if (gps.beaconing_enabled != false) {
+            $('#send_beacon, #send_beacon_quick').prop('disabled', false);
+        }
     } else {
-        // We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.
-        $('#send_beacon, #send_beacon_quick').prop('disabled', true);
-        update_gps_info_box(0, 0, 0, 0, 0, new Date());
+        // No lat/lon available at all
+        if (gps.beaconing_enabled == false) {
+            // Still show zeros so the user sees something
+            update_gps_info_box(0, 0, 0, 0, 0, new Date());
+        } else {
+            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
+            update_gps_info_box(0, 0, 0, 0, 0, new Date());
+        }
     }
 }
 
