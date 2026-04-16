@@ -36,6 +36,39 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * Update the GPS status indicator in the UI.
+ * @param {string} status - One of: 'fix', 'no-fix', 'no-gps', 'config-only', 'waiting'
+ * @param {string} [message] - Optional custom message
+ */
+function update_gps_status(status, message) {
+    var el = $('#gps_status');
+    el.removeClass('gps-status-fix gps-status-no-fix gps-status-no-gps gps-status-config gps-status-waiting');
+    switch (status) {
+        case 'fix':
+            el.addClass('gps-status-fix');
+            el.text(message || 'GPS Fix');
+            break;
+        case 'no-fix':
+            el.addClass('gps-status-no-fix');
+            el.text(message || 'No GPS Fix');
+            break;
+        case 'no-gps':
+            el.addClass('gps-status-no-gps');
+            el.text(message || 'GPS Not Available');
+            break;
+        case 'config-only':
+            el.addClass('gps-status-config');
+            el.text(message || 'Using Config Location');
+            break;
+        case 'waiting':
+        default:
+            el.addClass('gps-status-waiting');
+            el.text(message || 'Waiting...');
+            break;
+    }
+}
+
 
 var beaconing_settings = [
     { value: 0, description: 'Disabled' },
@@ -272,24 +305,21 @@ function init_gps() {
         if (gps.gps_extension.is_installed == true && gps.gps_extension.enabled == true) {
             // GPS extension is running - live coords will arrive via WebSocket.
             // Show config lat/lon initially until live data comes in.
+            update_gps_status('waiting', 'Waiting for GPS...');
             if (gps.latitude !== null && gps.longitude !== null) {
                 update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
             }
         } else if (gps.latitude !== null && gps.longitude !== null) {
             // No GPS extension, but we have config lat/lon
+            update_gps_status('config-only');
             update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+        } else {
+            update_gps_status('no-gps');
         }
     } else {
-        // Start the GPS icon blinking until we get coordinates.
-        /*gps_icon_interval = window.setInterval(function() {
-            $('#gps_icon').css('opacity', gps_icon_opacity);
-            gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
-        }, 500);*/
-        //$('#beaconing_type').text(beaconing_type.find(type => type.value === gps.gps_extension.beacon_type).description);
         if (gps.gps_extension.is_installed == true) {
             if (gps.gps_extension.enabled == true) {
-                //$('#send_beacon').prop('disabled', false);
-                //$('#beaconing_status').text('enabled');
+                update_gps_status('waiting', 'Waiting for GPS...');
                 if (gps.gps_extension.beacon_type == 'smart') {
                     beaconing_setting = 3;
                 } else if (gps.gps_extension.beacon_type == 'interval') {
@@ -305,27 +335,25 @@ function init_gps() {
                     console.log("Beaconing is disabled in config.  We have no lat/lon in the webchat extension.");
                     beaconing_description = 'missing lat/lon in config';
                     update_gps_info_box(0, 0, 0, 0, 0, new Date());
+                    update_gps_status('no-gps', 'GPS Disabled, No Config Location');
                     beaconing_setting = 0;
                 } else {
                     console.log("Beaconing is enabled in config.  have to use webchat lat/lon, which is set in the config.");
                     update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+                    update_gps_status('config-only');
                     beaconing_setting = 1;
                 }
             }
         } else {
-            // If aprsd beaconing is enabled, but we don't have coordinates, disable the beacon button.
+            // GPS extension not installed
             if (gps.latitude === null || gps.longitude === null) {
                 console.log("Beaconing is disabled in config.  We have no lat/lon in the webchat extension.");
-                // Have to disable the beacon button.
-                //$('#send_beacon').prop('disabled', true);
-                //$('#beaconing_status').text('disabled - No lat/lon in config');
-                //$('#gps_icon').css('opacity', 0.5);
                 beaconing_description = 'missing lat/lon in config';
                 update_gps_info_box(0, 0, 0, 0, 0, new Date());
+                update_gps_status('no-gps');
                 beaconing_setting = 0;
             } else {
-                //$('#send_beacon').prop('disabled', false);
-                //$('#beaconing_status').text('enabled');
+                update_gps_status('config-only');
                 beaconing_setting = 1;
             }
         }
@@ -398,14 +426,14 @@ function update_gps_fix(data) {
     // set to manual.  Also update the GPS satellite icon.
     current_stats.stats.GPSStats = data;
     gps = current_stats.stats.gps;
-    //console.log("update_gps_fix Called.  GPS fix: ", data);
     beaconing_setting = $('#beaconing_setting').val();
-    //console.log("beaconing_setting IS: ", beaconing_setting);
     if (gps.gps_extension.is_installed == true && gps.gps_extension.enabled == true) {
         // We have the gps extension installed and enabled, so we can get the lat/lon from the current gps position.
         if (data.fix == true) {
+            console.log("update_gps_fix: Have fix! Calling update_gps_info_box with:", data.latitude, data.longitude);
             // Always display live GPS coordinates regardless of beaconing setting
             update_gps_info_box(data.latitude, data.longitude, data.altitude, data.speed, data.track, data.time);
+            update_gps_status('fix');
             $('#gps_icon').css('opacity', 1);
             clearInterval(gps_icon_interval);
             gps_icon_interval = null;
@@ -419,6 +447,7 @@ function update_gps_fix(data) {
             }
         } else {
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
+            update_gps_status('no-fix');
             $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             if (gps.beaconing_enabled != false) {
                 $('#beaconing_status').text('disabled - No fix');
@@ -438,6 +467,7 @@ function update_gps_fix(data) {
         // GPS extension installed but disabled, fall back to config lat/lon
         if (gps.latitude !== null && gps.longitude !== null) {
             update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
+            update_gps_status('config-only');
             $('#gps_icon').css('opacity', 1);
             if (gps.beaconing_enabled != false) {
                 $('#send_beacon, #send_beacon_quick').prop('disabled', false);
@@ -446,6 +476,7 @@ function update_gps_fix(data) {
             console.log("We don't have a gps fix and no lat/lon in the config, so we can't send a beacon.");
             $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
+            update_gps_status('no-gps', 'GPS Disabled, No Config Location');
             if (gps.beaconing_enabled != false) {
                 $('#beaconing_status').text('disabled - No lat/lon in config');
             }
@@ -458,12 +489,14 @@ function update_gps_fix(data) {
     // GPS extension not installed, fall back to config lat/lon
     if (gps.latitude !== null && gps.longitude !== null) {
         update_gps_info_box(gps.latitude, gps.longitude, data.altitude, data.speed, data.track, gps.time);
+        update_gps_status('config-only');
         $('#gps_icon').css('opacity', 1);
         if (gps.beaconing_enabled != false) {
             $('#send_beacon, #send_beacon_quick').prop('disabled', false);
         }
     } else {
         // No lat/lon available at all
+        update_gps_status('no-gps');
         if (gps.beaconing_enabled == false) {
             // Still show zeros so the user sees something
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
