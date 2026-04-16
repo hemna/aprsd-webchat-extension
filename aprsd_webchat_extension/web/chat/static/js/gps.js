@@ -267,6 +267,10 @@ function init_gps() {
     beaconing_description = '';
     if (gps.beaconing_enabled == false) {
         beaconing_setting = 0;
+        // Still display the config lat/lon even when beaconing is disabled
+        if (gps.latitude !== null && gps.longitude !== null) {
+            update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+        }
     } else {
         // Start the GPS icon blinking until we get coordinates.
         /*gps_icon_interval = window.setInterval(function() {
@@ -379,6 +383,11 @@ function update_gps(data) {
     console.log("update_gps Called: ", data);
     current_stats = data;
     if (current_stats.stats.gps.beaconing_enabled == false) {
+        // Still display the config lat/lon even when beaconing is disabled
+        var gps = current_stats.stats.gps;
+        if (gps.latitude !== null && gps.longitude !== null) {
+            update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+        }
         return;
     }
     update_gps_fix(current_stats.stats.GPSStats);
@@ -393,7 +402,10 @@ function update_gps_fix(data) {
     beaconing_setting = $('#beaconing_setting').val();
     //console.log("beaconing_setting IS: ", beaconing_setting);
     if (gps.beaconing_enabled == false) {
-        // everything is disabled.
+        // Still display the config lat/lon even when beaconing is disabled
+        if (gps.latitude !== null && gps.longitude !== null) {
+            update_gps_info_box(gps.latitude, gps.longitude, 0, 0, 0, gps.time);
+        }
         return;
     }
 

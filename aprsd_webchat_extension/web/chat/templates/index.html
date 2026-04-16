@@ -44,8 +44,8 @@
 
     <script type="text/javascript">
         var initial_stats = {{ initial_stats|tojson|safe }};
-        var gps_lat = '{{ initial_stats.stats.GPSStats.latitude|safe }}';
-        var gps_lon = '{{ initial_stats.stats.GPSStats.longitude|safe }}';
+        var gps_lat = '{{ initial_stats.stats.gps.latitude|safe }}';
+        var gps_lon = '{{ initial_stats.stats.gps.longitude|safe }}';
         var gps_alt = '{{ initial_stats.stats.GPSStats.altitude|safe }}';
         var gps_speed = parseFloat('{{ initial_stats.stats.GPSStats.speed|safe }}');
         var gps_course = parseFloat('{{ initial_stats.stats.GPSStats.track|safe }}');
