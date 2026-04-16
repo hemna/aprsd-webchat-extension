@@ -20,6 +20,7 @@ from aprsd.packets import collector as packets_collector
 from aprsd.threads import aprsd as aprsd_threads
 from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
+from aprsd.utils import objectstore
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import Namespace, SocketIO
 from haversine import haversine
@@ -513,15 +514,55 @@ class WebChatProcessPacketThread(rx.APRSDProcessPacketThread):
         )
 
 
+class BeaconSettingsStore(objectstore.ObjectStoreMixin):
+    """Persist beacon settings across restarts (non-GPS extension path).
+
+    Stores user-modified beacon settings from the webchat UI to disk.
+    On startup, persisted settings take precedence over CONF values.
+    Saved to: {CONF.save_location}/beaconsettingsstore.json
+    """
+
+    _instance = None
+    data: dict = {}
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.lock = threading.RLock()
+            cls._instance.data = {}
+        return cls._instance
+
+    def get(self, key, default=None):
+        """Get a persisted setting, or return default if not set."""
+        with self.lock:
+            return self.data.get(key, default)
+
+    def update_from_message(self, message):
+        """Update settings from a beaconing_settings_changed message."""
+        with self.lock:
+            self.data["beacon_type"] = message.get("beacon_type")
+            self.data["beacon_interval"] = message.get("beacon_interval")
+        self.save()
+        LOG.info(f"Beacon settings persisted: {self.data}")
+
+
 class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
     """Beacon thread for when the gps extension is not installed."""
 
     def __init__(self, notify_queue):
         super().__init__("BeaconSendThread")
         self.notify_queue = notify_queue
-        self.beacon_interval = CONF.aprsd_webchat_extension.beacon_interval
-        # Default this to none.
-        self.beacon_type = "none"
+
+        # Load persisted settings from disk, falling back to CONF values
+        settings_store = BeaconSettingsStore()
+        settings_store.load()
+        self.beacon_interval = settings_store.get(
+            "beacon_interval",
+            CONF.aprsd_webchat_extension.beacon_interval,
+        )
+        self.beacon_type = settings_store.get("beacon_type", "none")
+        if len(settings_store) > 0:
+            LOG.info(f"Loaded persisted beacon settings: {settings_store.data}")
 
         # Make sure Latitude and Longitude are set.
         if not _get_latitude() or not _get_longitude():
@@ -538,6 +579,8 @@ class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
     def update_settings(self, message):
         self.beacon_type = message.get("beacon_type")
         self.beacon_interval = message.get("beacon_interval")
+        # Persist settings to disk
+        BeaconSettingsStore().update_from_message(message)
 
     def get_gps_settings(self):
         LOG.info("Getting GPS settings")
