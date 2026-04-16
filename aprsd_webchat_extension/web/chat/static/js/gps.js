@@ -43,28 +43,37 @@ function escapeHtml(text) {
  */
 function update_gps_status(status, message) {
     var el = $('#gps_status');
-    el.removeClass('gps-status-fix gps-status-no-fix gps-status-no-gps gps-status-config gps-status-waiting');
+    // Dispose any existing Bootstrap tooltips before replacing content
+    el.find('[data-bs-toggle="tooltip"]').each(function() {
+        var tip = bootstrap.Tooltip.getInstance(this);
+        if (tip) tip.dispose();
+    });
+    el.removeClass('gps-status-fix gps-status-no-fix gps-status-no-gps gps-status-config gps-status-waiting gps-status-error');
     switch (status) {
         case 'fix':
             el.addClass('gps-status-fix');
-            el.text(message || 'GPS Fix');
+            el.html(message || 'GPS Fix');
             break;
         case 'no-fix':
             el.addClass('gps-status-no-fix');
-            el.text(message || 'No GPS Fix');
+            el.html(message || 'No GPS Fix');
+            break;
+        case 'gps-error':
+            el.addClass('gps-status-error');
+            el.html(message || 'GPS Daemon Error');
             break;
         case 'no-gps':
             el.addClass('gps-status-no-gps');
-            el.text(message || 'GPS Not Available');
+            el.html(message || 'GPS Not Available');
             break;
         case 'config-only':
             el.addClass('gps-status-config');
-            el.text(message || 'Using Config Location');
+            el.html(message || 'Using Config Location');
             break;
         case 'waiting':
         default:
             el.addClass('gps-status-waiting');
-            el.text(message || 'Waiting...');
+            el.html(message || 'Waiting...');
             break;
     }
 }
@@ -450,7 +459,17 @@ function update_gps_fix(data) {
             return;
         } else {
             update_gps_info_box(0, 0, 0, 0, 0, new Date());
-            update_gps_status('no-fix');
+            // Check if this is a GPS daemon error or just no satellite fix.
+            if (data.error) {
+                var escaped_error = escapeHtml(data.error);
+                update_gps_status('gps-error', 'GPS Daemon Error <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="' + escaped_error + '">&#9432;</span>');
+            } else {
+                update_gps_status('no-fix', 'No GPS Fix <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="GPS daemon is connected but does not have a satellite fix yet. Make sure the GPS antenna has a clear view of the sky.">&#9432;</span>');
+            }
+            // Initialize Bootstrap tooltips on the newly added elements
+            $('#gps_status [data-bs-toggle="tooltip"]').each(function() {
+                new bootstrap.Tooltip(this, {trigger: 'hover focus'});
+            });
             $('#send_beacon, #send_beacon_quick').prop('disabled', true);
             if (gps.beaconing_enabled != false) {
                 $('#beaconing_status').text('disabled - No fix');

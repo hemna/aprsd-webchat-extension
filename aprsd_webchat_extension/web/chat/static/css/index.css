@@ -626,6 +626,17 @@ body {
     background-color: #e2e3e5;
 }
 
+.gps-status-error {
+    color: #721c24;
+    background-color: #f8d7da;
+}
+
+.gps-status-error .gps-error-icon {
+    cursor: help;
+    margin-left: 4px;
+    font-weight: bold;
+}
+
 .gps-info-flash {
     box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
     transition: box-shadow 0.15s ease-in;
