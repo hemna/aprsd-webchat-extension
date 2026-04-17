@@ -10,6 +10,14 @@ var socketio_connected = false;
 var socketio_reconnecting = false;
 var showRawPackets = false;  // Toggle state for raw APRS packet view
 
+// Track pending ACK timers so we can cancel them when an ACK arrives.
+// Key: ack_id (e.g. "ack_1234567890"), Value: setTimeout handle
+var ack_timers = {};
+
+// APRSD default timeout for message ACKs (in milliseconds).
+// After this period with no ACK, the spinner is replaced with a warning icon.
+var ACK_TIMEOUT_MS = 93000;
+
 MSG_TYPE_TX = "tx";
 MSG_TYPE_RX = "rx";
 MSG_TYPE_ACK = "ack";
@@ -101,6 +109,51 @@ function escapeJsString(text) {
         .replace(/\n/g, '\\n')
         .replace(/\r/g, '\\r')
         .replace(/\t/g, '\\t');
+}
+
+/**
+ * Start a timer for an ACK. If the ACK does not arrive within ACK_TIMEOUT_MS,
+ * replace the spinner with a warning icon to indicate the message was not acknowledged.
+ * @param {string} ack_id - The DOM element id for the ack indicator (e.g. "ack_1234567890")
+ * @param {string} callsign - The destination callsign (key into message_list)
+ * @param {string} msg_id - The message id (key into message_list[callsign])
+ */
+function start_ack_timer(ack_id, callsign, msg_id) {
+    // Clear any existing timer for this ack_id
+    if (ack_timers[ack_id]) {
+        clearTimeout(ack_timers[ack_id]);
+    }
+
+    ack_timers[ack_id] = setTimeout(function() {
+        // Timer fired -- no ACK received in time
+        delete ack_timers[ack_id];
+
+        // Update the DOM: replace spinner with warning icon
+        var ack_el = $('#' + ack_id);
+        if (ack_el.length) {
+            ack_el.replaceWith(
+                '<span class="material-symbols-rounded md-10 ack-failed ack-tip" id="' +
+                escapeHtmlAttribute(ack_id) + '" data-tip="No acknowledgment received">warning</span>'
+            );
+        }
+
+        // Mark the message as timed out in message_list so it persists correctly
+        if (message_list[callsign] && message_list[callsign][msg_id]) {
+            message_list[callsign][msg_id]['ack_timeout'] = true;
+            save_data();
+        }
+    }, ACK_TIMEOUT_MS);
+}
+
+/**
+ * Cancel a pending ACK timer (called when an ACK is received).
+ * @param {string} ack_id - The DOM element id for the ack indicator
+ */
+function cancel_ack_timer(ack_id) {
+    if (ack_timers[ack_id]) {
+        clearTimeout(ack_timers[ack_id]);
+        delete ack_timers[ack_id];
+    }
 }
 
 /**
@@ -687,16 +740,31 @@ function init_messages() {
             d = info['date'];
             ack_id = false;
             acked = false;
+            ack_timed_out = false;
             if (msg['type'] == MSG_TYPE_TX) {
                 ack_id = info['ack_id'];
                 acked = msg['ack'];
+                // Messages from a previous session that were never acked
+                // should show the warning icon, not a spinner.
+                // Either they were explicitly timed out, or the session ended
+                // before the timeout fired -- either way, 93s has long passed.
+                if (!acked) {
+                    ack_timed_out = true;
+                    // Persist the timeout flag if not already set
+                    if (!msg['ack_timeout']) {
+                        message_list[callsign][id]['ack_timeout'] = true;
+                    }
+                }
             }
             msg_html = create_message_html(d, t, msg['from_call'], msg['to_call'],
-                                           msg['message_text'], ack_id, msg, acked);
+                                           msg['message_text'], ack_id, msg, acked, ack_timed_out);
             append_message_html(callsign, msg_html, new_callsign);
             new_callsign = false;
         }
     }
+
+    // Persist any ack_timeout flags we just set on loaded messages
+    save_data();
 
     // Always ensure the "+" tab exists
     ensure_add_tab();
@@ -993,7 +1061,7 @@ function scroll_to_bottom(callsign) {
     }
 }
 
-function create_message_html(date, time, from, to, message, ack_id, msg, acked=false) {
+function create_message_html(date, time, from, to, message, ack_id, msg, acked=false, ack_timed_out=false) {
     div_id = from + "_" + msg.msgNo;
     if (ack_id) {
       alt = " alt"
@@ -1038,7 +1106,9 @@ function create_message_html(date, time, from, to, message, ack_id, msg, acked=f
 
     if (ack_id) {
         if (acked) {
-            msg_html += '<span class="material-symbols-rounded md-10" id="' + escaped_ack_id + '">thumb_up</span>';
+            msg_html += '<span class="material-symbols-rounded md-10 ack-tip" id="' + escaped_ack_id + '" data-tip="Message acknowledged">thumb_up</span>';
+        } else if (ack_timed_out) {
+            msg_html += '<span class="material-symbols-rounded md-10 ack-failed ack-tip" id="' + escaped_ack_id + '" data-tip="No acknowledgment received">warning</span>';
         } else {
             msg_html += '<span class="ack-spinner" id="' + escaped_ack_id + '"><span class="spinner-border spinner-border-sm" role="status" aria-label="Waiting for acknowledgment"></span></span>';
         }
@@ -1069,6 +1139,12 @@ function sent_msg(msg) {
     msg_html = create_message_html(d, t, msg['from_call'], msg['to_call'], msg['message_text'], ack_id, msg, false);
     append_message(msg['to_call'], msg, msg_html);
     save_data();
+
+    // Start the ACK timeout timer -- if no ACK arrives within 93 seconds,
+    // the spinner will be replaced with a warning icon.
+    ts_id = message_ts_id(msg);
+    start_ack_timer(ack_id, msg['to_call'], ts_id['id']);
+
     // Scroll is handled in append_message_html, but ensure it happens
     setTimeout(function() {
         scroll_to_bottom(msg['to_call']);
@@ -1148,11 +1224,17 @@ function ack_msg(msg) {
        return false;
    }
    message_list[callsign][id]['ack'] = true;
+   // Clear the timeout flag if it was set
+   delete message_list[callsign][id]['ack_timeout'];
    ack_id = "ack_" + id
+
+   // Cancel any pending ACK timeout timer
+   cancel_ack_timer(ack_id);
 
     if (msg['ack'] == true) {
         var ack_div = $('#' + ack_id);
-        ack_div.replaceWith('<span class="material-symbols-rounded md-10" id="' + escapeHtmlAttribute(ack_id) + '">thumb_up</span>');
+        // This replaces either the spinner OR the warning icon (if timeout already fired)
+        ack_div.replaceWith('<span class="material-symbols-rounded md-10 ack-tip" id="' + escapeHtmlAttribute(ack_id) + '" data-tip="Message acknowledged">thumb_up</span>');
     }
 
    //$('.ui.accordion').accordion('refresh');

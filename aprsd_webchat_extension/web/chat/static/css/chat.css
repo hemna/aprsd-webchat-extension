@@ -223,6 +223,49 @@ input[type=search]::-webkit-search-cancel-button {
     color: rgba(255, 255, 255, 0.9);
 }
 
+/* Ack failed/timed-out warning icon */
+.ack-failed {
+    color: #f59e0b;  /* Amber warning color */
+    font-size: 0.85rem;
+    vertical-align: middle;
+    margin-left: 4px;
+    cursor: help;
+}
+
+.bubble.alt .material-symbols-rounded.ack-failed,
+.bubble.alt .material-symbols-rounded.ack-failed:hover {
+    color: #fbbf24;  /* Slightly brighter amber on the blue sent bubble */
+}
+
+/* Instant CSS tooltip for ack status icons */
+.ack-tip {
+    position: relative;
+    cursor: help;
+}
+
+.ack-tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    font-size: 0.7rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.3;
+    white-space: nowrap;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+    z-index: 1000;
+}
+
+.ack-tip:hover::after {
+    opacity: 1;
+}
+
 /* Popover Styles */
 .popover {
     max-width: 400px;
