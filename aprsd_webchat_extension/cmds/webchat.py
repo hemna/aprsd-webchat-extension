@@ -98,7 +98,7 @@ class WebChatPacketMonitor:
     """Class to monitor packets for the webchat UI radio icon blinking."""
 
     def rx(self, packet: packets.Packet):
-        if packet.get("to_call") == CONF.callsign:
+        if getattr(packet, "to_call", None) == CONF.callsign:
             socketio.emit(
                 "rx_pkt",
                 packet.__dict__,
@@ -106,7 +106,7 @@ class WebChatPacketMonitor:
             )
 
     def tx(self, packet: packets.Packet):
-        if packet.get("from_call") == CONF.callsign:
+        if getattr(packet, "from_call", None) == CONF.callsign:
             socketio.emit(
                 "tx_pkt",
                 packet.__dict__,
