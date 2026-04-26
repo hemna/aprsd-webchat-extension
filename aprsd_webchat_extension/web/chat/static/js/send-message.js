@@ -161,6 +161,8 @@ function cancel_ack_timer(ack_id) {
  * Valid formats:
  *   - Standard: 1-2 letters, 1 number, 1-3 letters, optional /suffix or -SSID
  *     Examples: K1ABC, W1AW, N0CALL, VE3ABC, K1ABC/P, WB4BOR-11
+ *   - Digit-prefix: 1 digit, 1-2 letters, 1 number, 1-3 letters (e.g., UK callsigns)
+ *     Examples: 2E0FNP, 2E1ABC, 2D0xyz, 2M0SQL, 2W0ABC, 2I0xxx
  *   - All-letter: 3-7 letters (special event callsigns)
  *     Examples: REPEAT, WXNOW, JOKE
  */
@@ -210,8 +212,8 @@ function is_valid_callsign(callsign) {
         return false;
     }
 
-    // Must start with a letter
-    if (!/^[A-Z]/.test(baseCallsign)) {
+    // Must start with a letter or a digit (e.g., 2E0FNP for UK callsigns)
+    if (!/^[A-Z0-9]/.test(baseCallsign)) {
         return false;
     }
 
@@ -220,13 +222,17 @@ function is_valid_callsign(callsign) {
         return false;
     }
 
-    // Check for standard format (letters, number, letters) OR all-letter format
+    // Check for standard format, digit-prefix format, or all-letter format
     var hasNumber = /[0-9]/.test(baseCallsign);
+    // Standard: 1-2 letters, 1 digit, 1-3 letters (e.g., K1ABC, VE3ABC)
     var isStandardFormat = /^[A-Z]{1,2}[0-9][A-Z]{1,3}$/.test(baseCallsign);
+    // Digit-prefix: 1 digit, 1-2 letters, 1 digit, 1-3 letters (e.g., 2E0FNP, 2M0SQL)
+    var isDigitPrefixFormat = /^[0-9][A-Z]{1,2}[0-9][A-Z]{1,3}$/.test(baseCallsign);
+    // All-letter: 3-7 letters (special event callsigns like REPEAT, WXNOW)
     var isAllLetterFormat = /^[A-Z]{3,7}$/.test(baseCallsign);
 
-    // Must match either standard format (with number) or all-letter format
-    if (hasNumber && !isStandardFormat) {
+    // Must match one of the recognized formats
+    if (hasNumber && !isStandardFormat && !isDigitPrefixFormat) {
         return false;
     }
     if (!hasNumber && !isAllLetterFormat) {
