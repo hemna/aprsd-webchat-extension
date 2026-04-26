@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import os
 import queue
 import signal
 import sys
@@ -824,6 +825,76 @@ def index():
         beaconing_enabled=CONF.enable_beacon,
         default_path=default_path,
         aprsthursday_enabled=CONF.aprsd_webchat_extension.enable_aprsthursday,
+    )
+
+
+@auth.login_required
+@flask_app.route("/v2/")
+def react_ui():
+    """Serve the React UI from the built Vite output."""
+    react_dist = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "web",
+        "chat",
+        "react",
+        "dist",
+    )
+    return flask.send_from_directory(react_dist, "index.html")
+
+
+@flask_app.route("/v2/assets/<path:filename>")
+def react_assets(filename):
+    """Serve React UI static assets (JS/CSS bundles)."""
+    react_dist = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "web",
+        "chat",
+        "react",
+        "dist",
+        "assets",
+    )
+    return flask.send_from_directory(react_dist, filename)
+
+
+@auth.login_required
+@flask_app.route("/api/config")
+def get_config():
+    """JSON config endpoint for the React UI."""
+    stats_data = _stats()
+    transport, aprs_connection = _get_transport(stats_data["stats"])
+
+    latitude = CONF.aprsd_webchat_extension.latitude
+    if latitude:
+        latitude = float(latitude)
+    else:
+        latitude = 0.0
+
+    longitude = CONF.aprsd_webchat_extension.longitude
+    if longitude:
+        longitude = float(longitude)
+    else:
+        longitude = 0.0
+
+    # Trigger GPS settings fetch (same as index route)
+    notify_queue.put({"message": "get_gps_settings"})
+
+    return flask.jsonify(
+        {
+            "callsign": CONF.callsign,
+            "transport": transport,
+            "aprs_connection": aprs_connection,
+            "default_path": _get_default_path(),
+            "beaconing_enabled": CONF.enable_beacon,
+            "aprsthursday_enabled": CONF.aprsd_webchat_extension.enable_aprsthursday,
+            "is_digipi": CONF.is_digipi,
+            "latitude": latitude,
+            "longitude": longitude,
+            "version": aprsd_webchat_extension.__version__,
+            "aprsd_version": aprsd.__version__,
+            "initial_stats": stats_data,
+        }
     )
 
 
