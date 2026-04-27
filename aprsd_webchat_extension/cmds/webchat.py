@@ -94,6 +94,21 @@ def _is_aprsd_gps_extension_installed():
         return False
 
 
+def _is_gps_extension_active():
+    """Check if the GPS extension is both installed and enabled.
+
+    Use this for all behavioral decisions (which threads to start,
+    whether to read live GPS data, etc.).  When the extension is
+    installed but disabled it should behave as if it is not installed.
+    """
+    if not _is_aprsd_gps_extension_installed():
+        return False
+    try:
+        return bool(CONF.aprsd_gps_extension.enabled)
+    except (cfg.NoSuchOptError, AttributeError):
+        return False
+
+
 class WebChatPacketMonitor:
     """Class to monitor packets for the webchat UI radio icon blinking."""
 
@@ -217,8 +232,8 @@ def _calculate_location_data(location_data):
     )
     # now calculate distance from our own location
     distance = 0
-    # if we have the gps extension installed, then we can use the gps extension to get the location data.
-    if _is_aprsd_gps_extension_installed():
+    # if we have the gps extension installed and enabled, then we can use the gps extension to get the location data.
+    if _is_gps_extension_active():
         gps_stats = GPSStats().stats(serializable=True)
         if gps_stats.get("fix"):
             our_lat = gps_stats.get("latitude")
@@ -573,7 +588,7 @@ class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
             self.stop()
         LOG.info(
             "Beacon thread is running and will send "
-            f"beacons every {CONF.aprsd_webchat_extension.beacon_interval} seconds.",
+            f"beacons every {self.beacon_interval} seconds.",
         )
 
     def update_settings(self, message):
@@ -615,7 +630,7 @@ class NonGPSExtensionBeaconThread(aprsd_threads.APRSDThread):
             return True
 
         # Only dump out the stats every N seconds
-        if self.loop_count % CONF.beacon_interval == 0:
+        if self.loop_count % self.beacon_interval == 0:
             pkt = packets.core.BeaconPacket(
                 from_call=CONF.callsign,
                 to_call="APRS",
@@ -678,11 +693,20 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
                 case _:
                     self.notify_queue.put(message)
 
-        if _is_aprsd_gps_extension_installed():
-            # Check every 10 seconds to see if we have a fix.
+        if _is_gps_extension_active():
+            # Check every 2 seconds to see if we have a fix.
             if self.loop_count % 2 == 0:
                 if GPSStats:
                     gps_stats = GPSStats().stats(serializable=True)
+                    # When we have no GPS fix, fall back to config lat/lon
+                    # so the UI can still show usable coordinates.
+                    if not gps_stats.get("fix"):
+                        config_lat = _get_latitude()
+                        config_lon = _get_longitude()
+                        if config_lat and config_lon:
+                            gps_stats["latitude"] = config_lat
+                            gps_stats["longitude"] = config_lon
+                            gps_stats["config_fallback"] = True
                     if self._should_send_gps_stats(gps_stats):
                         self.last_gps_fix = gps_stats.get("fix")
                         # Ensure time field is serializable (str, not datetime)
@@ -858,7 +882,7 @@ def _stats():
     # digipi wants ui elements to be disabled.
     stats_dict["is_digipi"] = CONF.is_digipi
 
-    if not _is_aprsd_gps_extension_installed():
+    if not _is_gps_extension_active():
         stats_dict["GPSStats"] = {
             "latitude": 0.0,
             "longitude": 0.0,
@@ -1260,19 +1284,25 @@ def webchat(ctx, flush, port):
     )
 
     # See if the aprsd-gps-extension is installed and enabled
-    if _is_aprsd_gps_extension_installed():
-        if CONF.aprsd_gps_extension.enabled:
-            LOG.info(
-                "aprsd-gps-extension is installed and enabled.  Starting GPSBeaconThread."
-            )
-            from aprsd_gps_extension.threads import GPSBeaconThread
+    if _is_gps_extension_active():
+        LOG.info(
+            "aprsd-gps-extension is installed and enabled.  Starting GPSBeaconThread."
+        )
+        from aprsd_gps_extension.threads import GPSBeaconThread
 
-            service_threads.register(GPSBeaconThread.GPSBeaconThread(notify_queue))
-            service_threads.register(LocationProcessingThread(notify_queue))
+        service_threads.register(GPSBeaconThread.GPSBeaconThread(notify_queue))
+        service_threads.register(LocationProcessingThread(notify_queue))
     else:
-        # we have to use the built in beaconing thread from aprsd.
+        # GPS extension is either not installed, or installed but disabled.
+        # Use the built in beaconing thread.
         if CONF.enable_beacon:
-            LOG.info("Beacon Enabled.  Starting Beacon thread.")
+            if _is_aprsd_gps_extension_installed():
+                LOG.info(
+                    "aprsd-gps-extension is installed but disabled.  "
+                    "Starting built-in Beacon thread.",
+                )
+            else:
+                LOG.info("Beacon Enabled.  Starting built-in Beacon thread.")
             service_threads.register(NonGPSExtensionBeaconThread(notify_queue))
             service_threads.register(LocationProcessingThread(notify_queue))
 

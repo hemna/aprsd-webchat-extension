@@ -611,6 +611,11 @@ body {
     background-color: #fff3cd;
 }
 
+.gps-status-no-fix-config {
+    color: #856404;
+    background-color: #fff3cd;
+}
+
 .gps-status-no-gps {
     color: #721c24;
     background-color: #f8d7da;

@@ -48,7 +48,7 @@ function update_gps_status(status, message) {
         var tip = bootstrap.Tooltip.getInstance(this);
         if (tip) tip.dispose();
     });
-    el.removeClass('gps-status-fix gps-status-no-fix gps-status-no-gps gps-status-config gps-status-waiting gps-status-error');
+    el.removeClass('gps-status-fix gps-status-no-fix gps-status-no-gps gps-status-config gps-status-waiting gps-status-error gps-status-no-fix-config');
     switch (status) {
         case 'fix':
             el.addClass('gps-status-fix');
@@ -57,6 +57,10 @@ function update_gps_status(status, message) {
         case 'no-fix':
             el.addClass('gps-status-no-fix');
             el.html(message || 'No GPS Fix');
+            break;
+        case 'no-fix-config':
+            el.addClass('gps-status-no-fix-config');
+            el.html(message || 'No GPS Fix - Using Config Location');
             break;
         case 'gps-error':
             el.addClass('gps-status-error');
@@ -247,11 +251,18 @@ function init_gps() {
         // If the gps extension is installed and enabled,
         // we try and get the lat/lon from current gps position.
         if (current_stats.stats.gps.gps_extension.is_installed == true && current_stats.stats.gps.gps_extension.enabled == true) {
-            // we have the gps extension installed and enabled, so we can get the lat/lon from the current gps position.
-            sendPosition({'coords': {'latitude': current_stats.stats.GPSStats.latitude, 'longitude': current_stats.stats.GPSStats.longitude, 'altitude': current_stats.stats.GPSStats.altitude}});
+            var lat = current_stats.stats.GPSStats.latitude;
+            var lon = current_stats.stats.GPSStats.longitude;
+            var alt = current_stats.stats.GPSStats.altitude;
+            // If GPS has no fix (coords are 0), fall back to config lat/lon
+            if (!lat && !lon && current_stats.stats.gps.latitude && current_stats.stats.gps.longitude) {
+                lat = current_stats.stats.gps.latitude;
+                lon = current_stats.stats.gps.longitude;
+                alt = 0;
+            }
+            sendPosition({'coords': {'latitude': lat, 'longitude': lon, 'altitude': alt}});
         } else if (current_stats.stats.gps.latitude !== null && current_stats.stats.gps.longitude !== null) {
-            // we don't have the gps extension installed or enabled, so we can't get the lat/lon from the current gps position.
-            // we can't send a beacon.
+            // GPS extension not installed or disabled -- use config lat/lon.
             sendPosition({'coords': {'latitude': current_stats.stats.gps.latitude, 'longitude': current_stats.stats.gps.longitude}})
         }
     });
@@ -458,29 +469,48 @@ function update_gps_fix(data) {
             }
             return;
         } else {
-            update_gps_info_box(0, 0, 0, 0, 0, new Date());
-            // Check if this is a GPS daemon error or just no satellite fix.
-            if (data.error) {
-                var escaped_error = escapeHtml(data.error);
-                update_gps_status('gps-error', 'GPS Daemon Error <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="' + escaped_error + '">&#9432;</span>');
+            // No GPS fix -- check if we have config coordinates as fallback
+            if (data.config_fallback == true && data.latitude && data.longitude) {
+                // We have config lat/lon to fall back to
+                update_gps_info_box(data.latitude, data.longitude, 0, 0, 0, new Date());
+                update_gps_status('no-fix-config', 'No GPS Fix - Using Config Location <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="GPS daemon is connected but does not have a satellite fix yet. Coordinates shown are static values from the APRSD config file.">&#9432;</span>');
+                // Initialize Bootstrap tooltips on the newly added elements
+                $('#gps_status [data-bs-toggle="tooltip"]').each(function() {
+                    new bootstrap.Tooltip(this, {trigger: 'hover focus'});
+                });
+                $('#gps_icon').css('opacity', 0.5);
+                clearInterval(gps_icon_interval);
+                gps_icon_interval = null;
+                // Enable beacon buttons since we have usable coordinates
+                if (gps.beaconing_enabled != false) {
+                    $('#send_beacon, #send_beacon_quick').prop('disabled', false);
+                    $('#beaconing_status').text('enabled - using config location');
+                }
             } else {
-                update_gps_status('no-fix', 'No GPS Fix <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="GPS daemon is connected but does not have a satellite fix yet. Make sure the GPS antenna has a clear view of the sky.">&#9432;</span>');
-            }
-            // Initialize Bootstrap tooltips on the newly added elements
-            $('#gps_status [data-bs-toggle="tooltip"]').each(function() {
-                new bootstrap.Tooltip(this, {trigger: 'hover focus'});
-            });
-            $('#send_beacon, #send_beacon_quick').prop('disabled', true);
-            if (gps.beaconing_enabled != false) {
-                $('#beaconing_status').text('disabled - No fix');
-            }
-            $('#gps_icon').css('opacity', 0.2);
-            if (gps_icon_interval == null) {
-                if (beaconing_setting != 0) {
-                    gps_icon_interval = window.setInterval(function() {
-                        $('#gps_icon').css('opacity', gps_icon_opacity);
-                        gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
-                    }, 800);
+                update_gps_info_box(0, 0, 0, 0, 0, new Date());
+                // Check if this is a GPS daemon error or just no satellite fix.
+                if (data.error) {
+                    var escaped_error = escapeHtml(data.error);
+                    update_gps_status('gps-error', 'GPS Daemon Error <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="' + escaped_error + '">&#9432;</span>');
+                } else {
+                    update_gps_status('no-fix', 'No GPS Fix <span class="gps-error-icon" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="GPS daemon is connected but does not have a satellite fix yet. Make sure the GPS antenna has a clear view of the sky.">&#9432;</span>');
+                }
+                // Initialize Bootstrap tooltips on the newly added elements
+                $('#gps_status [data-bs-toggle="tooltip"]').each(function() {
+                    new bootstrap.Tooltip(this, {trigger: 'hover focus'});
+                });
+                $('#send_beacon, #send_beacon_quick').prop('disabled', true);
+                if (gps.beaconing_enabled != false) {
+                    $('#beaconing_status').text('disabled - No fix');
+                }
+                $('#gps_icon').css('opacity', 0.2);
+                if (gps_icon_interval == null) {
+                    if (beaconing_setting != 0) {
+                        gps_icon_interval = window.setInterval(function() {
+                            $('#gps_icon').css('opacity', gps_icon_opacity);
+                            gps_icon_opacity = gps_icon_opacity == 0.2 ? 1 : 0.2;
+                        }, 800);
+                    }
                 }
             }
             return;
