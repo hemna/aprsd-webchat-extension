@@ -662,11 +662,18 @@ class LocationProcessingThread(aprsd_threads.APRSDThread):
         self.last_gps_sent_time = None
 
     def _should_send_gps_stats(self, gps_stats):
-        return gps_stats.get("fix") != self.last_gps_fix or (
-            self.last_gps_sent_time
-            and datetime.datetime.now() - self.last_gps_sent_time
-            > datetime.timedelta(seconds=10)
-        )
+        # Always send on first check (no previous send recorded)
+        if self.last_gps_sent_time is None:
+            return True
+        # Send when fix state changes
+        if gps_stats.get("fix") != self.last_gps_fix:
+            return True
+        # Send periodically (every 10 seconds)
+        if datetime.datetime.now() - self.last_gps_sent_time > datetime.timedelta(
+            seconds=10
+        ):
+            return True
+        return False
 
     def loop(self):
         # First check if the notify queue has a message
@@ -898,6 +905,16 @@ def _stats():
             "speed": 0,
             "track": 0,
         }
+
+    # When GPS extension is active but has no fix, inject config
+    # coordinates so the UI can show usable position data.
+    if _is_gps_extension_active() and not stats_dict["GPSStats"].get("fix"):
+        config_lat = _get_latitude()
+        config_lon = _get_longitude()
+        if config_lat and config_lon:
+            stats_dict["GPSStats"]["latitude"] = config_lat
+            stats_dict["GPSStats"]["longitude"] = config_lon
+            stats_dict["GPSStats"]["config_fallback"] = True
 
     stats_dict["gps"] = {
         "beaconing_enabled": CONF.enable_beacon,
