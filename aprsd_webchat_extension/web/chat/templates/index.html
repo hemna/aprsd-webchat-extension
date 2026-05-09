@@ -224,12 +224,12 @@
             window.updateSendButton = updateSendButton;
 
 
-            // Save path when user manually changes it
+            // Save path when user manually changes it (empty string = "Direct" is valid)
             $('#pkt_path').on('change', function() {
                 if (selected_tab_callsign && selected_tab_callsign !== '') {
-                    var path = $(this).val();
+                    var path = $(this).val() || '';
                     if (typeof callsign_list !== 'undefined') {
-                        callsign_list[selected_tab_callsign] = path || '';
+                        callsign_list[selected_tab_callsign] = path;
                         if (typeof save_data === 'function') {
                             save_data();
                         }
@@ -242,9 +242,15 @@
             $(document).on('shown.bs.tab', 'button[data-bs-toggle="tab"]', function (e) {
                 var callsign = $(e.target).attr('callsign');
                 if (callsign && callsign !== 'ADD_TAB') {
-                    // Restore the path for this callsign
-                    if (typeof callsign_list !== 'undefined' && callsign in callsign_list && callsign_list[callsign]) {
-                        $('#pkt_path').val(callsign_list[callsign]);
+                    // Restore the path for this callsign (empty string is valid = "Direct")
+                    var storedPath = (typeof callsign_list !== 'undefined' && callsign in callsign_list) ? callsign_list[callsign] : null;
+                    // Handle legacy data where path was stored as array from server
+                    if (Array.isArray(storedPath)) {
+                        storedPath = storedPath.join(',');
+                        callsign_list[callsign] = storedPath;
+                    }
+                    if (storedPath !== null && storedPath !== undefined) {
+                        $('#pkt_path').val(storedPath);
                     } else {
                         $('#pkt_path').val(default_path);
                     }

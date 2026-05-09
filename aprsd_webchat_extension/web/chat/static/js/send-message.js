@@ -471,13 +471,11 @@ function init_chat() {
            if (!beacon_sent) {
                console.log("Showing beacon warning toast");
                raise_warning("You should send a GPS beacon before messaging so other stations can route packets to you. Click the GPS button and send a beacon.");
-           }
-           // Save the path for this callsign
-           if (path) {
-               callsign_list[to_call] = path;
-               save_data();
-           }
-           msg = {'to': to_call, 'message': message, 'path': path};
+            }
+            // Save the path for this callsign (including empty string for "Direct")
+            callsign_list[to_call] = path;
+            save_data();
+            msg = {'to': to_call, 'message': message, 'path': path};
            //console.log(msg);
            socket.emit("send", msg);
            $('#message').val('');
@@ -575,9 +573,15 @@ function init_chat() {
                    updateSendButton();
                }
 
-                // Restore the path for this callsign
-                if (callsign in callsign_list && callsign_list[callsign]) {
-                    $('#pkt_path').val(callsign_list[callsign]);
+                // Restore the path for this callsign (empty string is valid = "Direct")
+                var storedPath = callsign_list[callsign];
+                // Handle legacy data where path was stored as array from server
+                if (Array.isArray(storedPath)) {
+                    storedPath = storedPath.join(',');
+                    callsign_list[callsign] = storedPath;
+                }
+                if (callsign in callsign_list && storedPath !== null && storedPath !== undefined) {
+                    $('#pkt_path').val(storedPath);
                 } else {
                     // If no path stored, use default path from config
                     $('#pkt_path').val(typeof default_path !== 'undefined' ? default_path : '');
@@ -949,14 +953,19 @@ function add_callsign(callsign, msg) {
       active = false;
   }
   create_callsign_tab(callsign, active);
-  // Initialize with path from message if available, otherwise empty
-  callsign_list[callsign] = (msg && msg['path']) ? msg['path'] : '';
+  // Initialize with null (not yet set) — msg['path'] is the APRS network routing
+  // path (e.g. "TCPIP*,qAC,T2VAN"), not the user's send path choice
+  callsign_list[callsign] = null;
   return true;
 }
 
 function update_callsign_path(callsign, msg) {
   //Get the selected path to save for this callsign
-  path = msg['path']
+  // Server sends path as array; convert to comma-separated string for the <select>
+  var path = msg['path'];
+  if (Array.isArray(path)) {
+      path = path.join(',');
+  }
   $('#pkt_path').val(path);
   callsign_list[callsign] = path;
 }
@@ -986,11 +995,6 @@ function append_message(callsign, msg, msg_html) {
 
   // Find the right div to place the html
   new_callsign = add_callsign(callsign, msg);
-  // Update the path if it's in the message
-  if (msg && msg['path'] && msg['path'] !== '') {
-      callsign_list[callsign] = msg['path'];
-      save_data();
-  }
   append_message_html(callsign, msg_html, new_callsign);
   len = Object.keys(callsign_list).length;
   if (new_callsign) {
@@ -1299,9 +1303,15 @@ function callsign_select(callsign) {
     if (typeof updateSendButton === 'function') {
         updateSendButton();
     }
-    // Restore the path for this callsign
-    if (callsign in callsign_list && callsign_list[callsign]) {
-        $('#pkt_path').val(callsign_list[callsign]);
+    // Restore the path for this callsign (empty string is valid = "Direct")
+    var storedPath = callsign_list[callsign];
+    // Handle legacy data where path was stored as array from server
+    if (Array.isArray(storedPath)) {
+        storedPath = storedPath.join(',');
+        callsign_list[callsign] = storedPath;
+    }
+    if (callsign in callsign_list && storedPath !== null && storedPath !== undefined) {
+        $('#pkt_path').val(storedPath);
     } else {
         // If no path stored, use default path from config
         $('#pkt_path').val(typeof default_path !== 'undefined' ? default_path : '');
@@ -1459,8 +1469,8 @@ function handle_new_callsign_input() {
     // Create the new tab
     var active = Object.keys(callsign_list).length === 0;
     create_callsign_tab(newCallsign, active);
-    // Initialize with empty path (will be set when first message is sent)
-    callsign_list[newCallsign] = '';
+    // Initialize with null path (will be set to actual value when first message is sent)
+    callsign_list[newCallsign] = null;
     message_list[newCallsign] = {};
 
     // Clear the input
