@@ -1124,19 +1124,19 @@ class SendMessageNamespace(Namespace):
         symbol_str = f"{symbol_table}{symbol_code}"
         LOG.debug(f"Symbol: {symbol_str}")
 
-        tx.send(
-            packets.BeaconPacket(
-                from_call=CONF.callsign,
-                to_call="APDW16",
-                latitude=lat,
-                longitude=long,
-                symbol=symbol_code,
-                symbol_table=symbol_table,
-                comment="APRSD WebChat Beacon",
-                path=path,
-            ),
-            direct=True,
+        beacon_pkt = packets.BeaconPacket(
+            from_call=CONF.callsign,
+            to_call="APDW16",
+            latitude=lat,
+            longitude=long,
+            symbol=symbol_code,
+            symbol_table=symbol_table,
+            comment="APRSD WebChat Beacon",
+            path=path,
         )
+        # Only send once — beacons are never acked, so retries just flood RF
+        beacon_pkt.retry_count = 1
+        tx.send(beacon_pkt, direct=True)
         # Now let the browser know that the beacon was sent.
         socketio.emit(
             "gps_beacon_sent",
