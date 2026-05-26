@@ -189,14 +189,14 @@ class SentMessages:
 
 def _build_location_from_repeat(message):
     # This is a location message Format is
-    # ^ld^callsign:latitude,longitude,altitude,course,speed,timestamp
+    # ^ld^callsign:latitude,longitude,altitude,course,speed,timestamp[,symbol]
     a = message.split(":")
     LOG.warning(a)
     if len(a) == 2:
         callsign = a[0].replace("^ld^", "")
         b = a[1].split(",")
         LOG.warning(b)
-        if len(b) == 6:
+        if len(b) >= 6:
             lat = float(b[0])
             lon = float(b[1])
             alt = float(b[2])
@@ -215,6 +215,9 @@ def _build_location_from_repeat(message):
                 "lasttime": time,
                 "timeago": timeago.format(time),
             }
+            # Optional symbol field (future-proofing for ^ld^ with symbol)
+            if len(b) >= 7:
+                data["symbol"] = b[6]
             LOG.debug(f"Location data from REPEAT {data}")
             return data
 
