@@ -1,3 +1,17 @@
+/* CSS version indicator - remove after confirming cache bust works */
+body::before {
+    content: "CSS v20250527a";
+    position: fixed;
+    top: 0;
+    right: 0;
+    background: red;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    z-index: 99999;
+    pointer-events: none;
+}
+
 :root {
     /* Modern Color Palette - Light Theme (Default) */
     --primary-color: #2563eb;
