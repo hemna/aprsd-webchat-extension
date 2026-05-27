@@ -424,8 +424,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0; /* Allow shrinking below content size */
-    overflow: hidden;
-    padding-bottom: var(--spacing-md);
+    overflow: clip; /* Clip visually without creating a scroll context (fixes Android touch scroll) */
     position: relative;
 }
 
