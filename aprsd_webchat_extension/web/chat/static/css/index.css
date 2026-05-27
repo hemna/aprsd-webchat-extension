@@ -99,7 +99,7 @@ body {
     height: 100vh; /* fallback for browsers without dvh support */
     height: 100dvh; /* dynamic viewport height - adjusts when browser chrome shows/hides */
     height: var(--app-height, 100dvh); /* JS-driven fallback for maximum compatibility */
-    overflow: hidden;
+    overflow-y: auto; /* Allow page scroll on devices where layout exceeds viewport */
 }
 
 .wc-container {
@@ -424,7 +424,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0; /* Allow shrinking below content size */
-    overflow: clip; /* Clip visually without creating a scroll context (fixes Android touch scroll) */
+    overflow: hidden; /* Creates BFC needed for flex height containment */
     position: relative;
 }
 

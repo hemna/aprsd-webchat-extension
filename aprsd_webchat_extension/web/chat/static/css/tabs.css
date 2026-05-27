@@ -154,7 +154,7 @@
     background: var(--bg-primary);
     border-radius: 0 var(--radius-md) var(--radius-md) var(--radius-md);
     border: 1px solid var(--border-color);
-    overflow: clip; /* Clip visually without creating a scroll context */
+    overflow: hidden; /* Creates BFC for flex height containment + clips to rounded corners */
     display: flex;
     flex-direction: column;
     flex: 1 1 0; /* Grow/shrink properly, basis 0 */
@@ -166,7 +166,7 @@
     padding: 0;
     flex: 1 1 0; /* Grow/shrink properly */
     min-height: 0; /* Allow shrinking below content size */
-    overflow: clip; /* Clip visually without creating a scroll context */
+    /* No overflow set here - avoids interfering with .speech-wrapper touch scroll on Android */
     flex-direction: column;
     position: relative;
 }
