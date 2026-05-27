@@ -157,17 +157,15 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
+    flex: 1 1 0; /* Grow/shrink properly, basis 0 */
+    min-height: 0; /* Allow shrinking below content size */
 }
 
 .tab-pane {
     display: none;
     padding: 0;
-    flex: 1 1 auto;
-    min-height: 0;
-    max-height: 100%;
+    flex: 1 1 0; /* Grow/shrink properly */
+    min-height: 0; /* Allow shrinking below content size */
     overflow: hidden;
     flex-direction: column;
     position: relative;
