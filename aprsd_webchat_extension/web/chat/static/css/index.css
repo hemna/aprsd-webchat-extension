@@ -95,14 +95,19 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color: var(--text-primary);
-    height: 100vh;
+    /* Use dynamic viewport height to handle mobile browser chrome (URL bar) */
+    height: 100vh; /* fallback for browsers without dvh support */
+    height: 100dvh; /* dynamic viewport height - adjusts when browser chrome shows/hides */
+    height: var(--app-height, 100dvh); /* JS-driven fallback for maximum compatibility */
     overflow: hidden;
 }
 
 .wc-container {
     display: flex;
     flex-flow: column;
-    height: 100vh;
+    height: 100vh; /* fallback */
+    height: 100dvh;
+    height: var(--app-height, 100dvh);
     background: var(--bg-secondary);
 }
 

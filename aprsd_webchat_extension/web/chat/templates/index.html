@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport"
-          content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+          content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, interactive-widget=resizes-content">
     <title>{% if is_digipi %}DigiPi{% else %}APRSD{% endif %} WebChat</title>
     <script src="/static/js/upstream/jquery-3.7.1.min.js"></script>
     <script src="/static/js/upstream/jquery.toast.js"></script>
@@ -28,6 +28,21 @@
                          (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             if (theme === 'dark') {
                 document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        })();
+    </script>
+
+    <!-- Fix mobile viewport height (100vh bug on Android/iOS browsers) -->
+    <script>
+        (function() {
+            function setAppHeight() {
+                document.documentElement.style.setProperty('--app-height', window.innerHeight + 'px');
+            }
+            setAppHeight();
+            window.addEventListener('resize', setAppHeight);
+            // visualViewport API provides more accurate resize events on mobile
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', setAppHeight);
             }
         })();
     </script>
