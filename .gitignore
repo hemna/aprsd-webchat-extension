@@ -3,3 +3,7 @@ __pycache*
 node_modules/
 dist/
 .gstack/
+# React sub-project generated artifacts (defense-in-depth; root rule already covers node_modules/)
+aprsd_webchat_extension/web/chat/react/node_modules/
+aprsd_webchat_extension/web/chat/react/dist/
+aprsd_webchat_extension/web/chat/react/build/
