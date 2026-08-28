@@ -821,6 +821,7 @@ def location(callsign):
     LOG.debug(f"Fetch location for callsign {callsign}")
     if callsign not in callsign_no_track:
         populate_callsign_location(callsign)
+    return flask.Response("", status=204)
 
 
 @auth.login_required
