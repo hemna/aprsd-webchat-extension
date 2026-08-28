@@ -595,3 +595,41 @@ class TestEventletAsyncMode(unittest.TestCase):
                 "threading",
                 "async_mode='threading' uses the Werkzeug dev server and must not be used",
             )
+class TestCallsignLocationsTTLCache(unittest.TestCase):
+    """Tests for issue #26 — callsign_locations must be a bounded TTL cache."""
+
+    def test_callsign_locations_is_ttl_cache(self):
+        """callsign_locations must be a TTLCache, not a plain dict."""
+        from cachetools import TTLCache
+
+        self.assertIsInstance(
+            webchat.callsign_locations,
+            TTLCache,
+            "callsign_locations must be a TTLCache to prevent unbounded memory growth",
+        )
+
+    def test_callsign_locations_has_maxsize(self):
+        """TTLCache maxsize must be set to a positive integer."""
+        self.assertGreater(
+            webchat.callsign_locations.maxsize,
+            0,
+            "TTLCache maxsize must be > 0",
+        )
+
+    def test_callsign_locations_has_ttl(self):
+        """TTLCache ttl must be set (entries must expire)."""
+        self.assertGreater(
+            webchat.callsign_locations.ttl,
+            0,
+            "TTLCache ttl must be > 0 so stale entries are evicted",
+        )
+
+    def test_callsign_locations_respects_maxsize(self):
+        """Inserting more entries than maxsize must evict the oldest ones."""
+        from cachetools import TTLCache
+
+        small_cache: TTLCache = TTLCache(maxsize=3, ttl=86400)
+        for i in range(5):
+            small_cache[f"CALL{i}"] = {"lat": float(i), "lon": float(i)}
+        # Cache should never exceed maxsize
+        self.assertLessEqual(len(small_cache), 3)

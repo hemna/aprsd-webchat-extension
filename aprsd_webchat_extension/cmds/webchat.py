@@ -23,6 +23,7 @@ from aprsd.threads import aprsd as aprsd_threads
 from aprsd.threads import keepalive, rx, service, tx
 from aprsd.threads import stats as stats_thread
 from aprsd.utils import objectstore
+from cachetools import TTLCache
 from flask_httpauth import HTTPBasicAuth
 from flask_socketio import Namespace, SocketIO
 from haversine import haversine
@@ -63,7 +64,8 @@ callsign_no_track = [
 
 # Callsign location information
 # callsign: {lat: 0.0, long: 0.0, last_update: datetime}
-callsign_locations = {}
+# Capped at 2000 entries; entries expire after 24 hours of inactivity.
+callsign_locations: TTLCache = TTLCache(maxsize=2000, ttl=86400)
 
 flask_app = flask.Flask(
     "aprsd_webchat_extension",
