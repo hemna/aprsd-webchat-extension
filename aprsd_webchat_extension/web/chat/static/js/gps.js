@@ -22,20 +22,6 @@ var original_gps_settings = {
 };
 
 /**
- * Escape HTML special characters to prevent XSS attacks
- * @param {string} text - The text to escape
- * @returns {string} - The escaped text
- */
-function escapeHtml(text) {
-    if (text == null || text === undefined) {
-        return '';
-    }
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
  * Update the GPS status indicator in the UI.
  * @param {string} status - One of: 'fix', 'no-fix', 'no-gps', 'config-only', 'waiting'
  * @param {string} [message] - Optional custom message
