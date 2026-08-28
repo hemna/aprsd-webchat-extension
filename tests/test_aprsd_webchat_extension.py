@@ -444,3 +444,31 @@ class TestSetupLogging(unittest.TestCase):
             webchat_utils.setup_logging(loglevel="DEBUG")
         except KeyError as exc:
             self.fail(f"setup_logging('DEBUG') raised KeyError: {exc}")
+
+
+class TestBuildLocationFromRepeat(unittest.TestCase):
+    """Tests for _build_location_from_repeat() — issue #17.
+
+    The function previously logged at WARNING level with raw list objects;
+    those are now LOG.debug with f-strings.
+    """
+
+    def test_valid_message_parses_correctly(self):
+        """A well-formed ^ld^ message is parsed into a dict with expected keys."""
+        msg = "^ld^W1AW:37.5,-122.3,100.0,90.0,30.0,1699000000,/>>"
+        result = webchat._build_location_from_repeat(msg)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["callsign"], "W1AW")
+        self.assertAlmostEqual(result["lat"], 37.5)
+        self.assertAlmostEqual(result["lon"], -122.3)
+
+    def test_malformed_message_returns_none(self):
+        """A message that cannot be parsed returns None without raising."""
+        result = webchat._build_location_from_repeat("totally_invalid")
+        self.assertIsNone(result)
+
+    def test_missing_fields_returns_none(self):
+        """Fewer than 6 comma-separated fields → None."""
+        msg = "^ld^W1AW:37.5,-122.3"
+        result = webchat._build_location_from_repeat(msg)
+        self.assertIsNone(result)
