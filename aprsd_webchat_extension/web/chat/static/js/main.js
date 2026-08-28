@@ -18,20 +18,6 @@ function show_aprs_icon(item, symbol) {
 
 function ord(str){return str.charCodeAt(0);}
 
-/**
- * Escape HTML special characters to prevent XSS attacks
- * @param {string} text - The text to escape
- * @returns {string} - The escaped text
- */
-function escapeHtml(text) {
-    if (text == null || text === undefined) {
-        return '';
-    }
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 function update_stats( data ) {
     console.log("update_stats() main.js called");
     console.log(data);
