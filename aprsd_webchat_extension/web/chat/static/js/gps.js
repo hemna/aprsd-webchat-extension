@@ -7,9 +7,8 @@ var beacon_sent = localStorage.getItem('aprsd-webchat-beacon-sent') === 'true';
 // Track the last beacon sent time
 var last_beacon_time = localStorage.getItem('aprsd-webchat-last-beacon-time') || null;
 
-// Threshold in milliseconds for beacon highlight (5 minutes for testing)
-// TODO: Change to 1 hour for production: var BEACON_STALE_THRESHOLD_MS = 60 * 60 * 1000;
-var BEACON_STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes for testing
+// Threshold in milliseconds after which a beacon is considered stale (1 hour)
+var BEACON_STALE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
 
 // Timer for periodic beacon highlight check
 var beacon_highlight_timer = null;

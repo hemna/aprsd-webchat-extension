@@ -421,3 +421,147 @@ class TestSendMessageNamespace(unittest.TestCase):
         # Verify response includes correct symbol
         emit_args = mock_socketio.emit.call_args
         assert emit_args[0][1]["symbol"] == "\\>"
+
+
+class TestSignalHandler(unittest.TestCase):
+    """Tests for signal_handler() — issue #23.
+
+    The old code called ``signal.signal(signal.SIGTERM, sys.exit(0))`` which
+    executed sys.exit(0) *immediately* as argument evaluation, then passed
+    ``None`` as the handler.  The fix is ``sys.exit(0)`` directly.
+    """
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_calls_sys_exit(self, mock_threads, mock_stats):
+        """signal_handler() must call sys.exit(0) directly (not via signal.signal)."""
+        mock_threads.APRSDThreadList.return_value.__len__ = lambda s: 0
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "main"
+        with self.assertRaises(SystemExit) as ctx:
+            webchat.signal_handler(None, frame)
+        self.assertEqual(ctx.exception.code, 0)
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_subprocess_frame_does_not_exit(
+        self, mock_threads, mock_stats
+    ):
+        """When 'subprocess' appears in the frame string, sys.exit is NOT called."""
+        mock_threads.APRSDThreadList.return_value.__len__ = lambda s: 0
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "subprocess run"
+        # Should return normally without raising SystemExit
+        webchat.signal_handler(None, frame)
+
+
+class TestBuildLocationFromRepeat(unittest.TestCase):
+    """Tests for _build_location_from_repeat() — issue #17.
+
+    The function previously logged at WARNING level; those are now DEBUG.
+    Also verifies correct parsing of the custom ^ld^ message format.
+    """
+
+    def test_valid_message_parses_correctly(self):
+        """A well-formed ^ld^ message is parsed into a dict with expected keys."""
+        msg = "^ld^W1AW:37.5,-122.3,100.0,90.0,30.0,1699000000,/>>"
+        result = webchat._build_location_from_repeat(msg)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["callsign"], "W1AW")
+        self.assertAlmostEqual(result["lat"], 37.5)
+        self.assertAlmostEqual(result["lon"], -122.3)
+
+    def test_malformed_message_returns_none(self):
+        """A message that cannot be parsed returns None without raising."""
+        result = webchat._build_location_from_repeat("totally_invalid")
+        self.assertIsNone(result)
+
+    def test_missing_fields_returns_none(self):
+        """Fewer than 6 comma-separated fields → None (not an exception)."""
+        msg = "^ld^W1AW:37.5,-122.3"
+        result = webchat._build_location_from_repeat(msg)
+        self.assertIsNone(result)
+
+
+class TestIsAprsdGpsExtensionInstalled(unittest.TestCase):
+    """Tests for _is_aprsd_gps_extension_installed() — issue #22.
+
+    The function now catches only ImportError, not all exceptions.
+    """
+
+    def test_returns_false_when_not_installed(self):
+        """Returns False when aprsd_gps_extension is not importable."""
+        with mock.patch.dict("sys.modules", {"aprsd_gps_extension": None}):
+            result = webchat._is_aprsd_gps_extension_installed()
+            self.assertFalse(result)
+
+    def test_returns_true_when_installed(self):
+        """Returns True when aprsd_gps_extension is importable."""
+        fake_module = mock.MagicMock()
+        with mock.patch.dict("sys.modules", {"aprsd_gps_extension": fake_module}):
+            result = webchat._is_aprsd_gps_extension_installed()
+            self.assertTrue(result)
+
+
+class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
+    """Tests for on_set_beaconing_setting() — issue #24.
+
+    The handler must not crash on missing or out-of-range keys.
+    """
+
+    def setUp(self):
+        CONF.callsign = fake.FAKE_TO_CALLSIGN
+        CONF.trace_enabled = False
+        webchat.init_flask("DEBUG", False)
+
+    def _make_namespace(self):
+        ns = webchat.SendMessageNamespace("/sendmsg")
+        # Replace the global notify_queue so put() is captured
+        ns._test_queue = []
+        self._orig_queue = webchat.notify_queue
+        import queue
+
+        webchat.notify_queue = queue.Queue()
+        return ns
+
+    def tearDown(self):
+        if hasattr(self, "_orig_queue"):
+            webchat.notify_queue = self._orig_queue
+
+    def test_valid_beacon_type_accepted(self):
+        """A valid beacon_type value (0-3) must not raise."""
+        ns = self._make_namespace()
+        data = {"beacon_type": 2, "beacon_interval": 600}
+        ns.on_set_beaconing_setting(data)
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "interval")
+        self.assertEqual(item["beacon_interval"], 600)
+
+    def test_out_of_range_beacon_type_defaults_to_none(self):
+        """An out-of-range beacon_type (e.g. 99) must not KeyError — defaults to 'none'."""
+        ns = self._make_namespace()
+        data = {"beacon_type": 99, "beacon_interval": 300}
+        ns.on_set_beaconing_setting(data)
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "none")
+
+    def test_missing_beacon_type_uses_default(self):
+        """Missing 'beacon_type' must not KeyError — defaults to 'none'."""
+        ns = self._make_namespace()
+        data = {"beacon_interval": 300}
+        ns.on_set_beaconing_setting(data)
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "none")
+
+    def test_missing_beacon_interval_uses_config_default(self):
+        """Missing 'beacon_interval' uses CONF.aprsd_webchat_extension.beacon_interval."""
+        ns = self._make_namespace()
+        data = {"beacon_type": 0}
+        ns.on_set_beaconing_setting(data)
+        item = webchat.notify_queue.get_nowait()
+        expected = CONF.aprsd_webchat_extension.beacon_interval
+        self.assertEqual(item["beacon_interval"], expected)

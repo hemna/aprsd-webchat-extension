@@ -84,7 +84,7 @@ def signal_handler(sig, frame):
     if "subprocess" not in str(frame):
         time.sleep(1.5)
         LOG.info("Telling flask to bail.")
-        signal.signal(signal.SIGTERM, sys.exit(0))
+        sys.exit(0)
 
 
 def _is_aprsd_gps_extension_installed():
@@ -92,7 +92,7 @@ def _is_aprsd_gps_extension_installed():
         import aprsd_gps_extension  # noqa: F401
 
         return True
-    except Exception:
+    except ImportError:
         return False
 
 
@@ -193,11 +193,11 @@ def _build_location_from_repeat(message):
     # This is a location message Format is
     # ^ld^callsign:latitude,longitude,altitude,course,speed,timestamp[,symbol]
     a = message.split(":")
-    LOG.warning(a)
+    LOG.debug(f"_build_location_from_repeat parts: {a}")
     if len(a) == 2:
         callsign = a[0].replace("^ld^", "")
         b = a[1].split(",")
-        LOG.warning(b)
+        LOG.debug(f"_build_location_from_repeat fields: {b}")
         if len(b) >= 6:
             lat = float(b[0])
             lon = float(b[1])
@@ -1157,16 +1157,21 @@ class SendMessageNamespace(Namespace):
 
     def on_set_beaconing_setting(self, data):
         global notify_queue
-        LOG.warning(f"WS on_set_beaconing_setting {data}")
-        beacon_type = data["beacon_type"]
+        LOG.debug(f"WS on_set_beaconing_setting {data}")
+        beacon_type_raw = data.get("beacon_type", 0)
         lookup = {
             0: "none",
             1: "none",
             2: "interval",
             3: "smart",
         }
-        beacon_type = lookup[int(beacon_type)]
-        beacon_interval = data["beacon_interval"]
+        beacon_type = lookup.get(int(beacon_type_raw), "none")
+        beacon_interval = int(
+            data.get(
+                "beacon_interval",
+                CONF.aprsd_webchat_extension.beacon_interval,
+            )
+        )
         smart_beacon_distance_threshold = (
             0
             if not data.get("smart_beacon_distance_threshold")
