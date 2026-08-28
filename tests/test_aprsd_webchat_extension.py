@@ -489,3 +489,29 @@ class TestIsAprsdGpsExtensionInstalled(unittest.TestCase):
         with mock.patch.dict("sys.modules", {"aprsd_gps_extension": fake_module}):
             result = webchat._is_aprsd_gps_extension_installed()
             self.assertTrue(result)
+class TestSignalHandler(unittest.TestCase):
+    """Tests for signal_handler() — issue #23."""
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_calls_sys_exit(self, mock_threads, mock_stats):
+        """signal_handler() must call sys.exit(0) directly."""
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "main"
+        with self.assertRaises(SystemExit) as ctx:
+            webchat.signal_handler(None, frame)
+        self.assertEqual(ctx.exception.code, 0)
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_subprocess_frame_does_not_exit(
+        self, mock_threads, mock_stats
+    ):
+        """When 'subprocess' appears in the frame string, sys.exit is NOT called."""
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "subprocess run"
+        webchat.signal_handler(None, frame)  # must return normally

@@ -84,7 +84,7 @@ def signal_handler(sig, frame):
     if "subprocess" not in str(frame):
         time.sleep(1.5)
         LOG.info("Telling flask to bail.")
-        signal.signal(signal.SIGTERM, sys.exit(0))
+        sys.exit(0)
 
 
 def _is_aprsd_gps_extension_installed():
