@@ -1157,16 +1157,21 @@ class SendMessageNamespace(Namespace):
 
     def on_set_beaconing_setting(self, data):
         global notify_queue
-        LOG.warning(f"WS on_set_beaconing_setting {data}")
-        beacon_type = data["beacon_type"]
+        LOG.debug(f"WS on_set_beaconing_setting {data}")
+        beacon_type_raw = data.get("beacon_type", 0)
         lookup = {
             0: "none",
             1: "none",
             2: "interval",
             3: "smart",
         }
-        beacon_type = lookup[int(beacon_type)]
-        beacon_interval = data["beacon_interval"]
+        beacon_type = lookup.get(int(beacon_type_raw), "none")
+        beacon_interval = int(
+            data.get(
+                "beacon_interval",
+                CONF.aprsd_webchat_extension.beacon_interval,
+            )
+        )
         smart_beacon_distance_threshold = (
             0
             if not data.get("smart_beacon_distance_threshold")

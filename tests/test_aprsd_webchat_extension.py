@@ -515,3 +515,48 @@ class TestSignalHandler(unittest.TestCase):
         frame = mock.MagicMock()
         frame.__str__ = lambda s: "subprocess run"
         webchat.signal_handler(None, frame)  # must return normally
+class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
+    """Tests for on_set_beaconing_setting() — issue #24."""
+
+    def setUp(self):
+        CONF.callsign = fake.FAKE_TO_CALLSIGN
+        CONF.trace_enabled = False
+        webchat.init_flask("DEBUG", False)
+        import queue
+
+        self._orig_queue = webchat.notify_queue
+        webchat.notify_queue = queue.Queue()
+
+    def tearDown(self):
+        webchat.notify_queue = self._orig_queue
+
+    def test_valid_beacon_type_accepted(self):
+        """A valid beacon_type (0-3) must not raise."""
+        ns = webchat.SendMessageNamespace("/sendmsg")
+        ns.on_set_beaconing_setting({"beacon_type": 2, "beacon_interval": 600})
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "interval")
+        self.assertEqual(item["beacon_interval"], 600)
+
+    def test_out_of_range_beacon_type_defaults_to_none(self):
+        """An out-of-range beacon_type must not KeyError — defaults to 'none'."""
+        ns = webchat.SendMessageNamespace("/sendmsg")
+        ns.on_set_beaconing_setting({"beacon_type": 99, "beacon_interval": 300})
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "none")
+
+    def test_missing_beacon_type_uses_default(self):
+        """Missing 'beacon_type' must not KeyError — defaults to 'none'."""
+        ns = webchat.SendMessageNamespace("/sendmsg")
+        ns.on_set_beaconing_setting({"beacon_interval": 300})
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(item["beacon_type"], "none")
+
+    def test_missing_beacon_interval_uses_config_default(self):
+        """Missing 'beacon_interval' uses CONF.aprsd_webchat_extension.beacon_interval."""
+        ns = webchat.SendMessageNamespace("/sendmsg")
+        ns.on_set_beaconing_setting({"beacon_type": 0})
+        item = webchat.notify_queue.get_nowait()
+        self.assertEqual(
+            item["beacon_interval"], CONF.aprsd_webchat_extension.beacon_interval
+        )
