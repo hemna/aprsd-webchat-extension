@@ -34,6 +34,25 @@ extension_opts = [
         "with dedicated tab, message routing, and quick templates. "
         "When disabled, HOTG messages appear as normal incoming messages.",
     ),
+    cfg.StrOpt(
+        "public_url",
+        default="",
+        help="The public-facing URL of this webchat instance, including scheme "
+        "and host (e.g. https://mycall.aprsradio.online). Set this when "
+        "running behind a reverse proxy so the browser Origin header matches "
+        "a known value. Leave empty for auto-detection (recommended for "
+        "direct LAN deployments such as DigiPi).",
+    ),
+    cfg.ListOpt(
+        "allowed_origins",
+        default=[],
+        help="Explicit list of CORS Origins that are permitted to open a "
+        "WebSocket connection (e.g. http://192.168.1.10:8001,"
+        "https://mycall.aprsradio.online). When non-empty this list "
+        "completely replaces the auto-detected origins. Use this only "
+        "when the automatic detection and public_url options are "
+        "insufficient for your deployment.",
+    ),
 ]
 
 ALL_OPTS = extension_opts

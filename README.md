@@ -80,6 +80,61 @@ disable_url_request_logging = False
 APRSD configuration (where `latitude` and `longitude` are already configured
 for APRSD core). There is no need to duplicate them in `[aprsd_webchat_extension]`.
 
+### CORS / WebSocket Security
+
+Webchat uses a WebSocket connection between the browser and the server. For
+security, the server restricts which browser origins are allowed to open that
+connection. The behaviour depends on your deployment:
+
+#### DigiPi and direct LAN access (default — no configuration needed)
+
+If your browser connects directly to the Pi by IP address or hostname (e.g.
+`http://192.168.1.42:8001` or `http://raspberrypi.local:8001`), **no
+configuration is required**. Webchat automatically detects the machine's local
+hostname and IP addresses at startup and permits only those origins.
+
+#### Hosted service with a reverse proxy (e.g. aprsradio.online)
+
+When a reverse proxy (nginx, caddy, etc.) sits in front of Flask and exposes
+webchat at a public URL, the browser sends an `Origin` header containing the
+public hostname — which the server cannot auto-detect. Set `public_url` to
+that public-facing address:
+
+``` yaml
+[aprsd_webchat_extension]
+# The public URL browsers use to reach this instance.
+# Required when running behind a reverse proxy.
+public_url = https://mycall.aprsradio.online
+```
+
+The auto-detected local origins (localhost, LAN IP) are still included
+alongside `public_url`, so admin SSH-tunnel access continues to work.
+
+> **aprsradio.online users:** the hosting service sets `public_url`
+> automatically at provisioning time. You do not need to set it yourself.
+
+#### Advanced: explicit origin list
+
+If neither auto-detection nor `public_url` covers your setup, you can specify
+the exact list of allowed origins. **This replaces auto-detection entirely** —
+only the origins you list will be accepted.
+
+``` yaml
+[aprsd_webchat_extension]
+# Comma-separated list of allowed WebSocket origins.
+# Replaces all auto-detection when set.
+allowed_origins = http://192.168.1.10:8001,https://mydomain.example.com
+```
+
+#### Quick reference
+
+| Deployment | What to set |
+|------------|-------------|
+| DigiPi / direct LAN by IP or `.local` name | Nothing — auto-detected |
+| aprsradio.online (provisioned by the service) | `public_url` set automatically |
+| Custom reverse proxy / public hostname | `public_url = https://your.hostname` |
+| Multiple non-standard origins | `allowed_origins = url1,url2` |
+
 ### Authentication
 
 The webchat interface uses HTTP Basic Authentication. You'll need to set up authentication
