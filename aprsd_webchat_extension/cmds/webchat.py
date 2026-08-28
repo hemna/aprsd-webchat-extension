@@ -3,9 +3,11 @@ import json
 import logging
 import queue
 import signal
+import socket
 import sys
 import threading
 import time
+from urllib.parse import urlparse
 
 import aprsd
 import click
@@ -1198,16 +1200,89 @@ class SendMessageNamespace(Namespace):
             populate_callsign_location(data["callsign"])
 
 
+def _derive_allowed_origins(host: str, port: int) -> list:
+    """Build the list of Origins Flask-SocketIO will accept for WebSocket upgrades.
+
+    Three layers of configuration, applied in priority order:
+
+    1. ``allowed_origins`` config option — non-empty list completely replaces
+       auto-detection. Use when neither auto-detect nor ``public_url`` fits.
+
+    2. ``public_url`` config option — a single public-facing URL added on top of
+       the auto-detected set. Needed when a reverse proxy (nginx/caddy) fronts
+       Flask and the browser Origin does not match any local interface address.
+       Example: ``https://mycall.aprsradio.online`` (aprsradio.online hosted
+       service).
+
+    3. Auto-detection — derives origins from the host's local network interfaces.
+       Covers direct LAN access by IP, mDNS ``.local`` names, and localhost.
+       Sufficient for DigiPi and other embedded deployments where the browser
+       reaches Flask directly without a proxy.
+    """
+    # Layer 1 — explicit full override; the user owns the whole list
+    override = CONF.aprsd_webchat_extension.allowed_origins
+    if override:
+        LOG.info(f"SocketIO CORS: using explicit allowed_origins list: {override}")
+        return list(override)
+
+    origins = set()
+
+    # Layer 3 — auto-detect local interface origins
+    # When bound to a specific non-wildcard IP, include it directly.
+    if host not in ("0.0.0.0", "::", ""):
+        origins.add(f"http://{host}:{port}")
+
+    # Resolve the machine's own hostname → IP and add both the short name,
+    # the .local mDNS name, and the IP.  Covers raspberrypi / raspberrypi.local
+    # as well as any explicit IP the Pi has been assigned.
+    try:
+        hostname = socket.gethostname()
+        local_ip = socket.gethostbyname(hostname)
+        origins.add(f"http://{local_ip}:{port}")
+        origins.add(f"http://{hostname}:{port}")
+        origins.add(f"http://{hostname}.local:{port}")
+    except OSError as exc:
+        LOG.debug(f"SocketIO CORS: could not resolve local hostname: {exc}")
+
+    # Always allow localhost — covers dev machines and SSH port-forwarding.
+    origins.add(f"http://localhost:{port}")
+    origins.add(f"http://127.0.0.1:{port}")
+
+    # Layer 2 — public_url adds one more origin on top of auto-detect.
+    # Needed for hosted services (aprsradio.online) where the browser Origin
+    # is the public hostname, not the Flask bind address.
+    public_url = CONF.aprsd_webchat_extension.public_url
+    if public_url:
+        parsed = urlparse(public_url)
+        if parsed.scheme and parsed.netloc:
+            public_origin = f"{parsed.scheme}://{parsed.netloc}"
+            origins.add(public_origin)
+            LOG.info(f"SocketIO CORS: adding public_url origin: {public_origin}")
+        else:
+            LOG.warning(
+                f"SocketIO CORS: public_url '{public_url}' could not be parsed "
+                "as a URL — ignoring. Expected format: https://host[:port]"
+            )
+
+    result = sorted(origins)
+    LOG.info(f"SocketIO CORS allowed origins: {result}")
+    return result
+
+
 def init_flask(loglevel, quiet):
     global socketio, flask_app
 
+    allowed_origins = _derive_allowed_origins(
+        CONF.aprsd_webchat_extension.web_ip,
+        CONF.aprsd_webchat_extension.web_port,
+    )
     socketio = SocketIO(
         flask_app,
         logger=False,
         engineio_logger=False,
         async_mode="threading",
         manage_session=False,  # Avoid Flask 3.x AttributeError: session has no setter
-        cors_allowed_origins="*",  # Allow UI when served from reverse proxy / different host
+        cors_allowed_origins=allowed_origins,
     )
 
     socketio.on_namespace(
