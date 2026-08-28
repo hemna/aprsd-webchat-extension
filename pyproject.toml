@@ -93,6 +93,7 @@ classifiers = [
 # For an analysis of this field vs pip's requirements files see:
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
 dependencies = [
+    "cachetools>=5.0.0",
     "click",
     "eventlet>=0.33.0",
     "flask",
