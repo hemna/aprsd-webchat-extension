@@ -1285,7 +1285,7 @@ def init_flask(loglevel, quiet):
         flask_app,
         logger=False,
         engineio_logger=False,
-        async_mode="threading",
+        async_mode="eventlet",
         manage_session=False,  # Avoid Flask 3.x AttributeError: session has no setter
         cors_allowed_origins=allowed_origins,
     )
@@ -1418,7 +1418,6 @@ def webchat(ctx, flush, port):
         # ssl_context="adhoc",
         host=CONF.aprsd_webchat_extension.web_ip,
         port=port,
-        allow_unsafe_werkzeug=True,
     )
     service_threads.join()
 
