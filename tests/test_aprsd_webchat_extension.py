@@ -633,3 +633,205 @@ class TestCallsignLocationsTTLCache(unittest.TestCase):
             small_cache[f"CALL{i}"] = {"lat": float(i), "lon": float(i)}
         # Cache should never exceed maxsize
         self.assertLessEqual(len(small_cache), 3)
+class TestIsHotgMessage(unittest.TestCase):
+    """Tests for is_hotg_message() — issue #25."""
+
+    def test_traditional_ansrvr_relay_is_hotg(self):
+        """ANSRVR source with colon in message is a HOTG relay."""
+        self.assertTrue(webchat.is_hotg_message("ANSRVR", "W1AW: hello thursday"))
+
+    def test_notification_format_n_hotg_space(self):
+        """N:HOTG<space> prefix is a HOTG notification regardless of source."""
+        self.assertTrue(webchat.is_hotg_message("W2XYZ", "N:HOTG hello world"))
+
+    def test_notification_format_n_hotg_colon(self):
+        """N:HOTG: prefix is also a valid HOTG notification."""
+        self.assertTrue(webchat.is_hotg_message("K3ABC", "N:HOTG:hello world"))
+
+    def test_non_ansrvr_source_no_prefix_not_hotg(self):
+        """Regular message from non-ANSRVR source is not HOTG."""
+        self.assertFalse(webchat.is_hotg_message("W1AW", "hello there"))
+
+    def test_empty_message_not_hotg(self):
+        """Empty message is not HOTG."""
+        self.assertFalse(webchat.is_hotg_message("ANSRVR", ""))
+
+    def test_none_message_not_hotg(self):
+        """None message is not HOTG."""
+        self.assertFalse(webchat.is_hotg_message("ANSRVR", None))
+
+    def test_case_insensitive_from_call(self):
+        """ANSRVR source check is case-insensitive."""
+        self.assertTrue(webchat.is_hotg_message("ansrvr", "W1AW: message"))
+
+    def test_n_hotg_case_insensitive(self):
+        """N:HOTG prefix check is case-insensitive."""
+        self.assertTrue(webchat.is_hotg_message("W1AW", "n:hotg hello"))
+
+
+class TestParseHotgMessage(unittest.TestCase):
+    """Tests for parse_hotg_message() — issue #25."""
+
+    def test_traditional_format_returns_sender_and_message(self):
+        """Traditional ANSRVR relay parses callsign and message."""
+        result = webchat.parse_hotg_message("ANSRVR", "W1AW: hello thursday")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["sender"], "W1AW")
+        self.assertEqual(result["message"], "hello thursday")
+
+    def test_notification_n_hotg_space_format(self):
+        """N:HOTG<space> notification uses from_call as sender."""
+        result = webchat.parse_hotg_message("K5XYZ", "N:HOTG hello world")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["sender"], "K5XYZ")
+        self.assertEqual(result["message"], "hello world")
+
+    def test_notification_n_hotg_colon_format(self):
+        """N:HOTG: notification uses from_call as sender."""
+        result = webchat.parse_hotg_message("W9ABC", "N:HOTG:the message")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["sender"], "W9ABC")
+        self.assertEqual(result["message"], "the message")
+
+    def test_none_message_returns_none(self):
+        """None message text returns None."""
+        self.assertIsNone(webchat.parse_hotg_message("ANSRVR", None))
+
+    def test_empty_message_returns_none(self):
+        """Empty message text returns None."""
+        self.assertIsNone(webchat.parse_hotg_message("ANSRVR", ""))
+
+    def test_n_hotg_with_empty_content_returns_none(self):
+        """N:HOTG with empty payload returns None."""
+        self.assertIsNone(webchat.parse_hotg_message("W1AW", "N:HOTG "))
+
+    def test_sender_uppercased(self):
+        """Sender callsign is uppercased regardless of input case."""
+        result = webchat.parse_hotg_message("ANSRVR", "w1aw: hello")
+        self.assertEqual(result["sender"], "W1AW")
+
+
+class TestIsAnsvrConfirmation(unittest.TestCase):
+    """Tests for is_ansrvr_confirmation() — issue #25."""
+
+    def test_subscribed_keyword_triggers(self):
+        """'subscribed' keyword from ANSRVR is a confirmation."""
+        self.assertTrue(
+            webchat.is_ansrvr_confirmation("ANSRVR", "You have subscribed to HOTG")
+        )
+
+    def test_unsubscribed_keyword_triggers(self):
+        """'unsubscribed' keyword from ANSRVR is a confirmation."""
+        self.assertTrue(
+            webchat.is_ansrvr_confirmation("ANSRVR", "unsubscribed from group")
+        )
+
+    def test_joined_keyword_triggers(self):
+        """'joined' keyword from ANSRVR is a confirmation."""
+        self.assertTrue(webchat.is_ansrvr_confirmation("ANSRVR", "You joined HOTG"))
+
+    def test_left_keyword_triggers(self):
+        """'left' keyword from ANSRVR is a confirmation."""
+        self.assertTrue(webchat.is_ansrvr_confirmation("ANSRVR", "left the group"))
+
+    def test_aprsph_source_triggers(self):
+        """APRSPH source also triggers confirmation detection."""
+        self.assertTrue(webchat.is_ansrvr_confirmation("APRSPH", "confirmed"))
+
+    def test_non_ansrvr_source_not_confirmation(self):
+        """Random callsign with subscription keyword is not a confirmation."""
+        self.assertFalse(webchat.is_ansrvr_confirmation("W1AW", "subscribed"))
+
+    def test_empty_from_call_not_confirmation(self):
+        """Empty from_call returns False."""
+        self.assertFalse(webchat.is_ansrvr_confirmation("", "subscribed"))
+
+    def test_none_message_not_confirmation(self):
+        """None message returns False."""
+        self.assertFalse(webchat.is_ansrvr_confirmation("ANSRVR", None))
+
+    def test_ansrvr_without_keywords_not_confirmation(self):
+        """ANSRVR message without confirmation keywords is not a confirmation."""
+        self.assertFalse(webchat.is_ansrvr_confirmation("ANSRVR", "W1AW: hello"))
+
+
+class TestCalculateLocationData(unittest.TestCase):
+    """Tests for _calculate_location_data() — issue #25."""
+
+    def _base_data(self, callsign="W1AW", lat=42.0, lon=-71.0):
+        return {
+            "callsign": callsign,
+            "lat": lat,
+            "lon": lon,
+            "altitude": 10.0,
+            "speed": 0,
+            "course": 0,
+            "lasttime": 1700000000,
+        }
+
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._is_gps_extension_active",
+        return_value=False,
+    )
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_latitude", return_value=0.0)
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_longitude", return_value=0.0)
+    def test_returns_expected_keys(self, mock_lon, mock_lat, mock_gps):
+        """_calculate_location_data() must return all required keys."""
+        result = webchat._calculate_location_data(self._base_data())
+        for key in (
+            "callsign",
+            "lat",
+            "lon",
+            "altitude",
+            "speed",
+            "lasttime",
+            "course",
+            "compass_bearing",
+            "timeago",
+            "distance",
+        ):
+            self.assertIn(key, result, f"Missing key: {key}")
+
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._is_gps_extension_active",
+        return_value=False,
+    )
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_latitude", return_value=0.0)
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_longitude", return_value=0.0)
+    def test_distance_is_negative_when_no_own_location(
+        self, mock_lon, mock_lat, mock_gps
+    ):
+        """Distance must be -1 when our own lat/lon are both 0.0 (unknown)."""
+        result = webchat._calculate_location_data(self._base_data())
+        self.assertEqual(result["distance"], "-1.0")
+
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._is_gps_extension_active",
+        return_value=False,
+    )
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._get_latitude", return_value=42.36
+    )
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._get_longitude", return_value=-71.06
+    )
+    def test_distance_calculated_when_own_location_known(
+        self, mock_lon, mock_lat, mock_gps
+    ):
+        """Distance must be a non-negative number when own location is known."""
+        result = webchat._calculate_location_data(
+            self._base_data(lat=42.40, lon=-71.10)
+        )
+        dist = float(result["distance"])
+        self.assertGreaterEqual(dist, 0.0)
+
+    @mock.patch(
+        "aprsd_webchat_extension.cmds.webchat._is_gps_extension_active",
+        return_value=False,
+    )
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_latitude", return_value=0.0)
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._get_longitude", return_value=0.0)
+    def test_callsign_preserved_in_result(self, mock_lon, mock_lat, mock_gps):
+        """The callsign in input must be preserved in the output."""
+        result = webchat._calculate_location_data(self._base_data(callsign="K9TEST"))
+        self.assertEqual(result["callsign"], "K9TEST")
