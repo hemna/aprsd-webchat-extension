@@ -92,7 +92,7 @@ def _is_aprsd_gps_extension_installed():
         import aprsd_gps_extension  # noqa: F401
 
         return True
-    except Exception:
+    except ImportError:
         return False
 
 
