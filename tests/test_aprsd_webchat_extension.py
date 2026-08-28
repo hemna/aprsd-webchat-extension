@@ -560,3 +560,38 @@ class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
         self.assertEqual(
             item["beacon_interval"], CONF.aprsd_webchat_extension.beacon_interval
         )
+class TestEventletAsyncMode(unittest.TestCase):
+    """Tests for issue #16 — eventlet async mode / no allow_unsafe_werkzeug."""
+
+    def config_and_init(self):
+        CONF.callsign = fake.FAKE_TO_CALLSIGN
+        CONF.trace_enabled = False
+        CONF.watch_list.packet_keep_count = 1
+
+    @mock.patch("aprsd.log.log.setup_logging")
+    def test_init_flask_uses_eventlet_async_mode(self, mock_logging):
+        """init_flask() must configure SocketIO with async_mode='eventlet'."""
+        self.config_and_init()
+        with mock.patch("aprsd_webchat_extension.cmds.webchat.SocketIO") as mock_sio:
+            mock_sio.return_value.on_namespace = mock.MagicMock()
+            webchat.init_flask("DEBUG", False)
+            _, kwargs = mock_sio.call_args
+            self.assertEqual(
+                kwargs.get("async_mode"),
+                "eventlet",
+                "SocketIO must be initialised with async_mode='eventlet'",
+            )
+
+    @mock.patch("aprsd.log.log.setup_logging")
+    def test_init_flask_does_not_use_threading_async_mode(self, mock_logging):
+        """init_flask() must NOT use the single-threaded 'threading' async mode."""
+        self.config_and_init()
+        with mock.patch("aprsd_webchat_extension.cmds.webchat.SocketIO") as mock_sio:
+            mock_sio.return_value.on_namespace = mock.MagicMock()
+            webchat.init_flask("DEBUG", False)
+            _, kwargs = mock_sio.call_args
+            self.assertNotEqual(
+                kwargs.get("async_mode"),
+                "threading",
+                "async_mode='threading' uses the Werkzeug dev server and must not be used",
+            )

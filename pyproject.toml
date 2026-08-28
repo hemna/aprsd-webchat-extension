@@ -94,6 +94,7 @@ classifiers = [
 # https://packaging.python.org/discussions/install-requires-vs-requirements/
 dependencies = [
     "click",
+    "eventlet>=0.33.0",
     "flask",
     "flask-httpauth",
     "flask-socketio",
