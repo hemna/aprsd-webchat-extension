@@ -193,11 +193,11 @@ def _build_location_from_repeat(message):
     # This is a location message Format is
     # ^ld^callsign:latitude,longitude,altitude,course,speed,timestamp[,symbol]
     a = message.split(":")
-    LOG.warning(a)
+    LOG.debug(f"_build_location_from_repeat parts: {a}")
     if len(a) == 2:
         callsign = a[0].replace("^ld^", "")
         b = a[1].split(",")
-        LOG.warning(b)
+        LOG.debug(f"_build_location_from_repeat fields: {b}")
         if len(b) >= 6:
             lat = float(b[0])
             lon = float(b[1])
