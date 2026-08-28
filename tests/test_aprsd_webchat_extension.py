@@ -17,6 +17,51 @@ CONF = cfg.CONF
 F = t.TypeVar("F", bound=t.Callable[..., t.Any])
 
 
+class TestLocationEndpoint(unittest.TestCase):
+    """Tests for the /location/<callsign> POST endpoint (issue #13)."""
+
+    def setUp(self):
+        CONF.callsign = fake.FAKE_TO_CALLSIGN
+        CONF.trace_enabled = False
+        # Ensure SocketIO is initialised so flask_app is ready for test client
+        webchat.init_flask("DEBUG", False)
+        self.client = webchat.flask_app.test_client()
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.populate_callsign_location")
+    def test_location_returns_204_for_normal_callsign(self, mock_populate):
+        """POST /location/<callsign> must return HTTP 204 for a trackable callsign."""
+        response = self.client.post("/location/W1AW")
+        self.assertEqual(response.status_code, 204)
+        mock_populate.assert_called_once_with("W1AW")
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.populate_callsign_location")
+    def test_location_returns_204_for_no_track_callsign(self, mock_populate):
+        """POST /location/<callsign> must return HTTP 204 even for no-track callsigns."""
+        # ANSRVR is in callsign_no_track — populate_callsign_location should not be called
+        response = self.client.post("/location/ANSRVR")
+        self.assertEqual(response.status_code, 204)
+        mock_populate.assert_not_called()
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.populate_callsign_location")
+    def test_location_does_not_track_blocked_callsigns(self, mock_populate):
+        """Callsigns in callsign_no_track must not trigger a location lookup."""
+        for callsign in webchat.callsign_no_track:
+            mock_populate.reset_mock()
+            response = self.client.post(f"/location/{callsign}")
+            self.assertEqual(
+                response.status_code,
+                204,
+                f"Expected 204 for blocked callsign {callsign}",
+            )
+            mock_populate.assert_not_called()
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.populate_callsign_location")
+    def test_location_response_body_is_empty(self, mock_populate):
+        """The 204 response body must be empty."""
+        response = self.client.post("/location/K1ABC")
+        self.assertEqual(response.data, b"")
+
+
 class TestSendMessageCommand(unittest.TestCase):
     def config_and_init(self, login=None, password=None):
         CONF.callsign = fake.FAKE_TO_CALLSIGN
