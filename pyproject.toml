@@ -139,9 +139,9 @@ dev = [
 # maintainers, and where to support the project financially. The key is
 # what's used to render the link text on PyPI.
 [project.urls]
-"Homepage" = "https://github.com/hemna/aprsd-admin-extension"
-"Bug Reports" = "https://github.com/hemna/aprsd-admin-extension/issues"
-"Source" = "https://github.com/hemna/aprsd-admin-extension"
+"Homepage" = "https://github.com/hemna/aprsd-webchat-extension"
+"Bug Reports" = "https://github.com/hemna/aprsd-webchat-extension/issues"
+"Source" = "https://github.com/hemna/aprsd-webchat-extension"
 Documentation = "https://aprsd-webchat-extension.readthedocs.io/en/latest/"
 
 # The main entry points for extensions
