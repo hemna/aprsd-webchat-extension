@@ -472,3 +472,20 @@ class TestBuildLocationFromRepeat(unittest.TestCase):
         msg = "^ld^W1AW:37.5,-122.3"
         result = webchat._build_location_from_repeat(msg)
         self.assertIsNone(result)
+
+
+class TestIsAprsdGpsExtensionInstalled(unittest.TestCase):
+    """Tests for _is_aprsd_gps_extension_installed() — issue #22."""
+
+    def test_returns_false_when_not_installed(self):
+        """Returns False when aprsd_gps_extension is not importable."""
+        with mock.patch.dict("sys.modules", {"aprsd_gps_extension": None}):
+            result = webchat._is_aprsd_gps_extension_installed()
+            self.assertFalse(result)
+
+    def test_returns_true_when_installed(self):
+        """Returns True when aprsd_gps_extension is importable."""
+        fake_module = mock.MagicMock()
+        with mock.patch.dict("sys.modules", {"aprsd_gps_extension": fake_module}):
+            result = webchat._is_aprsd_gps_extension_installed()
+            self.assertTrue(result)
