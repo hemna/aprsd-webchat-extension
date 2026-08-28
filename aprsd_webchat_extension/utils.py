@@ -38,9 +38,9 @@ def _check_version():
 
 def setup_logging(loglevel=None, quiet=False):
     if not loglevel:
-        CONF.logging.log_level
+        loglevel = CONF.logging.log_level
     else:
-        conf_log.LOG_LEVELS[loglevel]
+        loglevel = conf_log.LOG_LEVELS.get(loglevel, loglevel)
 
     webserver_list = [
         "werkzeug",

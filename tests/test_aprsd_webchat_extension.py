@@ -421,3 +421,26 @@ class TestSendMessageNamespace(unittest.TestCase):
         # Verify response includes correct symbol
         emit_args = mock_socketio.emit.call_args
         assert emit_args[0][1]["symbol"] == "\\>"
+
+
+class TestSetupLogging(unittest.TestCase):
+    """Tests for setup_logging() — issue #14 (dead code / loglevel not assigned)."""
+
+    def test_loglevel_used_from_conf_when_none(self):
+        """When loglevel=None, setup_logging() must use CONF.logging.log_level."""
+        from aprsd_webchat_extension import utils as webchat_utils
+
+        # Just verify no AttributeError / TypeError is raised
+        try:
+            webchat_utils.setup_logging(loglevel=None)
+        except Exception as exc:
+            self.fail(f"setup_logging(loglevel=None) raised unexpectedly: {exc}")
+
+    def test_loglevel_resolved_from_log_levels_map(self):
+        """When a string loglevel is passed it must be resolved via LOG_LEVELS without KeyError."""
+        from aprsd_webchat_extension import utils as webchat_utils
+
+        try:
+            webchat_utils.setup_logging(loglevel="DEBUG")
+        except KeyError as exc:
+            self.fail(f"setup_logging('DEBUG') raised KeyError: {exc}")
