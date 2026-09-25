@@ -107,6 +107,13 @@ def _disconnect_socketio_clients():
 
 
 def signal_handler(sig, frame):
+    """Handle SIGINT/SIGTERM and shut down gracefully.
+
+    Stops all stats collectors and APRSD threads, then (on the exiting
+    signal path only) closes connected webchat clients nonblocking and
+    exits the process. When the signal arrives from a subprocess frame
+    the handler returns without exiting or disconnecting clients.
+    """
     LOG.warning(
         f"Ctrl+C, Sending all threads({len(threads.APRSDThreadList())}) exit! "
         f"Can take up to 10 seconds {datetime.datetime.now()}",
@@ -1308,6 +1315,15 @@ def _derive_allowed_origins(host: str, port: int) -> list:
 
 
 def init_flask(loglevel, quiet, port=None):
+    """Create the Flask-SocketIO app and return the SocketIO instance.
+
+    Args:
+        loglevel: Logging level for the flask/socketio server.
+        quiet: Suppress flask/socketio request logging when True.
+        port: The port the web server will listen on. Used to derive the
+            CORS allowed origins so the browser origin matches the actual
+            listen port. Defaults to ``aprsd_webchat_extension.web_port``.
+    """
     global socketio, flask_app
 
     if port is None:
