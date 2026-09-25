@@ -76,6 +76,29 @@ flask_app = flask.Flask(
 flask_app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 
+def _disconnect_socketio_clients():
+    """Disconnect all connected clients so eventlet can shut down promptly.
+
+    eventlet.wsgi.server waits for all active connections to finish before
+    exiting, on any exception (including SystemExit). An open browser
+    WebSocket is a long-running connection, so without an explicit disconnect
+    the shutdown hangs until the client connection closes (~20s).
+    """
+    global socketio
+    if socketio is None:
+        return
+    server = getattr(socketio, "server", None)
+    if server is None:
+        return
+    eio = getattr(server, "eio", None)
+    if eio is None:
+        return
+    try:
+        eio.disconnect()
+    except Exception as ex:
+        LOG.warning(f"Error disconnecting socketio clients: {ex}")
+
+
 def signal_handler(sig, frame):
     LOG.warning(
         f"Ctrl+C, Sending all threads({len(threads.APRSDThreadList())}) exit! "
@@ -83,6 +106,7 @@ def signal_handler(sig, frame):
     )
     stats.stats_collector.stop_all()
     threads.APRSDThreadList().stop_all()
+    _disconnect_socketio_clients()
     if "subprocess" not in str(frame):
         time.sleep(1.5)
         LOG.info("Telling flask to bail.")
@@ -1276,12 +1300,14 @@ def _derive_allowed_origins(host: str, port: int) -> list:
     return result
 
 
-def init_flask(loglevel, quiet):
+def init_flask(loglevel, quiet, port=None):
     global socketio, flask_app
 
+    if port is None:
+        port = CONF.aprsd_webchat_extension.web_port
     allowed_origins = _derive_allowed_origins(
         CONF.aprsd_webchat_extension.web_ip,
-        CONF.aprsd_webchat_extension.web_port,
+        port,
     )
     socketio = SocketIO(
         flask_app,
@@ -1373,7 +1399,7 @@ def webchat(ctx, flush, port):
     service_threads.register(keepalive.KeepAliveThread())
     service_threads.register(stats_thread.APRSDStatsStoreThread())
 
-    socketio = init_flask(loglevel, quiet)
+    socketio = init_flask(loglevel, quiet, port=port)
     service_threads.register(
         rx.APRSDRXThread(
             packet_queue=threads.packet_queue,
