@@ -252,6 +252,22 @@ class TestSendMessageCommand(unittest.TestCase):
         self.assertIsInstance(socketio, flask_socketio.SocketIO)
         self.assertIsInstance(webchat.flask_app, flask.Flask)
 
+    @mock.patch("aprsd_webchat_extension.cmds.webchat._derive_allowed_origins")
+    @mock.patch("aprsd.log.log.setup_logging")
+    def test_init_flask_uses_effective_port_for_cors_origins(
+        self, mock_logging, mock_derive
+    ):
+        """CORS origins must use the effective listen port, not the config web_port.
+
+        Regression test: `aprsd webchat --port 9999` bound the server to 9999
+        but _derive_allowed_origins() was called with the config web_port (8001),
+        so the browser at http://localhost:9999 was rejected with
+        "is not an accepted origin".
+        """
+        webchat.init_flask("DEBUG", False, port=9999)
+        host, port = mock_derive.call_args.args
+        self.assertEqual(port, 9999)
+
     @mock.patch("aprsd_webchat_extension.cmds.webchat.SentMessages")
     def test_process_ack_packet(
         self,
@@ -489,6 +505,8 @@ class TestIsAprsdGpsExtensionInstalled(unittest.TestCase):
         with mock.patch.dict("sys.modules", {"aprsd_gps_extension": fake_module}):
             result = webchat._is_aprsd_gps_extension_installed()
             self.assertTrue(result)
+
+
 class TestSignalHandler(unittest.TestCase):
     """Tests for signal_handler() — issue #23."""
 
@@ -515,6 +533,62 @@ class TestSignalHandler(unittest.TestCase):
         frame = mock.MagicMock()
         frame.__str__ = lambda s: "subprocess run"
         webchat.signal_handler(None, frame)  # must return normally
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_disconnects_clients_before_exit(
+        self, mock_threads, mock_stats
+    ):
+        """signal_handler() must close socketio clients nonblocking before exit.
+
+        Regression test: sys.exit(0) inside eventlet's wsgi server blocks until
+        all active connections close (eventlet waits for active connections on
+        any exception, including SystemExit). engineio socket.close(wait=True)
+        also calls queue.join(), which stalls for a polling client with no GET
+        in progress. Clients must be closed with wait=False so shutdown is
+        prompt.
+        """
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        fake_socket = mock.MagicMock()
+        fake_socket.sid = "abc"
+        fake_eio = mock.MagicMock()
+        fake_eio.sockets = {"abc": fake_socket}
+        fake_server = mock.MagicMock()
+        fake_server.eio = fake_eio
+        fake_sio = mock.MagicMock()
+        fake_sio.server = fake_server
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "main"
+        with mock.patch("aprsd_webchat_extension.cmds.webchat.socketio", fake_sio):
+            with self.assertRaises(SystemExit):
+                webchat.signal_handler(None, frame)
+        fake_socket.close.assert_called_once_with(wait=False)
+        fake_eio.disconnect.assert_not_called()
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_subprocess_frame_does_not_disconnect(
+        self, mock_threads, mock_stats
+    ):
+        """On the subprocess frame path (no exit), clients must NOT be closed."""
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        fake_socket = mock.MagicMock()
+        fake_socket.sid = "abc"
+        fake_eio = mock.MagicMock()
+        fake_eio.sockets = {"abc": fake_socket}
+        fake_server = mock.MagicMock()
+        fake_server.eio = fake_eio
+        fake_sio = mock.MagicMock()
+        fake_sio.server = fake_server
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "subprocess run"
+        with mock.patch("aprsd_webchat_extension.cmds.webchat.socketio", fake_sio):
+            webchat.signal_handler(None, frame)
+        fake_socket.close.assert_not_called()
+
+
 class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
     """Tests for on_set_beaconing_setting() — issue #24."""
 
@@ -560,6 +634,8 @@ class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
         self.assertEqual(
             item["beacon_interval"], CONF.aprsd_webchat_extension.beacon_interval
         )
+
+
 class TestEventletAsyncMode(unittest.TestCase):
     """Tests for issue #16 — eventlet async mode / no allow_unsafe_werkzeug."""
 
@@ -595,6 +671,8 @@ class TestEventletAsyncMode(unittest.TestCase):
                 "threading",
                 "async_mode='threading' uses the Werkzeug dev server and must not be used",
             )
+
+
 class TestCallsignLocationsTTLCache(unittest.TestCase):
     """Tests for issue #26 — callsign_locations must be a bounded TTL cache."""
 
@@ -633,6 +711,8 @@ class TestCallsignLocationsTTLCache(unittest.TestCase):
             small_cache[f"CALL{i}"] = {"lat": float(i), "lon": float(i)}
         # Cache should never exceed maxsize
         self.assertLessEqual(len(small_cache), 3)
+
+
 class TestIsHotgMessage(unittest.TestCase):
     """Tests for is_hotg_message() — issue #25."""
 
