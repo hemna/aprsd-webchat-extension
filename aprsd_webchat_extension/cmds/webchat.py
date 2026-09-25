@@ -77,12 +77,17 @@ flask_app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
 
 def _disconnect_socketio_clients():
-    """Disconnect all connected clients so eventlet can shut down promptly.
+    """Close all connected clients without blocking on queued packets.
 
     eventlet.wsgi.server waits for all active connections to finish before
     exiting, on any exception (including SystemExit). An open browser
     WebSocket is a long-running connection, so without an explicit disconnect
     the shutdown hangs until the client connection closes (~20s).
+
+    engineio socket.close() defaults to wait=True, which calls queue.join()
+    and blocks until an in-flight HTTP long-poll GET consumes the queued CLOSE
+    packet. An idle polling client with no GET in progress would stall
+    shutdown indefinitely, so close with wait=False.
     """
     global socketio
     if socketio is None:
@@ -93,10 +98,12 @@ def _disconnect_socketio_clients():
     eio = getattr(server, "eio", None)
     if eio is None:
         return
-    try:
-        eio.disconnect()
-    except Exception as ex:
-        LOG.warning(f"Error disconnecting socketio clients: {ex}")
+    sockets = getattr(eio, "sockets", None) or {}
+    for client_socket in list(sockets.values()):
+        try:
+            client_socket.close(wait=False)
+        except Exception as ex:
+            LOG.warning(f"Error closing socketio client: {ex}")
 
 
 def signal_handler(sig, frame):
@@ -106,8 +113,8 @@ def signal_handler(sig, frame):
     )
     stats.stats_collector.stop_all()
     threads.APRSDThreadList().stop_all()
-    _disconnect_socketio_clients()
     if "subprocess" not in str(frame):
+        _disconnect_socketio_clients()
         time.sleep(1.5)
         LOG.info("Telling flask to bail.")
         sys.exit(0)

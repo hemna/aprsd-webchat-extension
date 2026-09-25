@@ -539,17 +539,21 @@ class TestSignalHandler(unittest.TestCase):
     def test_signal_handler_disconnects_clients_before_exit(
         self, mock_threads, mock_stats
     ):
-        """signal_handler() must disconnect socketio clients before sys.exit(0).
+        """signal_handler() must close socketio clients nonblocking before exit.
 
         Regression test: sys.exit(0) inside eventlet's wsgi server blocks until
         all active connections close (eventlet waits for active connections on
-        any exception, including SystemExit). An open browser WebSocket held
-        shutdown for ~20s. Disconnecting clients first lets the server exit
-        promptly.
+        any exception, including SystemExit). engineio socket.close(wait=True)
+        also calls queue.join(), which stalls for a polling client with no GET
+        in progress. Clients must be closed with wait=False so shutdown is
+        prompt.
         """
         mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
         mock_stats.stats_collector.stop_all = mock.MagicMock()
+        fake_socket = mock.MagicMock()
+        fake_socket.sid = "abc"
         fake_eio = mock.MagicMock()
+        fake_eio.sockets = {"abc": fake_socket}
         fake_server = mock.MagicMock()
         fake_server.eio = fake_eio
         fake_sio = mock.MagicMock()
@@ -559,7 +563,30 @@ class TestSignalHandler(unittest.TestCase):
         with mock.patch("aprsd_webchat_extension.cmds.webchat.socketio", fake_sio):
             with self.assertRaises(SystemExit):
                 webchat.signal_handler(None, frame)
-        fake_eio.disconnect.assert_called_once()
+        fake_socket.close.assert_called_once_with(wait=False)
+        fake_eio.disconnect.assert_not_called()
+
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.stats")
+    @mock.patch("aprsd_webchat_extension.cmds.webchat.threads")
+    def test_signal_handler_subprocess_frame_does_not_disconnect(
+        self, mock_threads, mock_stats
+    ):
+        """On the subprocess frame path (no exit), clients must NOT be closed."""
+        mock_threads.APRSDThreadList.return_value.stop_all = mock.MagicMock()
+        mock_stats.stats_collector.stop_all = mock.MagicMock()
+        fake_socket = mock.MagicMock()
+        fake_socket.sid = "abc"
+        fake_eio = mock.MagicMock()
+        fake_eio.sockets = {"abc": fake_socket}
+        fake_server = mock.MagicMock()
+        fake_server.eio = fake_eio
+        fake_sio = mock.MagicMock()
+        fake_sio.server = fake_server
+        frame = mock.MagicMock()
+        frame.__str__ = lambda s: "subprocess run"
+        with mock.patch("aprsd_webchat_extension.cmds.webchat.socketio", fake_sio):
+            webchat.signal_handler(None, frame)
+        fake_socket.close.assert_not_called()
 
 
 class TestOnSetBeaconingSettingDefensive(unittest.TestCase):
